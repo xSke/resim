@@ -1,4 +1,9 @@
+from typing import List
+
+import pandas as pd
+
 from data import GameData, get_feed_between, weather_names
+from output import RollLog, make_roll_log
 from rng import Rng
 
 class Resim:
@@ -6,6 +11,8 @@ class Resim:
         self.rng = rng
         self.data = GameData()
         self.fetched_days = set()
+
+        self.strike_rolls: List[RollLog] = []
 
     def handle(self, event):
         self.setup_data(event)
@@ -232,7 +239,8 @@ class Resim:
             return True
 
     def handle_ball(self):
-        self.throw_pitch("ball")
+        value = self.throw_pitch("ball")
+        self.log_roll("Ball", value, False)
 
         if not self.is_flinching():
             self.roll("swing")
@@ -250,7 +258,8 @@ class Resim:
             self.roll("swing")
             self.roll("contact")
         elif ", looking" in self.desc or "strikes out looking." in self.desc:
-            self.throw_pitch("strike")
+            value = self.throw_pitch("strike")
+            self.log_roll("StrikeLooking", value, True)
 
             if not self.is_flinching():
                 self.roll("swing")
@@ -751,6 +760,22 @@ class Resim:
 
         # todo: double strike
 
+        return value
+
+    def log_roll(self, event_type: str, roll: float, passed: bool):
+        self.strike_rolls.append(make_roll_log(
+            event_type,
+            roll,
+            passed,
+            self.batter,
+            self.batting_team,
+            self.pitcher,
+            self.pitching_team,
+            self.stadium,
+            self.data.players,
+            self.update,
+        ))
+
     def setup_data(self, event):
         meta = event.get("metadata") or {}
         if meta.get("subPlay", -1) != -1:
@@ -847,10 +872,17 @@ class Resim:
         for event in feed_events:
             self.handle(event)
 
+        self.save_data(start_timestamp)
+
     def roll(self, label) -> float:
         value = self.rng.next()
         print("{}: {}".format(label, value))
         return value
+
+    def save_data(self, run_name):
+        strike_roll_df = pd.DataFrame(self.strike_rolls)
+        strike_roll_df.to_csv(f"roll_data/{run_name}-strikes.csv")
+
 
 def advance_bases(occupied, amount, up_to=4):
     occupied = [b+(amount if b < up_to else 0) for b in occupied]
