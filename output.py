@@ -61,6 +61,8 @@ class RollLog:
     batter_vibes: float
     pitcher_vibes: float
 
+    game_id: str
+    play_count: int
 
 def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_team, pitcher,
                   pitching_team, stadium, players, update):
@@ -148,4 +150,7 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
 
         batter_vibes=calculate_vibes(batter.data, update["day"]),
         pitcher_vibes=calculate_vibes(pitcher.data, update["day"]),
+
+        game_id=update['id'],
+        play_count=update['playCount'],
     )
