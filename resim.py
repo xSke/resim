@@ -446,7 +446,7 @@ class Resim:
         else:
             # not sure why we need this
             self.roll("magmatic")
-            self.roll("magmatic")
+            # self.roll("magmatic")
 
 
         if self.stadium.has_mod("BIG_BUCKET"):
@@ -806,6 +806,17 @@ class Resim:
                 else:
                     team = self.data.get_team(event["teamTags"][0])
                     team.data[position].append(meta["mod"])
+
+            # player or team mod removed
+            if event["type"] == 146:
+                position = mod_positions[meta["type"]]
+
+                if event["playerTags"]:
+                    player = self.data.get_player(event["playerTags"][0])
+                    player.data[position].remove(meta["mod"])
+                else:
+                    team = self.data.get_team(event["teamTags"][0])
+                    team.data[position].remove(meta["mod"])
 
             # echo mods added
             if event["type"] in [171, 172]:
