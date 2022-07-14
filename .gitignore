@@ -3,3 +3,4 @@ __pycache__/
 out/
 /.idea/
 *.png
+/.ipynb_checkpoints/
