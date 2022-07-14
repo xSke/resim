@@ -4,3 +4,4 @@ out/
 /.idea/
 *.png
 .ipynb_checkpoints/
+output.txt
