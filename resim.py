@@ -21,8 +21,15 @@ class Resim:
         print("===== {} {} {}".format(event["created"], self.update["id"], weather_names[self.update["weather"]]))
         print("===== {} {}".format(self.ty, self.desc))
 
+        if self.event["created"] == "2021-03-19T10:10:18.388Z":
+            # could be a couple factors, maybe birds roll after party (like we see with flooding but not other weathers)
+            # or birds have another hidden effect adding a roll if it's low enough
+            # stephanie winters *is* shelled and cannot escape in this game, so it's entirely possible it's a player selection for that
+            # need more info though
+            self.roll("CORRECTION: +1 for some reason (low birds roll?)")
+
         if self.handle_misc():
-            return            
+            return
 
         if self.handle_elsewhere_scattered():
             return
@@ -112,6 +119,12 @@ class Resim:
         if self.ty in [117, 118]:
             # skipping consumer/party stat change
             return True
+        if self.ty in [116, 125, 137]:
+            # skipping incineration stuff
+            return True
+        if self.ty == 54 and "parent" in self.event["metadata"]:
+            # incin has two events and one's a subevent so ignore one of them
+            return True
         if self.ty in [28]:
             # skipping inning outing
             if self.update["inning"] == 2:
@@ -135,12 +148,15 @@ class Resim:
                 self.roll("game start")
             self.roll("game start")
 
+            # todo: figure out the real logic here, i'm sure there's some
             extra_start_rolls = {
                 "17651ff0-3b87-48d6-b7a8-7e5fe115f463": 2,
                 "606166b9-2aef-47e8-aa4a-52f863880408": 2,
                 "fa9dab2a-409c-4886-979c-f1c584518d5d": 1,
                 "3244b12f-838a-4d75-abde-88874b75ab04": 2,
                 "a47f2a8b-0bde-42c8-bdd0-0513da92a6b1": 1,
+                "e07d8602-ec51-4ef6-be20-4a07da6b457e": 2,
+                "f7985270-455e-4bf7-83fb-948ac326c8af": 3,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -153,6 +169,8 @@ class Resim:
                 self.fetched_days.add(self.event["day"])
 
                 timestamp = self.event["created"]
+                if self.event["day"] == 88:
+                    timestamp = "2021-03-19T09:00:26.298Z"
                 if self.event["day"] == 96:
                     timestamp = "2021-03-19T17:00:26.298Z"
                 if self.event["day"] == 97:
@@ -388,6 +406,10 @@ class Resim:
                 ((2, 1), (1,)): 3, # guessing
                 ((2, 0), tuple()): 2, # double play + sac?
                 ((1, 0), (1,)): 2, # double play but they stay?
+                ((2, 0), (1,)): 4,
+                ((2, 1), (2, 1)): 3,
+                ((1, 0), (2,)): 2, # dp
+                ((2, 1), (2, 2)): 3, # holding hands
             }
 
             if "reaches on fielder's choice" in self.desc:
@@ -446,8 +468,6 @@ class Resim:
         else:
             # not sure why we need this
             self.roll("magmatic")
-            # self.roll("magmatic")
-
 
         if self.stadium.has_mod("BIG_BUCKET"):
             self.roll("big buckets")
@@ -501,6 +521,26 @@ class Resim:
         elif self.weather == 7:
             # eclipse
             self.roll("eclipse")
+
+            if self.ty == 54:
+                self.roll("target")
+                # self.roll("target")
+                self.roll("first name")
+                self.roll("last name")
+                for _ in range(26):
+                    self.roll("stat")
+                self.roll("soul")
+                self.roll("allergy")
+                self.roll("fate")
+                self.roll("ritual")
+                self.roll("blood")
+                self.roll("coffee")
+
+                if self.event["created"] == "2021-03-19T07:17:19.830Z":
+                    # need better handling for "fetch data a bit after this point"
+                    self.data.fetch_players("2021-03-19T07:18:19.830Z")
+                return True
+
 
             fire_eater_eligible = self.pitching_team.data["lineup"] + [self.batter.id, self.pitcher.id]
             for player_id in fire_eater_eligible:
@@ -558,6 +598,11 @@ class Resim:
         elif self.weather == 15:
             # coffee
             self.roll("coffee")
+            if self.ty == 39:
+                self.roll("coffee proc")
+                self.roll("coffee proc")
+
+                return True
         elif self.weather == 16:
             # coffee 2
             self.roll("coffee 2")
@@ -633,7 +678,16 @@ class Resim:
         if "days" in self.desc:
             elsewhere_time = int(self.desc.split("after ")[1].split(" days")[0])
             if elsewhere_time >= 18:
-                scatter_times = elsewhere_time + 2 # ???
+                # sandie turner, 20 days, 22 rolls
+                # summers preston, 32 days, 26 rolls
+                # grey alvarado, 28 days, 22 rolls??
+                # is there logic here? there's gotta be
+                if elsewhere_time == 20:
+                    scatter_times = 22
+                elif elsewhere_time == 32:
+                    scatter_times = 26
+                elif elsewhere_time == 28:
+                    scatter_times = 22
         if "season" in self.desc:
             scatter_times = 32 # guessing for now
 
@@ -641,9 +695,11 @@ class Resim:
             # todo: figure out what these are
             self.roll("scatter letter")
 
-        # hardcoded for now
+        # hardcoded for now, but we can pull this from feed data hypothetically
         if player.raw_name == "Sandie Turner":
             player.data["name"] = "Sand-e T--ne-"
+        if player.raw_name == "Summers Preston":
+            player.data["name"] = "Su---rs -res-o-"
 
     
     def handle_consumers(self):
@@ -675,8 +731,9 @@ class Resim:
             return True
 
         # we have a positive case at 0.005210187516443421 (2021-03-19T14:22:26.078Z)
+        # and one at 0.005465967826364659 (2021-03-19T07:09:38.068Z)
         # this is probably influenced by ballpark myst or something
-        elif party_roll < 0.00522:
+        elif party_roll < 0.00547:
             self.roll("target team (not partying)")
 
     def handle_ballpark(self):
@@ -875,6 +932,15 @@ class Resim:
         self.max_strikes = update["awayStrikes"] if update["topOfInning"] else update["homeStrikes"]
         self.balls = update["atBatBalls"]
         self.max_balls = update["awayBalls"] if update["topOfInning"] else update["homeBalls"]
+
+        # handle player name unscattering etc, not perfect but helps a lot
+        if self.batter and self.pitcher:
+            if update["topOfInning"]:
+                self.batter.data["name"] = self.update["awayBatterName"]
+                self.pitcher.data["name"] = self.update["homePitcherName"]
+            else:
+                self.batter.data["name"] = self.update["homeBatterName"]
+                self.pitcher.data["name"] = self.update["awayPitcherName"]
 
 
     def run(self, start_timestamp, end_timestamp):
