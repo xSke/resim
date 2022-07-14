@@ -437,8 +437,6 @@ class Resim:
         else:
             # not sure why we need this
             self.roll("magmatic")
-            self.roll("magmatic")
-
 
         if self.stadium.has_mod("BIG_BUCKET"):
             self.roll("big buckets")
