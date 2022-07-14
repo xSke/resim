@@ -173,8 +173,8 @@ class Resim:
         batter_charm_eligible = self.batting_team.has_mod("LOVE") and pitch_charm_eligible
         pitcher_charm_eligible = self.pitching_team.has_mod("LOVE") and pitch_charm_eligible
 
-        if self.event["season"] < 14: # if before s15 (zero indexed)
-            # todo: when was this changed? looks like this behavior at least happened in s14
+        # before season 16, love blood only proc'd when the player also had love blood
+        if self.event["season"] < 15:
             if self.batter.data["blood"] != 9:
                 batter_charm_eligible = False
 
