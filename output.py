@@ -3,13 +3,14 @@ import itertools
 import math
 
 
-def calculate_vibes(player, day):
-    frequency = 6 + round(10 * player['buoyancy'])
+def calculate_vibes(player, day, multiplier):
+    frequency = 6 + round(10 * player['buoyancy'] * multiplier)
     phase = math.pi * ((2 / frequency) * day + 0.5)
 
-    cinnamon = player['cinnamon'] if player['cinnamon'] is not None else 0
-    range = 0.5 * (player['pressurization'] + cinnamon)
-    return (range * math.sin(phase)) - (0.5 * player['pressurization']) + (0.5 * cinnamon)
+    pressurization = player['pressurization'] * multiplier
+    cinnamon = (player['cinnamon'] if player['cinnamon'] is not None else 0) * multiplier
+    range = 0.5 * (pressurization + cinnamon)
+    return (range * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
 
 
 @dataclass
@@ -29,6 +30,7 @@ class RollLog:
     batter_tragicness: float
     batter_multiplier: float
     batter_mods: str
+    batting_team_mods: str
 
     pitcher_name: str
     pitcher_ruthlessness: float
@@ -42,6 +44,7 @@ class RollLog:
     # on a lark
     pitcher_chasiness: float
     pitcher_mods: str
+    pitching_team_mods: str
 
 
     defense_avg_anticapitalism: float
@@ -64,11 +67,16 @@ class RollLog:
     pitching_team_hype: float
 
     batter_vibes: float
+    batter_vibes_multiplied: float
     pitcher_vibes: float
+    pitcher_vibes_multiplied: float
 
     game_id: str
+    stadium_id: str
     play_count: int
     weather: int
+    ball_count: int
+    strike_count: int
 
 def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_team, pitcher,
                   pitching_team, stadium, players, update):
@@ -130,6 +138,7 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         batter_tragicness=batter.data["tragicness"] * batter_multiplier,
         batter_multiplier=batter_multiplier,
         batter_mods=";".join(batter.mods),
+        batting_team_mods=";".join(batting_team.mods),
 
         pitcher_name=pitcher.data["name"],
         pitcher_ruthlessness=pitcher.data["ruthlessness"] * pitcher_multiplier,
@@ -141,6 +150,7 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         pitcher_chasiness=pitcher.data["chasiness"] * pitcher_multiplier,
         pitcher_multiplier=pitcher_multiplier,
         pitcher_mods=";".join(pitcher.mods),
+        pitching_team_mods=";".join(pitching_team.mods),
 
         defense_avg_anticapitalism=sum(
             players[pid]['anticapitalism'] for pid in defense_lineup) / len(defense_lineup),
@@ -166,10 +176,15 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         batting_team_hype=stadium.data["hype"] if not update["topOfInning"] else 0,
         pitching_team_hype=stadium.data["hype"] if update["topOfInning"] else 0,
 
-        batter_vibes=calculate_vibes(batter.data, update["day"]),
-        pitcher_vibes=calculate_vibes(pitcher.data, update["day"]),
+        batter_vibes=calculate_vibes(batter.data, update["day"], 1),
+        batter_vibes_multiplied=calculate_vibes(batter.data, update["day"], batter_multiplier),
+        pitcher_vibes=calculate_vibes(pitcher.data, update["day"], 1),
+        pitcher_vibes_multiplied=calculate_vibes(pitcher.data, update["day"], pitcher_multiplier),
 
         game_id=update['id'],
+        stadium_id=update['stadiumId'],
         play_count=update['playCount'],
-        weather=update["weather"]
+        weather=update["weather"],
+        ball_count=update["atBatBalls"],
+        strike_count=update["atBatStrikes"],
     )

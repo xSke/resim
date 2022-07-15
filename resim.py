@@ -256,6 +256,8 @@ class Resim:
             swing_roll = self.roll("swing")
             if swing_roll < 0.05:
                 print("!!! very low swing roll on ball")
+        else:
+            print("!!! warn: flinching ball")
 
         if self.ty == 5 and self.batting_team.has_mod("BASE_INSTINCTS"):
             self.roll("base instincts")
@@ -804,6 +806,12 @@ class Resim:
         value = self.roll("strike")
         if self.pitching_team.has_mod("ACIDIC"):
             self.roll("acidic")
+
+        s3_threshold = 0.35 + self.pitcher.data["ruthlessness"] * 0.35
+        if known_result == "strike" and value > (s3_threshold + 0.15):
+            print("!!! warn: too high strike roll")
+        elif known_result == "ball" and value < (s3_threshold - 0.15):
+            print("!!! warn: too low strike roll")
 
         # todo: double strike
 
