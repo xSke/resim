@@ -1,6 +1,21 @@
 from dataclasses import dataclass
 import os, json, requests
+from time import time
 from typing import Any, Dict
+from datetime import datetime, timedelta
+
+def parse_timestamp(timestamp):
+    timestamp = timestamp.replace("Z", "+00:00")
+    return datetime.fromisoformat(timestamp)
+
+def format_timestamp(dt: datetime):
+    return dt.isoformat()
+
+def offset_timestamp(timestamp: str, delta_secs: float) -> str:
+    dt = parse_timestamp(timestamp)
+    dt = dt + timedelta(seconds=delta_secs)
+    timestamp = format_timestamp(dt)
+    return timestamp.replace("+00:00", "Z")
 
 cache = {}
 def get_cached(key, url):
@@ -121,25 +136,35 @@ class GameData:
         self.games = {}
         self.sim = None
 
-    def fetch_sim(self, timestamp):
+    def fetch_sim(self, timestamp, delta_secs: float = 0):
+        timestamp = offset_timestamp(timestamp, delta_secs)
         key = "sim_at_{}".format(timestamp)
         resp = get_cached(key, "https://api.sibr.dev/chronicler/v2/entities?type=sim&at={}".format(timestamp))
         self.sim = resp["items"][0]["data"]
 
-    def fetch_teams(self, timestamp):
+    def fetch_teams(self, timestamp, delta_secs: float = 0):
+        timestamp = offset_timestamp(timestamp, delta_secs)
         key = "teams_at_{}".format(timestamp)
         resp = get_cached(key, "https://api.sibr.dev/chronicler/v2/entities?type=team&at={}&count=1000".format(timestamp))
         self.teams = {e["entityId"]: e["data"] for e in resp["items"]}
 
-    def fetch_players(self, timestamp):
+    def fetch_players(self, timestamp, delta_secs: float = 0):
+        timestamp = offset_timestamp(timestamp, delta_secs)
         key = "players_at_{}".format(timestamp)
         resp = get_cached(key, "https://api.sibr.dev/chronicler/v2/entities?type=player&at={}&count=2000".format(timestamp))
         self.players = {e["entityId"]: e["data"] for e in resp["items"]}
 
-    def fetch_stadiums(self, timestamp):
+    def fetch_stadiums(self, timestamp, delta_secs: float = 0):
+        timestamp = offset_timestamp(timestamp, delta_secs)
         key = "stadiums_at_{}".format(timestamp)
         resp = get_cached(key, "https://api.sibr.dev/chronicler/v2/entities?type=stadium&at={}&count=1000".format(timestamp))
         self.stadiums = {e["entityId"]: e["data"] for e in resp["items"]}
+
+    def fetch_player_after(self, player_id, timestamp):
+        key = "player_{}_after_{}".format(player_id, timestamp)
+        resp = get_cached(key, "https://api.sibr.dev/chronicler/v2/versions?type=player&id={}&after={}&count=1&order=asc".format(player_id, timestamp))
+        for item in resp["items"]:
+            self.players[item["entityId"]] = item["data"]
 
     def fetch_game(self, game_id):
         key = "game_updates_{}".format(game_id)
@@ -149,11 +174,11 @@ class GameData:
             play = update["data"]["playCount"]
             self.plays[(game_id, play)] = update["data"]
 
-    def fetch_league_data(self, timestamp):
-        self.fetch_sim(timestamp)
-        self.fetch_teams(timestamp)
-        self.fetch_players(timestamp)
-        self.fetch_stadiums(timestamp)
+    def fetch_league_data(self, timestamp, delta_secs: float = 0):
+        self.fetch_sim(timestamp, delta_secs)
+        self.fetch_teams(timestamp, delta_secs)
+        self.fetch_players(timestamp, delta_secs)
+        self.fetch_stadiums(timestamp, delta_secs)
 
     def get_update(self, game_id, play):
         if game_id not in self.games:
