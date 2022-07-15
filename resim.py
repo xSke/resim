@@ -987,7 +987,7 @@ class Resim:
         pd.DataFrame(self.strike_rolls).to_csv(f"roll_data/{run_name}-strikes.csv")
 
         print("Saving fouls csv...")
-        pd.DataFrame(self.foul_rolls).to_csv(f"roll_data/{run_name}-fouls   .csv")
+        pd.DataFrame(self.foul_rolls).to_csv(f"roll_data/{run_name}-fouls.csv")
 
 
 def advance_bases(occupied, amount, up_to=4):
