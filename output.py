@@ -66,6 +66,7 @@ class RollLog:
 
 def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_team, pitcher,
                   pitching_team, stadium, players, update):
+
     batter_multiplier = 1
     for mod in itertools.chain(batter.mods, batting_team.mods):
         if mod == 'OVERPERFORMING':
@@ -73,7 +74,7 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         elif mod == 'UNDERPERFORMING':
             batter_multiplier -= 0.2
         elif mod == 'GROWTH':
-            batter_multiplier += 0.05
+            batter_multiplier += min(0.05, 0.05 * (update["day"] / 99))
         elif mod == 'HIGH_PRESSURE':
             # checks for flooding weather and baserunners
             if update["weather"] == 18 and len(update['baseRunners']) > 0:
@@ -86,6 +87,9 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         elif mod == 'TRAVELING':
             if update["topOfInning"]:
                 batter_multiplier += 0.05
+        elif mod == 'SINKING_SHIP':
+            roster_size = len(batting_team.data["lineup"]) + len(batting_team.data["rotation"])
+            batter_multiplier += (14 - roster_size) * 0.01
 
     pitcher_multiplier = 1
     for mod in itertools.chain(pitcher.mods, pitching_team.mods):
@@ -94,10 +98,14 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         elif mod == 'UNDERPERFORMING':
             pitcher_multiplier -= 0.2
         elif mod == 'GROWTH':
-            pitcher_multiplier += 0.05
+            batter_multiplier += min(0.05, 0.05 * (update["day"] / 99))
         elif mod == 'TRAVELING':
             if not update["topOfInning"]:
                 pitcher_multiplier += 0.05
+        elif mod == 'SINKING_SHIP':
+            roster_size = len(pitching_team.data["lineup"]) + len(pitching_team.data["rotation"])
+            batter_multiplier += (14 - roster_size) * 0.01
+
 
     defense_lineup = pitching_team.data['lineup']
     return RollLog(
