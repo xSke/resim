@@ -18,7 +18,7 @@ class Resim:
         self.setup_data(event)
         
         print()
-        print("===== {} {} {}".format(event["created"], self.update["id"], weather_names[self.update["weather"]]))
+        print("===== {} {}/{} {}".format(event["created"], self.update["id"], self.update["playCount"], weather_names[self.update["weather"]]))
         print("===== {} {}".format(self.ty, self.desc))
 
         if self.event["created"] == "2021-03-19T10:10:18.388Z":
@@ -117,9 +117,9 @@ class Resim:
             # skipping sun 2 / black hole proc
             return True
         if self.ty in [117, 118]:
-            # skipping consumer/party stat change
+            # skip party/consumer stat change
             return True
-        if self.ty in [116, 125, 137]:
+        if self.ty in [116, 137, 125]:
             # skipping incineration stuff
             return True
         if self.ty == 54 and "parent" in self.event["metadata"]:
@@ -169,14 +169,7 @@ class Resim:
                 self.fetched_days.add(self.event["day"])
 
                 timestamp = self.event["created"]
-                if self.event["day"] == 88:
-                    timestamp = "2021-03-19T09:00:26.298Z"
-                if self.event["day"] == 96:
-                    timestamp = "2021-03-19T17:00:26.298Z"
-                if self.event["day"] == 97:
-                    timestamp = "2021-03-19T18:00:26.298Z"
-
-                self.data.fetch_league_data(timestamp)
+                self.data.fetch_league_data(timestamp, 30)
 
             if self.weather in [12, 13] and self.stadium.has_mod("PSYCHOACOUSTICS"):
                 print("away team mods:", self.away_team.data["permAttr"])
@@ -535,12 +528,7 @@ class Resim:
                 self.roll("ritual")
                 self.roll("blood")
                 self.roll("coffee")
-
-                if self.event["created"] == "2021-03-19T07:17:19.830Z":
-                    # need better handling for "fetch data a bit after this point"
-                    self.data.fetch_players("2021-03-19T07:18:19.830Z")
                 return True
-
 
             fire_eater_eligible = self.pitching_team.data["lineup"] + [self.batter.id, self.pitcher.id]
             for player_id in fire_eater_eligible:
@@ -665,13 +653,6 @@ class Resim:
                 unscatter_roll = self.roll("unscatter ({})".format(player.raw_name))
                 if unscatter_roll < 0.0005: # todo: find threshold
                     self.roll("unscatter letter ({})".format(player.raw_name))
-                    
-                    # lol. (just to make fielder selection work through unscatters)
-                    if player.raw_name == "Sand-e T--ne-":
-                        player.data["name"] = "Sand-e T--ner"
-                    if player.raw_name == "Igneus -elacru-":
-                        player.data["name"] = "Igneus Delacru-"
-
 
     def do_elsewhere_return(self, player):
         scatter_times = 0
@@ -694,12 +675,6 @@ class Resim:
         for _ in range(scatter_times):
             # todo: figure out what these are
             self.roll("scatter letter")
-
-        # hardcoded for now, but we can pull this from feed data hypothetically
-        if player.raw_name == "Sandie Turner":
-            player.data["name"] = "Sand-e T--ne-"
-        if player.raw_name == "Summers Preston":
-            player.data["name"] = "Su---rs -res-o-"
 
     
     def handle_consumers(self):
@@ -728,6 +703,7 @@ class Resim:
             self.roll("target player")
             for _ in range(25):
                 self.roll("stat")
+
             return True
 
         # we have a positive case at 0.005210187516443421 (2021-03-19T14:22:26.078Z)
@@ -834,54 +810,12 @@ class Resim:
         ))
 
     def setup_data(self, event):
+        self.apply_event_changes(event)
+
         meta = event.get("metadata") or {}
         if meta.get("subPlay", -1) != -1:
             print("=== EXTRA:", event["type"], event["description"], meta)
-
-            mod_positions = ["permAttr", "seasAttr", "weekAttr", "gameAttr"]
-
-            # player mod added
-            if event["type"] == 106:
-                player = self.data.get_player(event["playerTags"][0])
-                position = mod_positions[meta["type"]]
-                player.data[position].append(meta["mod"])
-
-            # player mod removed
-            if event["type"] == 107:
-                player = self.data.get_player(event["playerTags"][0])
-                position = mod_positions[meta["type"]]
-                if meta["mod"] in player.data[position]:
-                    player.data[position].remove(meta["mod"])
-
-            # player or team mod added
-            if event["type"] == 146:
-                position = mod_positions[meta["type"]]
-
-                if event["playerTags"]:
-                    player = self.data.get_player(event["playerTags"][0])
-                    player.data[position].append(meta["mod"])
-                else:
-                    team = self.data.get_team(event["teamTags"][0])
-                    team.data[position].append(meta["mod"])
-
-            # player or team mod removed
-            if event["type"] == 146:
-                position = mod_positions[meta["type"]]
-
-                if event["playerTags"]:
-                    player = self.data.get_player(event["playerTags"][0])
-                    player.data[position].remove(meta["mod"])
-                else:
-                    team = self.data.get_team(event["teamTags"][0])
-                    team.data[position].remove(meta["mod"])
-
-            # echo mods added
-            if event["type"] in [171, 172]:
-                player = self.data.get_player(event["playerTags"][0])
-                for mod in meta.get("adds", []):
-                    player.data[mod_positions[mod["type"]]].append(mod["mod"])
-                for mod in meta.get("removes", []):
-                    player.data[mod_positions[mod["type"]]].remove(mod["mod"])
+            pass
 
         self.event = event
         self.ty = event["type"]
@@ -942,6 +876,65 @@ class Resim:
                 self.batter.data["name"] = self.update["homeBatterName"]
                 self.pitcher.data["name"] = self.update["awayPitcherName"]
 
+    def apply_event_changes(self, event):
+        # maybe move this function to data.py?
+        meta = event.get("metadata", {})
+        mod_positions = ["permAttr", "seasAttr", "weekAttr", "gameAttr"]
+        desc = event["description"]
+
+        # player or team mod added
+        if event["type"] in [106, 146]:
+            position = mod_positions[meta["type"]]
+
+            if event["playerTags"]:
+                player = self.data.get_player(event["playerTags"][0])
+                player.data[position].append(meta["mod"])
+            else:
+                team = self.data.get_team(event["teamTags"][0])
+                team.data[position].append(meta["mod"])
+
+        # player or team mod removed
+        if event["type"] in [107, 147]:
+            position = mod_positions[meta["type"]]
+
+            if event["playerTags"]:
+                player = self.data.get_player(event["playerTags"][0])
+                player.data[position].remove(meta["mod"])
+            else:
+                team = self.data.get_team(event["teamTags"][0])
+                team.data[position].remove(meta["mod"])
+
+        # timed mods wore off
+        if event["type"] in [108]:
+            position = mod_positions[meta["type"]]
+
+            if event["playerTags"]:
+                for mod in meta["mods"]:
+                    player = self.data.get_player(event["playerTags"][0])
+                    player.data[position].remove(mod)
+            else:
+                for mod in meta["mods"]:
+                    team = self.data.get_team(event["teamTags"][0])
+                    team.data[position].remove(mod)
+
+        # echo mods added/removed
+        if event["type"] in [171, 172]:
+            player = self.data.get_player(event["playerTags"][0])
+            for mod in meta.get("adds", []):
+                player.data[mod_positions[mod["type"]]].append(mod["mod"])
+            for mod in meta.get("removes", []):
+                player.data[mod_positions[mod["type"]]].remove(mod["mod"])
+
+        # cases where the tagged player needs to be refetched (party, consumer, incin replacement)
+        if event["type"] in [117, 118, 137]:
+            for player_id in event["playerTags"]:
+                self.data.fetch_player_after(player_id, event["created"])
+
+        # scatter player name
+        if event["type"] == 106 and "was Scattered..." in desc:
+            new_name = desc.split(" was Scattered")[0]
+            player = self.data.get_player(event["playerTags"][0])
+            player.data["name"] = new_name
 
     def run(self, start_timestamp, end_timestamp):
         self.data.fetch_league_data(start_timestamp)
@@ -957,6 +950,7 @@ class Resim:
         return value
 
     def save_data(self, run_name):
+        run_name = run_name.replace(":", "_")
         strike_roll_df = pd.DataFrame(self.strike_rolls)
         strike_roll_df.to_csv(f"roll_data/{run_name}-strikes.csv")
 
