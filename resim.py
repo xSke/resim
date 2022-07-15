@@ -39,10 +39,10 @@ class Resim:
             return
 
         if self.batter:
-            print("- batter mods: {} + {}".format(self.batter.mods, self.batting_team.mods))
+            print("- batter mods: {} + {} ({})".format(self.batter.mods, self.batting_team.mods, self.batter.name))
         if self.pitcher:
-            print("- pitcher mods: {} + {}".format(self.pitcher.mods, self.pitching_team.mods))
-        print("- stadium mods: {}".format(self.stadium.mods))
+            print("- pitcher mods: {} + {} ({})".format(self.pitcher.mods, self.pitching_team.mods, self.pitcher.name))
+        print("- stadium mods: {} ({})".format(self.stadium.mods, self.stadium.data["nickname"]))
 
         if self.ty == 12:
             self.handle_batter_up()
@@ -254,7 +254,9 @@ class Resim:
         self.log_roll("Ball", value, False)
 
         if not self.is_flinching():
-            self.roll("swing")
+            swing_roll = self.roll("swing")
+            if swing_roll < 0.05:
+                print("!!! very low swing roll on ball")
 
         if self.ty == 5 and self.batting_team.has_mod("BASE_INSTINCTS"):
             self.roll("base instincts")
@@ -275,7 +277,8 @@ class Resim:
             if not self.is_flinching():
                 self.roll("swing")
         elif ", flinching" in self.desc:
-            self.throw_pitch("strike")
+            value = self.throw_pitch("strike")
+            self.log_roll("StrikeLooking", value, True)
         pass
 
     def try_roll_salmon(self):
@@ -548,6 +551,13 @@ class Resim:
         elif self.weather == 9:
             # blooddrain
             self.roll("blooddrain")
+
+            if self.ty == 52:
+                self.roll("siphon proc")
+                self.roll("siphon proc")
+                self.roll("siphon proc")
+                self.roll("siphon proc")
+                return True
         elif self.weather == 10:
             # peanuts
             self.roll("peanuts")
