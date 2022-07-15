@@ -27,6 +27,8 @@ class RollLog:
     batter_patheticism: float
     batter_thwackability: float
     batter_tragicness: float
+    batter_multiplier: float
+    batter_mods: str
 
     pitcher_name: str
     pitcher_ruthlessness: float
@@ -35,9 +37,12 @@ class RollLog:
     pitcher_shakespearianism: float
     pitcher_suppression: float
     pitcher_coldness: float
+    pitcher_multiplier: float
 
     # on a lark
     pitcher_chasiness: float
+    pitcher_mods: str
+
 
     defense_avg_anticapitalism: float
     defense_avg_chasiness: float
@@ -63,6 +68,7 @@ class RollLog:
 
     game_id: str
     play_count: int
+    weather: int
 
 def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_team, pitcher,
                   pitching_team, stadium, players, update):
@@ -98,13 +104,13 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         elif mod == 'UNDERPERFORMING':
             pitcher_multiplier -= 0.2
         elif mod == 'GROWTH':
-            batter_multiplier += min(0.05, 0.05 * (update["day"] / 99))
+            pitcher_multiplier += min(0.05, 0.05 * (update["day"] / 99))
         elif mod == 'TRAVELING':
             if not update["topOfInning"]:
                 pitcher_multiplier += 0.05
         elif mod == 'SINKING_SHIP':
             roster_size = len(pitching_team.data["lineup"]) + len(pitching_team.data["rotation"])
-            batter_multiplier += (14 - roster_size) * 0.01
+            pitcher_multiplier += (14 - roster_size) * 0.01
 
 
     defense_lineup = pitching_team.data['lineup']
@@ -122,6 +128,8 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         batter_patheticism=batter.data["patheticism"] * batter_multiplier,
         batter_thwackability=batter.data["thwackability"] * batter_multiplier,
         batter_tragicness=batter.data["tragicness"] * batter_multiplier,
+        batter_multiplier=batter_multiplier,
+        batter_mods=";".join(batter.mods),
 
         pitcher_name=pitcher.data["name"],
         pitcher_ruthlessness=pitcher.data["ruthlessness"] * pitcher_multiplier,
@@ -131,6 +139,8 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         pitcher_suppression=pitcher.data["suppression"] * pitcher_multiplier,
         pitcher_coldness=pitcher.data["coldness"] * pitcher_multiplier,
         pitcher_chasiness=pitcher.data["chasiness"] * pitcher_multiplier,
+        pitcher_multiplier=pitcher_multiplier,
+        pitcher_mods=";".join(pitcher.mods),
 
         defense_avg_anticapitalism=sum(
             players[pid]['anticapitalism'] for pid in defense_lineup) / len(defense_lineup),
@@ -161,4 +171,5 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
 
         game_id=update['id'],
         play_count=update['playCount'],
+        weather=update["weather"]
     )

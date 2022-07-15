@@ -153,10 +153,10 @@ class Resim:
                 "17651ff0-3b87-48d6-b7a8-7e5fe115f463": 2,
                 "606166b9-2aef-47e8-aa4a-52f863880408": 2,
                 "fa9dab2a-409c-4886-979c-f1c584518d5d": 1,
-                "3244b12f-838a-4d75-abde-88874b75ab04": 2,
+                "3244b12f-838a-4d75-abde-88874b75ab04": 0,
                 "a47f2a8b-0bde-42c8-bdd0-0513da92a6b1": 1,
                 "e07d8602-ec51-4ef6-be20-4a07da6b457e": 2,
-                "f7985270-455e-4bf7-83fb-948ac326c8af": 3,
+                "f7985270-455e-4bf7-83fb-948ac326c8af": 2,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -173,8 +173,7 @@ class Resim:
 
             if self.weather in [12, 13] and self.stadium.has_mod("PSYCHOACOUSTICS"):
                 print("away team mods:", self.away_team.data["permAttr"])
-                if self.away_team.data["permAttr"]:
-                    self.roll("echo team mod")
+                self.roll("echo team mod")
             return True
 
     def handle_bird_ambush(self):
@@ -278,7 +277,7 @@ class Resim:
                 self.roll("swing")
         elif ", flinching" in self.desc:
             value = self.throw_pitch("strike")
-            self.log_roll("StrikeLooking", value, True)
+            self.log_roll("StrikeFlinching", value, True)
         pass
 
     def try_roll_salmon(self):
@@ -720,7 +719,12 @@ class Resim:
         # and one at 0.005465967826364659 (2021-03-19T07:09:38.068Z)
         # this is probably influenced by ballpark myst or something
         elif party_roll < 0.00547:
-            self.roll("target team (not partying)")
+            team_roll = self.roll("target team (not partying)")
+            if team_roll < 0.5 and self.home_team.has_mod("PARTY_TIME"):
+                print("!!! home team is in party time")
+            elif team_roll > 0.5 and self.away_team.has_mod("PARTY_TIME"):
+                print("!!! away team is in party time")
+
 
     def handle_ballpark(self):
         if self.stadium.has_mod("PEANUT_MISTER"):
