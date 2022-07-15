@@ -1,3 +1,4 @@
+import os
 from typing import List
 
 import pandas as pd
@@ -13,6 +14,7 @@ class Resim:
         self.fetched_days = set()
 
         self.strike_rolls: List[RollLog] = []
+        self.foul_rolls: List[RollLog] = []
 
     def handle(self, event):
         self.setup_data(event)
@@ -250,7 +252,7 @@ class Resim:
 
     def handle_ball(self):
         value = self.throw_pitch("ball")
-        self.log_roll("Ball", value, False)
+        self.log_roll(self.strike_rolls, "Ball", value, False)
 
         if not self.is_flinching():
             swing_roll = self.roll("swing")
@@ -273,13 +275,13 @@ class Resim:
             self.roll("contact")
         elif ", looking" in self.desc or "strikes out looking." in self.desc:
             value = self.throw_pitch("strike")
-            self.log_roll("StrikeLooking", value, True)
+            self.log_roll(self.strike_rolls, "StrikeLooking", value, True)
 
             if not self.is_flinching():
                 self.roll("swing")
         elif ", flinching" in self.desc:
             value = self.throw_pitch("strike")
-            self.log_roll("StrikeFlinching", value, True)
+            self.log_roll(self.strike_rolls, "StrikeFlinching", value, True)
         pass
 
     def try_roll_salmon(self):
@@ -306,7 +308,8 @@ class Resim:
         self.throw_pitch()
         self.roll("swing")
         self.roll("contact")
-        self.roll("foul")
+        foul_roll = self.roll("foul")
+        self.log_roll(self.foul_rolls, "Out", foul_roll, True)
 
         if self.ty == 7:
             self.roll("???")
@@ -458,7 +461,8 @@ class Resim:
             self.throw_pitch()
             self.roll("swing")
             self.roll("contact")
-            self.roll("foul")
+            foul_roll = self.roll("foul")
+            self.log_roll(self.foul_rolls, "BaseHit", foul_roll, True)
             self.roll("???")
             self.roll("???")
             self.roll("home run")
@@ -473,7 +477,8 @@ class Resim:
         self.throw_pitch()
         self.roll("swing")
         self.roll("contact")
-        self.roll("foul")
+        foul_roll = self.roll("foul")
+        self.log_roll(self.foul_rolls, "BaseHit", foul_roll, True)
 
         self.roll("???")
         self.roll("???")
@@ -502,6 +507,9 @@ class Resim:
         is_0_no_eligible = self.batting_team.has_mod("O_NO") and self.strikes == 2 and self.balls == 0
         if foul_roll > 0.5 and not is_0_no_eligible:
             print("!!! too high foul roll ({})".format(foul_roll))
+
+        if not is_0_no_eligible:
+            self.log_roll(self.foul_rolls, "Foul", foul_roll, False)
 
     def handle_batter_up(self):
         if self.batter.has_mod("HAUNTED"):
@@ -817,8 +825,8 @@ class Resim:
 
         return value
 
-    def log_roll(self, event_type: str, roll: float, passed: bool):
-        self.strike_rolls.append(make_roll_log(
+    def log_roll(self, roll_list: List[RollLog], event_type: str, roll: float, passed: bool):
+        roll_list.append(make_roll_log(
             event_type,
             roll,
             passed,
@@ -972,9 +980,14 @@ class Resim:
         return value
 
     def save_data(self, run_name):
+        os.makedirs("roll_data", exist_ok=True)
         run_name = run_name.replace(":", "_")
-        strike_roll_df = pd.DataFrame(self.strike_rolls)
-        strike_roll_df.to_csv(f"roll_data/{run_name}-strikes.csv")
+
+        print("Saving strikes csv...")
+        pd.DataFrame(self.strike_rolls).to_csv(f"roll_data/{run_name}-strikes.csv")
+
+        print("Saving fouls csv...")
+        pd.DataFrame(self.foul_rolls).to_csv(f"roll_data/{run_name}-fouls   .csv")
 
 
 def advance_bases(occupied, amount, up_to=4):
