@@ -32,6 +32,7 @@ class RollLog:
     batter_multiplier: float
     batter_mods: str
     batting_team_mods: str
+    batting_team_name: str
 
     pitcher_name: str
     pitcher_ruthlessness: float
@@ -41,6 +42,7 @@ class RollLog:
     pitcher_suppression: float
     pitcher_coldness: float
     pitcher_multiplier: float
+    pitching_team_name: str
 
     # on a lark
     pitcher_chasiness: float
@@ -141,6 +143,7 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         batter_multiplier=batter_multiplier,
         batter_mods=";".join(batter.mods),
         batting_team_mods=";".join(batting_team.mods),
+        batting_team_name=batting_team.data["nickname"],
 
         pitcher_name=pitcher.data["name"],
         pitcher_ruthlessness=pitcher.data["ruthlessness"] * pitcher_multiplier,
@@ -153,6 +156,7 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         pitcher_multiplier=pitcher_multiplier,
         pitcher_mods=";".join(pitcher.mods),
         pitching_team_mods=";".join(pitching_team.mods),
+        pitching_team_name=pitching_team.data["nickname"],
 
         defense_avg_anticapitalism=sum(
             players[pid]['anticapitalism'] for pid in defense_lineup) / len(defense_lineup),
