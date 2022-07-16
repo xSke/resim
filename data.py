@@ -187,6 +187,9 @@ class GameData:
 
     def get_player(self, player_id) -> PlayerData:
         return PlayerData(self.players[player_id])
+        
+    def has_player(self, player_id) -> bool:
+        return player_id in self.players
 
     def get_team(self, team_id) -> TeamData:
         return TeamData(self.teams[team_id])
