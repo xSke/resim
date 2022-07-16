@@ -112,10 +112,10 @@ class Resim:
         if self.ty in [21, 78, 91, 92, 93, 99, 173, 182, 36]:
             # skipping pregame messages
             return True
-        if self.ty in [85, 86, 146, 147, 171, 172]:
+        if self.ty in [85, 86, 146, 147, 171, 172, 88]:
             # skipping mod added/removed
             return True
-        if self.ty in [30, 31, 156]:
+        if self.ty in [30, 31, 156, 157]:
             # skipping sun 2 / black hole proc
             return True
         if self.ty in [117, 118]:
@@ -130,9 +130,13 @@ class Resim:
         if self.ty in [28]:
             # skipping inning outing
             if self.update["inning"] == 2:
-                if self.home_pitcher.has_mod("TRIPLE_THREAT"):
+                # so if this *is* a coffee 3s game the pitchers are definitely gonna have the mod
+                # even if we pulled too early to catch it getting added. so i'm cheating here who cares
+                print("home pitcher mods: {} ({})".format(self.home_pitcher.mods, self.home_pitcher.name))
+                print("away pitcher mods: {} ({})".format(self.away_pitcher.mods, self.away_pitcher.name))
+                if self.home_pitcher.has_mod("TRIPLE_THREAT") or self.weather == 17:
                     self.roll("remove home pitcher triple threat")
-                if self.away_pitcher.has_mod("TRIPLE_THREAT"):
+                if self.away_pitcher.has_mod("TRIPLE_THREAT") or self.weather == 17:
                     self.roll("remove away pitcher triple threat")
             # todo: salmon
             return True
@@ -159,6 +163,11 @@ class Resim:
                 "a47f2a8b-0bde-42c8-bdd0-0513da92a6b1": 1,
                 "e07d8602-ec51-4ef6-be20-4a07da6b457e": 2,
                 "f7985270-455e-4bf7-83fb-948ac326c8af": 2,
+                "6c5396bd-bbe4-45df-842b-72d9a01fff4b": 1,
+                "20cd1579-e8b8-488f-8579-d1c11c95218e": 0,
+                "dcbc2123-c46a-4d21-8501-302f84ca8207": 1,
+                "fb3add1d-c711-42b3-8ca8-a5d1086c0429": 1,
+                "9eaf6ba7-14b0-4570-917b-acd6ff6a425b": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -185,6 +194,7 @@ class Resim:
             if self.strikes == 0:
                 self.roll("bird ambush")
                 if self.ty == 34:
+                    self.handle_batter_reverb() # i guess???
                     return True
 
     def handle_charm(self):
@@ -203,9 +213,7 @@ class Resim:
         if batter_charm_eligible:
             self.roll("charm")
             if " charms " in self.desc:
-                # self.roll("charm proc")
-                # self.roll("charm proc")
-                # self.roll("charm proc")
+                self.handle_batter_reverb() # apparently don mitchell can do this.
                 return True
 
 
@@ -232,7 +240,7 @@ class Resim:
 
     def handle_batter_reverb(self):
         if self.batter and self.batter.has_mod("REVERBERATING"):
-            is_at_bat_end = self.ty in [5, 6, 7, 8]
+            is_at_bat_end = self.ty in [5, 6, 7, 8, 34] # ambush i guess
             # s14: hrs/hits (type 9/10) do not trigger reverberating, this probably changed later
             # home runs might not either?
 
@@ -402,6 +410,7 @@ class Resim:
                 ((1, 0), tuple()): 2, # double play + second, 2 or 3 rolls?
                 ((2, 1, 0), (2, 1, 0)): 2,
                 ((2, 1, 0), (2, 1)): 5, # guessing
+                ((2, 1, 0), (2,)): 2,
                 ((2, 1, 0), tuple()): 2, # dp
                 ((2, 1), (1,)): 3, # guessing
                 ((2, 0), tuple()): 2, # double play + sac?
@@ -566,6 +575,10 @@ class Resim:
                 self.roll("siphon proc")
                 self.roll("siphon proc")
                 self.roll("siphon proc")
+
+                # this one is 1 more for some reason. don't know
+                if self.event["created"] == "2021-03-17T03:20:31.620Z":
+                    self.roll("siphon proc 2?")
                 return True
         elif self.weather == 10:
             # peanuts
@@ -576,6 +589,9 @@ class Resim:
                 return True
 
             self.roll("peanuts")
+            if self.ty == 47:
+                self.roll("target")
+                return True
             
             if self.batter.has_mod("HONEY_ROASTED"):
                 self.roll("honey roasted")
@@ -678,18 +694,9 @@ class Resim:
         if "days" in self.desc:
             elsewhere_time = int(self.desc.split("after ")[1].split(" days")[0])
             if elsewhere_time >= 18:
-                # sandie turner, 20 days, 22 rolls
-                # summers preston, 32 days, 26 rolls
-                # grey alvarado, 28 days, 22 rolls??
-                # is there logic here? there's gotta be
-                if elsewhere_time == 20:
-                    scatter_times = 22
-                elif elsewhere_time == 32:
-                    scatter_times = 26
-                elif elsewhere_time == 28:
-                    scatter_times = 22
+                scatter_times = (len(player.raw_name) - 2) * 2
         if "season" in self.desc:
-            scatter_times = 32 # guessing for now
+            scatter_times = 32 # guessing for now. might be the same formula?
 
         for _ in range(scatter_times):
             # todo: figure out what these are
@@ -727,8 +734,9 @@ class Resim:
 
         # we have a positive case at 0.005210187516443421 (2021-03-19T14:22:26.078Z)
         # and one at 0.005465967826364659 (2021-03-19T07:09:38.068Z)
+        # and one at 0.0054753553805302335 (2021-03-17T11:13:54.609Z)
         # this is probably influenced by ballpark myst or something
-        elif party_roll < 0.00547:
+        elif party_roll < 0.005476:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod("PARTY_TIME"):
                 print("!!! home team is in party time")
@@ -958,7 +966,19 @@ class Resim:
         # cases where the tagged player needs to be refetched (party, consumer, incin replacement)
         if event["type"] in [117, 118, 137]:
             for player_id in event["playerTags"]:
+                if self.data.has_player(player_id):
+                    stats_before = dict(self.data.get_player(player_id).data)
+                else:
+                    stats_before = {}
+                    
                 self.data.fetch_player_after(player_id, event["created"])
+                stats_after = dict(self.data.get_player(player_id).data)
+
+                for k, v in stats_before.items():
+                    if type(v) != float:
+                        continue
+                    delta = stats_after[k] - v
+                    # print("stat delta: {} {}".format(k, delta))
 
         # scatter player name
         if event["type"] == 106 and "was Scattered..." in desc:
