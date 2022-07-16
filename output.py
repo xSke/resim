@@ -28,6 +28,7 @@ class RollLog:
     batter_patheticism: float
     batter_thwackability: float
     batter_tragicness: float
+    batter_ground_friction: float
     batter_multiplier: float
     batter_mods: str
     batting_team_mods: str
@@ -136,6 +137,7 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         batter_patheticism=batter.data["patheticism"] * batter_multiplier,
         batter_thwackability=batter.data["thwackability"] * batter_multiplier,
         batter_tragicness=batter.data["tragicness"] * batter_multiplier,
+        batter_ground_friction=batter.data["groundFriction"] * batter_multiplier,
         batter_multiplier=batter_multiplier,
         batter_mods=";".join(batter.mods),
         batting_team_mods=";".join(batting_team.mods),
