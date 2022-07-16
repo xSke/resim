@@ -746,7 +746,6 @@ class Resim:
             elif team_roll > 0.5 and self.away_team.has_mod("PARTY_TIME"):
                 print("!!! away team is in party time")
 
-
     def handle_ballpark(self):
         if self.stadium.has_mod("PEANUT_MISTER"):
             self.roll("peanut mister")

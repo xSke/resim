@@ -5,4 +5,4 @@ out/
 *.png
 .ipynb_checkpoints/
 output.txt
-roll_data/
+#roll_data/
