@@ -61,7 +61,7 @@ class Resim:
         if self.handle_flooding():
             return
 
-        self.roll("???")
+        self.what1 = self.roll("???")
 
         if self.handle_consumers():
             return
@@ -73,7 +73,7 @@ class Resim:
             # s14 high pressure proc, not sure when this should interrupt
             return
 
-        self.roll("???")
+        self.what2 = self.roll("???")
 
         if self.handle_steal():
             return
@@ -847,6 +847,8 @@ class Resim:
             self.stadium,
             self.data.players,
             self.update,
+            self.what1,
+            self.what2
         ))
 
     def setup_data(self, event):

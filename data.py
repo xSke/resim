@@ -29,11 +29,16 @@ def get_cached(key, url):
 
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    else:
-        data = requests.get(url).json()
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f)
+            try:
+                data = json.load(f)
+                cache[key] = data
+                return data
+            except json.JSONDecodeError:
+                pass
+
+    data = requests.get(url).json()
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f)
     cache[key] = data
     return data
 
@@ -187,7 +192,7 @@ class GameData:
 
     def get_player(self, player_id) -> PlayerData:
         return PlayerData(self.players[player_id])
-        
+
     def has_player(self, player_id) -> bool:
         return player_id in self.players
 
