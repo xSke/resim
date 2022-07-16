@@ -61,7 +61,11 @@ class Resim:
         if self.handle_flooding():
             return
 
-        self.what1 = self.roll("???")
+        # deploy some time around s14 earlsiesta added this roll - unsure exactly when but it'll be somewhere between day 25 and day 30 (1-indexed)
+        if (self.update["season"], self.update["day"]) > (13, 24):
+            self.what1 = self.roll("???")
+        else:
+            self.what1 = 0
 
         if self.handle_consumers():
             return
@@ -113,7 +117,7 @@ class Resim:
         if self.ty in [21, 78, 91, 92, 93, 99, 173, 182, 36]:
             # skipping pregame messages
             return True
-        if self.ty in [85, 86, 146, 147, 171, 172, 88]:
+        if self.ty in [85, 86, 146, 147, 148, 171, 172, 88]:
             # skipping mod added/removed
             return True
         if self.ty in [30, 31, 156, 157]:
@@ -125,8 +129,14 @@ class Resim:
         if self.ty in [116, 137, 125]:
             # skipping incineration stuff
             return True
+        if self.ty in [112, 144]:
+            # skipping echo/static
+            return True
         if self.ty == 54 and "parent" in self.event["metadata"]:
             # incin has two events and one's a subevent so ignore one of them
+            return True
+        if self.ty == 3:
+            #s skipping pitcher change?
             return True
         if self.ty in [28]:
             # skipping inning outing
@@ -169,6 +179,12 @@ class Resim:
                 "dcbc2123-c46a-4d21-8501-302f84ca8207": 1,
                 "fb3add1d-c711-42b3-8ca8-a5d1086c0429": 1,
                 "9eaf6ba7-14b0-4570-917b-acd6ff6a425b": 1,
+                "a89f342d-7014-4f11-bb90-ecdb6fe73de6": 1,
+                "080e5fb4-0322-44db-8407-3761f84600a3": 2,
+                "3e4f43d3-2f5a-4283-8065-ff5fa881c888": 1,
+                "3c1b4d10-78af-4b8e-a9f5-e6ea2d50e5c4": 2,
+                "c84df551-f639-470a-8435-bd305af0847f": 1,
+                "4d898adc-8085-406b-967d-e36321eb2a14": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -211,15 +227,16 @@ class Resim:
             if self.pitcher.data["blood"] != 9:
                 pitcher_charm_eligible = False
 
-        if batter_charm_eligible:
+
+        # todo: figure out logic order when both teams have charm
+        if self.event["created"] == "2021-03-19T06:16:10.085Z":
+            self.roll("charm 2?")
+
+        if batter_charm_eligible or pitcher_charm_eligible:
             self.roll("charm")
             if " charms " in self.desc:
                 self.handle_batter_reverb() # apparently don mitchell can do this.
                 return True
-
-
-        if pitcher_charm_eligible:
-            self.roll("charm")
             if " charmed " in self.desc:
                 # self.roll("charm proc")
                 # self.roll("charm proc")
@@ -391,6 +408,10 @@ class Resim:
                 if not roll_outcome or base == 1:
                     break
 
+            # edge case for holding hands I GUESS SURE WHY NOT WHO CARES ANYMORE (i guess the base map doesn't support multiple)
+            if self.update["basesOccupied"] == [2, 2]:
+                self.roll("holding hands")
+
         elif self.ty == 8:
             # ground out
             extras = {
@@ -420,6 +441,7 @@ class Resim:
                 ((2, 1), (2, 1)): 3,
                 ((1, 0), (2,)): 2, # dp
                 ((2, 1), (2, 2)): 3, # holding hands
+                ((2, 2), tuple()): 3, # two players holding hands, both sac scoring???
             }
 
             if "reaches on fielder's choice" in self.desc:
@@ -611,8 +633,32 @@ class Resim:
             self.roll("feedback")
             self.roll("feedback") # this is probably echo y/n? but ignored if the mod isn't there
 
-            if self.weather in [12, 13] and self.batter.has_mod("ECHO"):
+            if self.weather in [12, 13] and (self.batter.has_mod("ECHO") or self.pitcher.has_mod("ECHO")):
+                # echo vs static, or batter echo vs pitcher echo?
                 if self.ty == 169:
+                    self.roll("echo target")
+
+                    players = self.pitching_team.data["lineup"] + self.pitching_team.data["rotation"]
+                    all_players = []
+                    players_with_mods = []
+                    for player_id in players:
+                        if player_id == self.pitcher.id:
+                            continue
+                        player = self.data.get_player(player_id)
+                        all_players.append(player)
+                        if player.mods:
+                            players_with_mods.append(player)
+                    
+                    print("all players:")
+                    for i, player in enumerate(all_players):
+                        print("- {} ({}/{}, {:.03f}-{:.03f}) {}".format(player.name, i, len(all_players), i / len(all_players), (i+1) / len(all_players), player.mods))
+                    print("players with mods:")
+                    for i, player in enumerate(players_with_mods):
+                        print("- {} ({}/{}, {:.03f}-{:.03f})".format(player.name, i, len(players_with_mods), i / len(players_with_mods), (i+1) / len(players_with_mods)))
+
+                    return True
+                if self.ty == 170:
+                    self.roll("echo target")
                     self.roll("echo target")
                     return True
         elif self.weather == 13:
@@ -694,16 +740,19 @@ class Resim:
 
     def do_elsewhere_return(self, player):
         scatter_times = 0
+        should_scatter = False
         if "days" in self.desc:
             elsewhere_time = int(self.desc.split("after ")[1].split(" days")[0])
             if elsewhere_time >= 18:
-                scatter_times = (len(player.raw_name) - 2) * 2
+                should_scatter = True
         if "season" in self.desc:
-            scatter_times = 32 # guessing for now. might be the same formula?
+            should_scatter = True
 
-        for _ in range(scatter_times):
-            # todo: figure out what these are
-            self.roll("scatter letter")
+        if should_scatter:
+            scatter_times = (len(player.raw_name) - 2) * 2
+            for _ in range(scatter_times):
+                # todo: figure out what these are
+                self.roll("scatter letter")
 
     
     def handle_consumers(self):
@@ -944,7 +993,24 @@ class Resim:
                 player.data[position].remove(meta["mod"])
             else:
                 team = self.data.get_team(event["teamTags"][0])
-                team.data[position].remove(meta["mod"])
+
+                if meta["mod"] not in team.data[position]:
+                    print("!!! warn: trying to remove mod {} but can't find it".format(meta["mod"]))
+                else:
+                    team.data[position].remove(meta["mod"])
+
+        # mod replaced
+        if event["type"] in [148]:
+            position = mod_positions[meta["type"]]
+
+            if event["playerTags"]:
+                player = self.data.get_player(event["playerTags"][0])
+                player.data[position].remove(meta["from"])
+                player.data[position].append(meta["to"])
+            else:
+                team = self.data.get_team(event["teamTags"][0])
+                team.data[position].remove(meta["from"])
+                team.data[position].append(meta["to"])
 
         # timed mods wore off
         if event["type"] in [108]:
@@ -989,6 +1055,16 @@ class Resim:
             new_name = desc.split(" was Scattered")[0]
             player = self.data.get_player(event["playerTags"][0])
             player.data["name"] = new_name
+
+        # player removed from roster
+        if event["type"] == 112:
+            team_id = meta["teamId"]
+            player_id = meta["playerId"]
+            team = self.data.get_team(team_id)
+            if player_id in team.data["lineup"]:
+                team.data["lineup"].remove(player_id)
+            if player_id in team.data["rotation"]:
+                team.data["rotation"].remove(player_id)
 
     def run(self, start_timestamp, end_timestamp):
         self.data.fetch_league_data(start_timestamp)
