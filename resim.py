@@ -15,6 +15,7 @@ class Resim:
 
         self.strike_rolls: List[RollLog] = []
         self.foul_rolls: List[RollLog] = []
+        self.triple_rolls: List[RollLog] = []
 
     def handle(self, event):
         self.setup_data(event)
@@ -494,7 +495,7 @@ class Resim:
         self.roll("???")
         self.roll("???")
         self.roll("???")
-        self.roll("???")
+        triple_roll = self.roll("triple?")
 
         hit_bases = 0
         if "hits a Single!" in self.desc:
@@ -503,6 +504,8 @@ class Resim:
             hit_bases = 2
         elif "hits a Triple!" in self.desc:
             hit_bases = 3
+
+        self.log_roll(self.triple_rolls, f"Hit{hit_bases}", triple_roll, hit_bases == 3)
 
         self.handle_hit_advances(hit_bases)
 
@@ -1008,6 +1011,9 @@ class Resim:
 
         print("Saving fouls csv...")
         pd.DataFrame(self.foul_rolls).to_csv(f"roll_data/{run_name}-fouls.csv")
+
+        print("Saving triples csv...")
+        pd.DataFrame(self.triple_rolls).to_csv(f"roll_data/{run_name}-triples.csv")
 
 
 def advance_bases(occupied, amount, up_to=4):
