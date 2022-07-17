@@ -12,7 +12,6 @@ def calculate_vibes(player, day, multiplier):
     range = 0.5 * (pressurization + cinnamon)
     return (range * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
 
-
 @dataclass
 class RollLog:
     event_type: str
@@ -128,47 +127,7 @@ class RollLog:
     baserunner_count: int
 
 def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_team, pitcher,
-                  pitching_team, stadium, players, update, what1: float, what2: float):
-
-    batter_multiplier = 1
-    for mod in itertools.chain(batter.mods, batting_team.mods):
-        if mod == 'OVERPERFORMING':
-            batter_multiplier += 0.2
-        elif mod == 'UNDERPERFORMING':
-            batter_multiplier -= 0.2
-        elif mod == 'GROWTH':
-            batter_multiplier += min(0.05, 0.05 * (update["day"] / 99))
-        elif mod == 'HIGH_PRESSURE':
-            # checks for flooding weather and baserunners
-            if update["weather"] == 18 and len(update['baseRunners']) > 0:
-                batter_multiplier += 0.25
-
-                # In season 14 High Pressure adds Overperforming but makes it worth 0.25 instead of
-                # 0.2. This should cancel that out.
-                if update["season"] == 13:
-                    batter_multiplier -= 0.2
-        elif mod == 'TRAVELING':
-            if update["topOfInning"]:
-                batter_multiplier += 0.05
-        elif mod == 'SINKING_SHIP':
-            roster_size = len(batting_team.data["lineup"]) + len(batting_team.data["rotation"])
-            batter_multiplier += (14 - roster_size) * 0.01
-
-    pitcher_multiplier = 1
-    for mod in itertools.chain(pitcher.mods, pitching_team.mods):
-        if mod == 'OVERPERFORMING':
-            pitcher_multiplier += 0.2
-        elif mod == 'UNDERPERFORMING':
-            pitcher_multiplier -= 0.2
-        elif mod == 'GROWTH':
-            pitcher_multiplier += min(0.05, 0.05 * (update["day"] / 99))
-        elif mod == 'TRAVELING':
-            if not update["topOfInning"]:
-                pitcher_multiplier += 0.05
-        elif mod == 'SINKING_SHIP':
-            roster_size = len(pitching_team.data["lineup"]) + len(pitching_team.data["rotation"])
-            pitcher_multiplier += (14 - roster_size) * 0.01
-
+                  pitching_team, stadium, players, update, what1: float, what2: float, batter_multiplier: float, pitcher_multiplier: float):
 
     defense_lineup = pitching_team.data['lineup']
     return RollLog(

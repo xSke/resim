@@ -1,4 +1,4 @@
-import os
+import os, itertools
 from typing import List
 
 import pandas as pd
@@ -62,7 +62,7 @@ class Resim:
             return
 
         # deploy some time around s14 earlsiesta added this roll - unsure exactly when but it'll be somewhere between day 25 and day 30 (1-indexed)
-        if (self.update["season"], self.update["day"]) > (13, 24):
+        if (self.season, self.day) > (13, 24):
             self.what1 = self.roll("???")
         else:
             self.what1 = 0
@@ -94,6 +94,7 @@ class Resim:
         if self.handle_charm():
             return
 
+        self.is_strike = None
         if self.ty in [5, 14, 27]:
             self.handle_ball()
         elif self.ty in [7, 8]:
@@ -642,8 +643,6 @@ class Resim:
                     all_players = []
                     players_with_mods = []
                     for player_id in players:
-                        if player_id == self.pitcher.id:
-                            continue
                         player = self.data.get_player(player_id)
                         all_players.append(player)
                         if player.mods:
@@ -870,19 +869,29 @@ class Resim:
                 break
 
     def throw_pitch(self, known_result=None):
-        value = self.roll("strike")
+        roll = self.roll("strike")
         if self.pitching_team.has_mod("ACIDIC"):
             self.roll("acidic")
 
-        s3_threshold = 0.35 + self.pitcher.data["ruthlessness"] * 0.35
-        if known_result == "strike" and value > (s3_threshold + 0.15):
-            print("!!! warn: too high strike roll")
-        elif known_result == "ball" and value < (s3_threshold - 0.15):
-            print("!!! warn: too low strike roll")
+        vibes = self.pitcher.vibes(self.day)
+        ruth = self.pitcher.data["ruthlessness"] * self.get_pitcher_multiplier()
+        musc = self.batter.data["musclitude"] * self.get_batter_multiplier()
+        fwd = self.stadium.data["forwardness"]
+
+        constant = 0.2 if not self.is_flinching() else 0.4
+        threshold = constant + 0.3 * (ruth * (1 + 0.2 * vibes)) + 0.2 * fwd + 0.1 * musc
+        threshold = min(threshold, 0.85)
+
+        self.is_strike = roll < threshold
+
+        if known_result == "strike" and roll > threshold:
+            print("!!! warn: too high strike roll (threshold {})".format(threshold))
+        elif known_result == "ball" and roll < threshold:
+            print("!!! warn: too low strike roll (threshold {})".format(threshold))
 
         # todo: double strike
 
-        return value
+        return roll
 
     def log_roll(self, roll_list: List[RollLog], event_type: str, roll: float, passed: bool):
         roll_list.append(make_roll_log(
@@ -897,7 +906,9 @@ class Resim:
             self.data.players,
             self.update,
             self.what1,
-            self.what2
+            self.what2,
+            self.get_batter_multiplier(),
+            self.get_pitcher_multiplier()
         ))
 
     def setup_data(self, event):
@@ -911,6 +922,8 @@ class Resim:
         self.event = event
         self.ty = event["type"]
         self.desc = event["description"].replace("\n", " ").strip()
+        self.season = event["season"]
+        self.day = event["day"]
 
         if not event["gameTags"]:
             return
@@ -927,7 +940,7 @@ class Resim:
         self.update = update
         self.next_update = next_update
         self.weather = update["weather"]
-        
+
         self.away_team = self.data.get_team(update["awayTeam"])
         self.home_team = self.data.get_team(update["homeTeam"])
 
@@ -1078,6 +1091,49 @@ class Resim:
         value = self.rng.next()
         print("{}: {}".format(label, value))
         return value
+
+    def get_batter_multiplier(self):
+        batter_multiplier = 1
+        for mod in itertools.chain(self.batter.mods, self.batting_team.mods):
+            if mod == 'OVERPERFORMING':
+                batter_multiplier += 0.2
+            elif mod == 'UNDERPERFORMING':
+                batter_multiplier -= 0.2
+            elif mod == 'GROWTH':
+                batter_multiplier += min(0.05, 0.05 * (self.day / 99))
+            elif mod == 'HIGH_PRESSURE':
+                # checks for flooding weather and baserunners
+                if self.update["weather"] == 18 and len(self.update['baseRunners']) > 0:
+                    # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
+                    batter_multiplier += 0.25
+            elif mod == 'TRAVELING':
+                if self.update["topOfInning"]:
+                    batter_multiplier += 0.05
+            elif mod == 'SINKING_SHIP':
+                roster_size = len(self.batting_team.data["lineup"]) + len(self.batting_team.data["rotation"])
+                batter_multiplier += (14 - roster_size) * 0.01
+            elif mod == 'AFFINITY_FOR_CROWS' and self.weather == 11:
+                batter_multiplier += 0.5
+        return batter_multiplier
+
+    def get_pitcher_multiplier(self):
+        pitcher_multiplier = 1
+        # growth or traveling do not work for pitchers as of s14
+        for mod in itertools.chain(self.pitcher.mods, self.pitching_team.mods):
+            if mod == 'OVERPERFORMING':
+                pitcher_multiplier += 0.2
+            elif mod == 'UNDERPERFORMING':
+                pitcher_multiplier -= 0.2
+            elif mod == 'SINKING_SHIP':
+                roster_size = len(self.pitching_team.data["lineup"]) + len(self.pitching_team.data["rotation"])
+                pitcher_multiplier += (14 - roster_size) * 0.01
+            elif mod == 'AFFINITY_FOR_CROWS' and self.weather == 11:
+                pitcher_multiplier += 0.5
+            elif mod == 'HIGH_PRESSURE':
+                # "should we really boost the pitcher when the *other* team's batters are on base" yes.
+                if self.weather == 18 and len(self.update['baseRunners']) > 0:
+                    pitcher_multiplier += 0.25
+        return pitcher_multiplier
 
     def save_data(self, run_name):
         os.makedirs("roll_data", exist_ok=True)

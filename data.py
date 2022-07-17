@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-import os, json, requests
-from time import time
+import os, json, requests, math
 from typing import Any, Dict
 from datetime import datetime, timedelta
 
@@ -131,6 +130,16 @@ class PlayerData:
             if mod in self.mods:
                 return True
         return False
+
+    def vibes(self, day):
+        frequency = 6 + round(10 * self.data['buoyancy'])
+        phase = math.pi * ((2 / frequency) * day + 0.5)
+
+        pressurization = self.data['pressurization']
+        cinnamon = (self.data['cinnamon'] if self.data['cinnamon'] is not None else 0)
+        range = 0.5 * (pressurization + cinnamon)
+        vibes = (range * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
+        return vibes if not self.has_mod("SCATTERED") else 0
 
 class GameData:
     def __init__(self):
