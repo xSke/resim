@@ -16,6 +16,8 @@ class Resim:
         self.strike_rolls: List[RollLog] = []
         self.foul_rolls: List[RollLog] = []
         self.triple_rolls: List[RollLog] = []
+        self.swing_on_ball_rolls: List[RollLog] = []
+        self.swing_on_strike_rolls: List[RollLog] = []
 
     def handle(self, event):
         self.setup_data(event)
@@ -285,6 +287,7 @@ class Resim:
             swing_roll = self.roll("swing")
             if swing_roll < 0.05:
                 print("!!! very low swing roll on ball")
+            self.log_roll(self.swing_on_ball_rolls, "Ball", swing_roll, False)
         else:
             print("!!! warn: flinching ball")
 
@@ -298,14 +301,17 @@ class Resim:
     def handle_strike(self):
         if ", swinging" in self.desc or "strikes out swinging." in self.desc:
             self.throw_pitch()
-            self.roll("swing")
+            swing_roll = self.roll("swing")
             self.roll("contact")
+            self.log_roll(self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
+                          "StrikeSwinging", swing_roll, True)
         elif ", looking" in self.desc or "strikes out looking." in self.desc:
             value = self.throw_pitch("strike")
-            self.log_roll(self.strike_rolls, "StrikeLooking", value, True)
+            self.log_roll(self.strike_rolls, "StrikeSwinging", value, True)
 
             if not self.is_flinching():
-                self.roll("swing")
+                swing_roll = self.roll("swing")
+                self.log_roll(self.swing_on_strike_rolls, "StrikeLooking", swing_roll, False)
         elif ", flinching" in self.desc:
             value = self.throw_pitch("strike")
             self.log_roll(self.strike_rolls, "StrikeFlinching", value, True)
@@ -333,7 +339,9 @@ class Resim:
 
     def handle_out(self):
         self.throw_pitch()
-        self.roll("swing")
+        swing_roll = self.roll("swing")
+        self.log_roll(self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
+                      "Out", swing_roll, True)
         self.roll("contact")
         foul_roll = self.roll("foul")
         self.log_roll(self.foul_rolls, "Out", foul_roll, True)
@@ -492,7 +500,10 @@ class Resim:
     def handle_hr(self):
         if not self.batter.has_mod("MAGMATIC"):
             self.throw_pitch()
-            self.roll("swing")
+            swing_roll = self.roll("swing")
+            self.log_roll(
+                self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
+                "HR", swing_roll, True)
             self.roll("contact")
             foul_roll = self.roll("foul")
             self.log_roll(self.foul_rolls, "BaseHit", foul_roll, True)
@@ -508,7 +519,10 @@ class Resim:
 
     def handle_base_hit(self):
         self.throw_pitch()
-        self.roll("swing")
+        swing_roll = self.roll("swing")
+        self.log_roll(
+            self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
+            "BaseHit", swing_roll, True)
         self.roll("contact")
         foul_roll = self.roll("foul")
         self.log_roll(self.foul_rolls, "BaseHit", foul_roll, True)
@@ -534,7 +548,10 @@ class Resim:
 
     def handle_foul(self):
         self.throw_pitch()
-        self.roll("swing")
+        swing_roll = self.roll("swing")
+        self.log_roll(
+            self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
+            "Foul", swing_roll, True)
         self.roll("contact")
 
         foul_roll = self.roll("foul")
@@ -1139,14 +1156,16 @@ class Resim:
         os.makedirs("roll_data", exist_ok=True)
         run_name = run_name.replace(":", "_")
 
-        print("Saving strikes csv...")
-        pd.DataFrame(self.strike_rolls).to_csv(f"roll_data/{run_name}-strikes.csv")
-
-        print("Saving fouls csv...")
-        pd.DataFrame(self.foul_rolls).to_csv(f"roll_data/{run_name}-fouls.csv")
-
-        print("Saving triples csv...")
-        pd.DataFrame(self.triple_rolls).to_csv(f"roll_data/{run_name}-triples.csv")
+        to_save = [
+            ("strikes", self.strike_rolls),
+            ("fouls", self.foul_rolls),
+            ("triples", self.triple_rolls),
+            ("swing-on-ball", self.swing_on_ball_rolls),
+            ("swing-on-strike", self.swing_on_strike_rolls),
+        ]
+        for category_name, data in to_save:
+            print(f"Saving {category_name} csv...")
+            pd.DataFrame(data).to_csv(f"roll_data/{run_name}-{category_name}.csv")
 
 
 def advance_bases(occupied, amount, up_to=4):
