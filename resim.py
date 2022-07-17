@@ -7,6 +7,7 @@ from data import GameData, get_feed_between, weather_names
 from output import RollLog, make_roll_log
 from rng import Rng
 
+
 class Resim:
     def __init__(self, rng):
         self.rng = rng
@@ -21,9 +22,10 @@ class Resim:
 
     def handle(self, event):
         self.setup_data(event)
-        
+
         print()
-        print("===== {} {}/{} {}".format(event["created"], self.update["id"], self.update["playCount"], weather_names[self.update["weather"]]))
+        print("===== {} {}/{} {}".format(event["created"], self.update["id"], self.update["playCount"],
+                                         weather_names[self.update["weather"]]))
         print("===== {} {}".format(self.ty, self.desc))
 
         if self.event["created"] == "2021-03-19T10:10:18.388Z":
@@ -92,7 +94,7 @@ class Resim:
 
         if self.handle_mild():
             return
-        
+
         if self.handle_charm():
             return
 
@@ -114,7 +116,6 @@ class Resim:
         pass
 
         self.handle_batter_reverb()
-
 
     def handle_misc(self):
         if self.ty in [21, 78, 91, 92, 93, 99, 173, 182, 36]:
@@ -139,7 +140,7 @@ class Resim:
             # incin has two events and one's a subevent so ignore one of them
             return True
         if self.ty == 3:
-            #s skipping pitcher change?
+            # s skipping pitcher change?
             return True
         if self.ty in [28]:
             # skipping inning outing
@@ -162,7 +163,7 @@ class Resim:
         if self.ty in [11, 158, 159, 106, 154, 155, 108, 107]:
             # skipping game end
             return True
-        if self.ty in [0]:                
+        if self.ty in [0]:
             # game start - probably like, postseason weather gen 
             if self.event["day"] >= 99:
                 self.roll("game start")
@@ -214,7 +215,7 @@ class Resim:
             if self.strikes == 0:
                 self.roll("bird ambush")
                 if self.ty == 34:
-                    self.handle_batter_reverb() # i guess???
+                    self.handle_batter_reverb()  # i guess???
                     return True
 
     def handle_charm(self):
@@ -230,7 +231,6 @@ class Resim:
             if self.pitcher.data["blood"] != 9:
                 pitcher_charm_eligible = False
 
-
         # todo: figure out logic order when both teams have charm
         if self.event["created"] == "2021-03-19T06:16:10.085Z":
             self.roll("charm 2?")
@@ -238,7 +238,7 @@ class Resim:
         if batter_charm_eligible or pitcher_charm_eligible:
             self.roll("charm")
             if " charms " in self.desc:
-                self.handle_batter_reverb() # apparently don mitchell can do this.
+                self.handle_batter_reverb()  # apparently don mitchell can do this.
                 return True
             if " charmed " in self.desc:
                 # self.roll("charm proc")
@@ -246,7 +246,6 @@ class Resim:
                 # self.roll("charm proc")
                 return True
 
-                
     def handle_electric(self):
         # todo: don't roll this if <s15 and batter doesn't have electric blood?
         # only case here would be baldwin breadwinner in s14 but it seems to work okay?
@@ -261,7 +260,7 @@ class Resim:
 
     def handle_batter_reverb(self):
         if self.batter and self.batter.has_mod("REVERBERATING"):
-            is_at_bat_end = self.ty in [5, 6, 7, 8, 34] # ambush i guess
+            is_at_bat_end = self.ty in [5, 6, 7, 8, 34]  # ambush i guess
             # s14: hrs/hits (type 9/10) do not trigger reverberating, this probably changed later
             # home runs might not either?
 
@@ -271,7 +270,6 @@ class Resim:
 
             if is_at_bat_end:
                 self.roll("at bat reverb")
-
 
     def handle_mild(self):
         self.roll("mild")
@@ -319,7 +317,7 @@ class Resim:
 
     def try_roll_salmon(self):
         if self.weather == 19 and self.next_update["inning"] > 0 and not self.update["topOfInning"]:
-            last_play = self.data.get_update(self.game_id, self.play-2)
+            last_play = self.data.get_update(self.game_id, self.play - 2)
 
             # only roll salmon if the last inning had any scores, but also we have to dig into game history to find this
             # how does the sim do it? no idea. i'm cheating.
@@ -333,7 +331,6 @@ class Resim:
                     self.roll("salmon effect")
                     self.roll("salmon effect")
 
-    
     def is_flinching(self):
         return self.batter.has_mod("FLINCH") and self.strikes == 0
 
@@ -387,7 +384,10 @@ class Resim:
             if rolled_idx != fielder_idx:
                 expected_min = fielder_idx / len(eligible_fielders)
                 expected_max = (fielder_idx + 1) / len(eligible_fielders)
-                print("!!! incorrect fielder! expected {}, got {}, needs to be {:.3f}-{:.3f}".format(fielder_idx, rolled_idx, expected_min, expected_max))
+                print("!!! incorrect fielder! expected {}, got {}, needs to be {:.3f}-{:.3f}".format(fielder_idx,
+                                                                                                     rolled_idx,
+                                                                                                     expected_min,
+                                                                                                     expected_max))
 
             matching = []
             r2 = Rng(self.rng.state, self.rng.offset)
@@ -425,37 +425,37 @@ class Resim:
             # ground out
             extras = {
                 (tuple(), tuple()): 0,
-                ((0,), (0,)): 2, # fielder's choice (successful)
+                ((0,), (0,)): 2,  # fielder's choice (successful)
                 ((0,), (1,)): 3,
                 ((1,), (1,)): 2,
-                
-                ((2, 0), (2, 1)): 4, 
+
+                ((2, 0), (2, 1)): 4,
                 ((1,), (2,)): 2,
                 ((2, 1), (2,)): 3,
-                ((0,), tuple()): 2, # double play (successful)
-                ((2,), tuple()): 2, # sac
+                ((0,), tuple()): 2,  # double play (successful)
+                ((2,), tuple()): 2,  # sac
                 ((1, 0), (2, 1)): 4,
                 ((1, 0), (1, 0)): 2,
                 ((2, 0), (0,)): 4,
                 ((2,), (2,)): 2,
-                ((1, 0), tuple()): 2, # double play + second, 2 or 3 rolls?
+                ((1, 0), tuple()): 2,  # double play + second, 2 or 3 rolls?
                 ((2, 1, 0), (2, 1, 0)): 2,
-                ((2, 1, 0), (2, 1)): 5, # guessing
+                ((2, 1, 0), (2, 1)): 5,  # guessing
                 ((2, 1, 0), (2,)): 2,
-                ((2, 1, 0), tuple()): 2, # dp
-                ((2, 1), (1,)): 3, # guessing
-                ((2, 0), tuple()): 2, # double play + sac?
-                ((1, 0), (1,)): 2, # double play but they stay?
+                ((2, 1, 0), tuple()): 2,  # dp
+                ((2, 1), (1,)): 3,  # guessing
+                ((2, 0), tuple()): 2,  # double play + sac?
+                ((1, 0), (1,)): 2,  # double play but they stay?
                 ((2, 0), (1,)): 4,
                 ((2, 1), (2, 1)): 3,
-                ((1, 0), (2,)): 2, # dp
-                ((2, 1), (2, 2)): 3, # holding hands
-                ((2, 2), tuple()): 3, # two players holding hands, both sac scoring???
+                ((1, 0), (2,)): 2,  # dp
+                ((2, 1), (2, 2)): 3,  # holding hands
+                ((2, 2), tuple()): 3,  # two players holding hands, both sac scoring???
             }
 
             if "reaches on fielder's choice" in self.desc:
-                extras[((2, 0), (0,))] = 2 # what
-            
+                extras[((2, 0), (0,))] = 2  # what
+
             rolls = extras[(tuple(self.update["basesOccupied"]), tuple(self.next_update["basesOccupied"]))]
             for _ in range(rolls):
                 self.roll("extra")
@@ -487,9 +487,7 @@ class Resim:
             #     if base == 2:
             #         self.roll("extra adv 2?")
 
-
         print("OUT {} {} -> {}".format(self.ty, self.update["basesOccupied"], self.next_update["basesOccupied"]))
-
 
     def handle_hit_advances(self, bases_hit):
         bases_before = make_base_map(self.update)
@@ -635,7 +633,7 @@ class Resim:
             if self.ty == 47:
                 self.roll("target")
                 return True
-            
+
             if self.batter.has_mod("HONEY_ROASTED"):
                 self.roll("honey roasted")
 
@@ -649,7 +647,7 @@ class Resim:
         elif self.weather == 12:
             # feedback
             self.roll("feedback")
-            self.roll("feedback") # this is probably echo y/n? but ignored if the mod isn't there
+            self.roll("feedback")  # this is probably echo y/n? but ignored if the mod isn't there
 
             if self.weather in [12, 13] and (self.batter.has_mod("ECHO") or self.pitcher.has_mod("ECHO")):
                 # echo vs static, or batter echo vs pitcher echo?
@@ -664,13 +662,17 @@ class Resim:
                         all_players.append(player)
                         if player.mods:
                             players_with_mods.append(player)
-                    
+
                     print("all players:")
                     for i, player in enumerate(all_players):
-                        print("- {} ({}/{}, {:.03f}-{:.03f}) {}".format(player.name, i, len(all_players), i / len(all_players), (i+1) / len(all_players), player.mods))
+                        print("- {} ({}/{}, {:.03f}-{:.03f}) {}".format(player.name, i, len(all_players),
+                                                                        i / len(all_players),
+                                                                        (i + 1) / len(all_players), player.mods))
                     print("players with mods:")
                     for i, player in enumerate(players_with_mods):
-                        print("- {} ({}/{}, {:.03f}-{:.03f})".format(player.name, i, len(players_with_mods), i / len(players_with_mods), (i+1) / len(players_with_mods)))
+                        print("- {} ({}/{}, {:.03f}-{:.03f})".format(player.name, i, len(players_with_mods),
+                                                                     i / len(players_with_mods),
+                                                                     (i + 1) / len(players_with_mods)))
 
                     return True
                 if self.ty == 170:
@@ -714,7 +716,7 @@ class Resim:
             self.roll("polarity")
         else:
             print("error: {} weather not implemented".format(weather_names[self.weather]))
-        
+
     def handle_flooding(self):
         if self.weather == 18:
             if self.update["basesOccupied"]:
@@ -751,7 +753,7 @@ class Resim:
 
             if player.has_mod("SCATTERED"):
                 unscatter_roll = self.roll("unscatter ({})".format(player.raw_name))
-                if unscatter_roll < 0.0005: # todo: find threshold
+                if unscatter_roll < 0.0005:  # todo: find threshold
                     self.roll("unscatter letter ({})".format(player.raw_name))
 
     def do_elsewhere_return(self, player):
@@ -770,7 +772,6 @@ class Resim:
                 # todo: figure out what these are
                 self.roll("scatter letter")
 
-    
     def handle_consumers(self):
         # todo: roll order (might be home/away?)
         teams = [self.batting_team, self.pitching_team]
@@ -793,7 +794,7 @@ class Resim:
         # lol. turns out it just rolls party all the time and throws out the roll if the team isn't partying
         party_roll = self.roll("party time")
         if self.ty == 24:
-            team_roll = self.roll("target team") # <0.5 for home, >0.5 for away
+            team_roll = self.roll("target team")  # <0.5 for home, >0.5 for away
             self.roll("target player")
             for _ in range(25):
                 self.roll("stat")
@@ -828,7 +829,7 @@ class Resim:
 
         if self.stadium.has_mod("GRIND_RAIL"):
             print("todo: grind rail handling")
-            pass # todo
+            pass  # todo
 
         league_mods = self.data.sim["attr"]
         if "SECRET_TUNNELS" in league_mods:
@@ -859,7 +860,6 @@ class Resim:
             self.roll("secret base enter")
         if attractor_eligible:
             self.roll("secret base attract")
-
 
     def handle_steal(self):
         bases = self.update["basesOccupied"]
@@ -1070,7 +1070,7 @@ class Resim:
                     stats_before = dict(self.data.get_player(player_id).data)
                 else:
                     stats_before = {}
-                    
+
                 self.data.fetch_player_after(player_id, event["created"])
                 stats_after = dict(self.data.get_player(player_id).data)
 
@@ -1169,8 +1169,9 @@ class Resim:
 
 
 def advance_bases(occupied, amount, up_to=4):
-    occupied = [b+(amount if b < up_to else 0) for b in occupied]
+    occupied = [b + (amount if b < up_to else 0) for b in occupied]
     return [b for b in occupied if b < 3]
+
 
 def make_base_map(update):
     bases = {}
@@ -1178,12 +1179,14 @@ def make_base_map(update):
         bases[pos] = update["baseRunners"][i]
     return bases
 
+
 def force_advance(bases, start_at=0):
     new_bases = {}
     for i in range(start_at, 5):
         if i in bases:
-            new_bases[i+1] = bases[i]
+            new_bases[i + 1] = bases[i]
     return new_bases
+
 
 def calculate_advances(bases_before, bases_after, bases_hit):
     # this code sucks so much. i hate runner advances. they're nasty
@@ -1209,16 +1212,16 @@ def calculate_advances(bases_before, bases_after, bases_hit):
     for runner in occupied:
         player = bases[runner]
 
-        is_eligible = runner+1 not in bases
+        is_eligible = runner + 1 not in bases
         if is_eligible:
             if runner == 2:
-                did_advance = third_scored 
+                did_advance = third_scored
             else:
-                did_advance = runner+1 in bases_after
+                did_advance = runner + 1 in bases_after
 
             rolls.append((player, runner, did_advance))
             if did_advance:
-                bases[runner+1] = bases[runner]
+                bases[runner + 1] = bases[runner]
                 del bases[runner]
-    
+
     return rolls
