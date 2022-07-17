@@ -549,9 +549,6 @@ class Resim:
     def handle_foul(self):
         self.throw_pitch()
         swing_roll = self.roll("swing")
-        self.log_roll(
-            self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
-            "Foul", swing_roll, True)
         self.roll("contact")
 
         foul_roll = self.roll("foul")
@@ -562,6 +559,9 @@ class Resim:
 
         if not is_0_no_eligible:
             self.log_roll(self.foul_rolls, "Foul", foul_roll, False)
+            self.log_roll(
+                self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
+                "Foul", swing_roll, True)
 
     def handle_batter_up(self):
         if self.batter.has_mod("HAUNTED"):
