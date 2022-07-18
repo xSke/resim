@@ -14,6 +14,9 @@ class Resim:
         self.data = GameData()
         self.fetched_days = set()
 
+        self.is_strike = None
+        self.strike_roll = None
+        self.strike_threshold = None
         self.strike_rolls: List[RollLog] = []
         self.foul_rolls: List[RollLog] = []
         self.triple_rolls: List[RollLog] = []
@@ -21,6 +24,8 @@ class Resim:
         self.swing_on_strike_rolls: List[RollLog] = []
         self.contact_rolls: List[RollLog] = []
         self.hr_rolls: List[RollLog] = []
+        self.steal_attempt_rolls: List[RollLog] = []
+        self.steal_success_rolls: List[RollLog] = []
 
     def handle(self, event):
         self.setup_data(event)
@@ -582,9 +587,9 @@ class Resim:
         self.throw_pitch()
 
         swing_roll = self.roll("swing")
-            self.log_roll(
-                self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
-                "Foul", swing_roll, True)
+        self.log_roll(
+            self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
+            "Foul", swing_roll, True)
 
         contact_roll = self.roll("contact")
         self.log_roll(self.contact_rolls, "Foul", contact_roll, True)
@@ -903,12 +908,20 @@ class Resim:
         elif "fourth base" in self.desc:
             base_stolen = 3
 
-        for base in bases:
+        for i, base in enumerate(bases):
             if base + 1 not in bases:
-                self.roll("steal ({})".format(base))
+                runner = self.data.get_player(self.update["baseRunners"][i])
 
-                if self.ty == 4 and base + 1 == base_stolen:
-                    self.roll("steal success")
+                steal_roll = self.roll("steal ({})".format(base))
+
+                was_success = self.ty == 4 and base + 1 == base_stolen
+                self.log_roll(self.steal_attempt_rolls, "StealAttempt{}".format(base), steal_roll, was_success, runner)
+
+                if was_success:
+                    success_roll = self.roll("steal success")
+                    was_caught = "caught stealing" in self.desc
+
+                    self.log_roll(self.steal_success_rolls, "StealSuccess{}".format(base), success_roll, not was_caught, runner)
                     return True
 
             if bases == [2, 2]:
@@ -942,12 +955,12 @@ class Resim:
 
         return roll
 
-    def log_roll(self, roll_list: List[RollLog], event_type: str, roll: float, passed: bool):
+    def log_roll(self, roll_list: List[RollLog], event_type: str, roll: float, passed: bool, relevant_batter = None):
         roll_list.append(make_roll_log(
             event_type,
             roll,
             passed,
-            self.batter,
+            relevant_batter or self.batter,
             self.batting_team,
             self.pitcher,
             self.pitching_team,
@@ -956,7 +969,7 @@ class Resim:
             self.update,
             self.what1,
             self.what2,
-            self.get_batter_multiplier(),
+            self.get_batter_multiplier(relevant_batter),
             self.get_pitcher_multiplier(),
             self.is_strike,
             self.strike_roll,
@@ -1144,9 +1157,11 @@ class Resim:
         print("{}: {}".format(label, value))
         return value
 
-    def get_batter_multiplier(self):
+    def get_batter_multiplier(self, relevant_batter=None):
+        batter = relevant_batter or self.batter
+
         batter_multiplier = 1
-        for mod in itertools.chain(self.batter.mods, self.batting_team.mods):
+        for mod in itertools.chain(batter.mods, self.batting_team.mods):
             if mod == 'OVERPERFORMING':
                 batter_multiplier += 0.2
             elif mod == 'UNDERPERFORMING':
@@ -1198,7 +1213,9 @@ class Resim:
             ("swing-on-ball", self.swing_on_ball_rolls),
             ("swing-on-strike", self.swing_on_strike_rolls),
             ("contact", self.contact_rolls),
-            ("hr", self.hr_rolls)
+            ("hr", self.hr_rolls),
+            ("steal_attempt", self.steal_attempt_rolls),
+            ("steal_success", self.steal_success_rolls),
         ]
         for category_name, data in to_save:
             print(f"Saving {category_name} csv...")
