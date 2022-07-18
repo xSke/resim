@@ -126,11 +126,14 @@ class RollLog:
     batting_team_roster_size: int
     pitching_team_roster_size: int
     baserunner_count: int
+    is_strike: bool
+    strike_roll: float
+    strike_threshold: float
 
 
 def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_team, pitcher,
                   pitching_team, stadium, players, update, what1: float, what2: float, batter_multiplier: float,
-                  pitcher_multiplier: float):
+                  pitcher_multiplier: float, is_strike: bool, strike_roll: float, strike_threshold: float):
     defense_lineup = pitching_team.data['lineup']
     return RollLog(
         event_type=event_type,
@@ -250,4 +253,7 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         what2=what2,
         batting_team_roster_size=len(batting_team.data["lineup"]) + len(batting_team.data["rotation"]),
         pitching_team_roster_size=len(pitching_team.data["lineup"]) + len(pitching_team.data["rotation"]),
+        is_strike=is_strike,
+        strike_roll=strike_roll,
+        strike_threshold=strike_threshold
     )

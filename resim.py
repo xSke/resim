@@ -19,6 +19,8 @@ class Resim:
         self.triple_rolls: List[RollLog] = []
         self.swing_on_ball_rolls: List[RollLog] = []
         self.swing_on_strike_rolls: List[RollLog] = []
+        self.contact_rolls: List[RollLog] = []
+        self.hr_rolls: List[RollLog] = []
 
     def handle(self, event):
         self.setup_data(event)
@@ -27,8 +29,9 @@ class Resim:
         print("===== {} {}/{} {}".format(event["created"], self.update["id"], self.update["playCount"],
                                          weather_names[self.update["weather"]]))
         print("===== {} {}".format(self.ty, self.desc))
+        print("===== rng pos: {}".format(self.rng.get_state_str()))
 
-        if self.event["created"] == "2021-03-19T10:10:18.388Z":
+        if self.event["created"] in ["2021-03-19T10:10:18.388Z", "2021-03-20T00:02:46.644Z", "2021-03-20T00:19:55.994Z", "2021-03-20T00:33:05.016Z"]:
             # could be a couple factors, maybe birds roll after party (like we see with flooding but not other weathers)
             # or birds have another hidden effect adding a roll if it's low enough
             # stephanie winters *is* shelled and cannot escape in this game, so it's entirely possible it's a player selection for that
@@ -147,11 +150,13 @@ class Resim:
             if self.update["inning"] == 2:
                 # so if this *is* a coffee 3s game the pitchers are definitely gonna have the mod
                 # even if we pulled too early to catch it getting added. so i'm cheating here who cares
-                print("home pitcher mods: {} ({})".format(self.home_pitcher.mods, self.home_pitcher.name))
-                print("away pitcher mods: {} ({})".format(self.away_pitcher.mods, self.away_pitcher.name))
-                if self.home_pitcher.has_mod("TRIPLE_THREAT") or self.weather == 17:
+
+                # it's also specifically permanent mods, not seasonal mods that may or may not be echoed/received
+                print("home pitcher mods: {} ({})".format(self.home_pitcher.data["permAttr"], self.home_pitcher.name))
+                print("away pitcher mods: {} ({})".format(self.away_pitcher.data["permAttr"], self.away_pitcher.name))
+                if "TRIPLE_THREAT" in self.home_pitcher.data["permAttr"] or self.weather == 17:
                     self.roll("remove home pitcher triple threat")
-                if self.away_pitcher.has_mod("TRIPLE_THREAT") or self.weather == 17:
+                if "TRIPLE_THREAT" in self.away_pitcher.data["permAttr"] or self.weather == 17:
                     self.roll("remove away pitcher triple threat")
             # todo: salmon
             return True
@@ -201,7 +206,7 @@ class Resim:
                 self.fetched_days.add(self.event["day"])
 
                 timestamp = self.event["created"]
-                self.data.fetch_league_data(timestamp, 30)
+                self.data.fetch_league_data(timestamp, 20)
 
             if self.weather in [12, 13] and self.stadium.has_mod("PSYCHOACOUSTICS"):
                 print("away team mods:", self.away_team.data["permAttr"])
@@ -300,12 +305,14 @@ class Resim:
         if ", swinging" in self.desc or "strikes out swinging." in self.desc:
             self.throw_pitch()
             swing_roll = self.roll("swing")
-            self.roll("contact")
             self.log_roll(self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
                           "StrikeSwinging", swing_roll, True)
+
+            contact_roll = self.roll("contact")
+            self.log_roll(self.contact_rolls, "StrikeSwinging", contact_roll, False)
         elif ", looking" in self.desc or "strikes out looking." in self.desc:
             value = self.throw_pitch("strike")
-            self.log_roll(self.strike_rolls, "StrikeSwinging", value, True)
+            self.log_roll(self.strike_rolls, "StrikeLooking", value, True)
 
             if not self.is_flinching():
                 swing_roll = self.roll("swing")
@@ -339,9 +346,9 @@ class Resim:
         swing_roll = self.roll("swing")
         self.log_roll(self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
                       "Out", swing_roll, True)
-        self.roll("contact")
-        foul_roll = self.roll("foul")
-        self.log_roll(self.foul_rolls, "Out", foul_roll, True)
+        contact_roll = self.roll("contact")
+        self.log_roll(self.contact_rolls, "Out", contact_roll, True)
+        self.roll_foul(False)
 
         if self.ty == 7:
             self.roll("???")
@@ -502,12 +509,16 @@ class Resim:
             self.log_roll(
                 self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
                 "HR", swing_roll, True)
-            self.roll("contact")
-            foul_roll = self.roll("foul")
-            self.log_roll(self.foul_rolls, "BaseHit", foul_roll, True)
+
+            contact_roll = self.roll("contact")
+            self.log_roll(self.contact_rolls, "HomeRun", contact_roll, True)
+
+            self.roll_foul(False)
             self.roll("???")
             self.roll("???")
-            self.roll("home run")
+            
+            hr_roll = self.roll("home run")
+            self.log_roll(self.hr_rolls, "HomeRun", hr_roll, True)
         else:
             # not sure why we need this
             self.roll("magmatic")
@@ -521,13 +532,18 @@ class Resim:
         self.log_roll(
             self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
             "BaseHit", swing_roll, True)
-        self.roll("contact")
-        foul_roll = self.roll("foul")
-        self.log_roll(self.foul_rolls, "BaseHit", foul_roll, True)
+
+        contact_roll = self.roll("contact")
+        self.log_roll(self.contact_rolls, "BaseHit", contact_roll, True)
+
+        self.roll_foul(False)
 
         self.roll("???")
         self.roll("???")
-        self.roll("???")
+
+        hr_roll = self.roll("home run")
+        self.log_roll(self.hr_rolls, "BaseHit", hr_roll, False)
+
         self.roll("???")
         self.roll("???")
         triple_roll = self.roll("triple?")
@@ -544,22 +560,36 @@ class Resim:
 
         self.handle_hit_advances(hit_bases)
 
-    def handle_foul(self):
-        self.throw_pitch()
-        swing_roll = self.roll("swing")
-        self.roll("contact")
+    def roll_foul(self, known_outcome: bool):
+        vibes = self.batter.vibes(self.day)
+        fwd = self.stadium.data["forwardness"]
+        obt = self.stadium.data["obtuseness"]
+        musc = self.batter.data["musclitude"] * self.get_batter_multiplier() * (1 + 0.2 * vibes)
+        thwack = self.batter.data["thwackability"] * self.get_batter_multiplier() * (1 + 0.2 * vibes)
+        div = self.batter.data["divinity"] * self.get_batter_multiplier() * (1 + 0.2 * vibes)
+        foul_threshold = 0.25 + 0.1*fwd - 0.1*obt + (1/30)*musc + (1/30)*thwack + (1/30)*div
 
         foul_roll = self.roll("foul")
-
         is_0_no_eligible = self.batting_team.has_mod("O_NO") and self.strikes == 2 and self.balls == 0
-        if foul_roll > 0.5 and not is_0_no_eligible:
-            print("!!! too high foul roll ({})".format(foul_roll))
-
         if not is_0_no_eligible:
-            self.log_roll(self.foul_rolls, "Foul", foul_roll, False)
+            if known_outcome and foul_roll > foul_threshold:
+                print("!!! too high foul roll ({} > {})".format(foul_roll, foul_threshold))
+            elif not known_outcome and foul_roll < foul_threshold:
+                print("!!! too low foul roll ({} < {})".format(foul_roll, foul_threshold))
+        self.log_roll(self.foul_rolls, "uhhhhh", foul_roll, known_outcome)
+
+    def handle_foul(self):
+        self.throw_pitch()
+
+        swing_roll = self.roll("swing")
             self.log_roll(
                 self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
                 "Foul", swing_roll, True)
+
+        contact_roll = self.roll("contact")
+        self.log_roll(self.contact_rolls, "Foul", contact_roll, True)
+
+        self.roll_foul(True)
 
     def handle_batter_up(self):
         if self.batter.has_mod("HAUNTED"):
@@ -900,6 +930,8 @@ class Resim:
         threshold = min(threshold, 0.85)
 
         self.is_strike = roll < threshold
+        self.strike_roll = roll
+        self.strike_threshold = threshold
 
         if known_result == "strike" and roll > threshold:
             print("!!! warn: too high strike roll (threshold {})".format(threshold))
@@ -925,7 +957,10 @@ class Resim:
             self.what1,
             self.what2,
             self.get_batter_multiplier(),
-            self.get_pitcher_multiplier()
+            self.get_pitcher_multiplier(),
+            self.is_strike,
+            self.strike_roll,
+            self.strike_threshold
         ))
 
     def setup_data(self, event):
@@ -1162,6 +1197,8 @@ class Resim:
             ("triples", self.triple_rolls),
             ("swing-on-ball", self.swing_on_ball_rolls),
             ("swing-on-strike", self.swing_on_strike_rolls),
+            ("contact", self.contact_rolls),
+            ("hr", self.hr_rolls)
         ]
         for category_name, data in to_save:
             print(f"Saving {category_name} csv...")
