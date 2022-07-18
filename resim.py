@@ -569,9 +569,9 @@ class Resim:
         vibes = self.batter.vibes(self.day)
         fwd = self.stadium.data["forwardness"]
         obt = self.stadium.data["obtuseness"]
-        musc = self.batter.data["musclitude"] * self.get_batter_multiplier() * (1 + 0.2 * vibes)
-        thwack = self.batter.data["thwackability"] * self.get_batter_multiplier() * (1 + 0.2 * vibes)
-        div = self.batter.data["divinity"] * self.get_batter_multiplier() * (1 + 0.2 * vibes)
+        musc = self.batter.data["musclitude"] * self.get_batter_multiplier(relevant_attr="musclitude") * (1 + 0.2 * vibes)
+        thwack = self.batter.data["thwackability"] * self.get_batter_multiplier(relevant_attr="thwackability") * (1 + 0.2 * vibes)
+        div = self.batter.data["divinity"] * self.get_batter_multiplier(relevant_attr="divinity") * (1 + 0.2 * vibes)
         foul_threshold = 0.25 + 0.1*fwd - 0.1*obt + (1/30)*musc + (1/30)*thwack + (1/30)*div
 
         foul_roll = self.roll("foul")
@@ -934,8 +934,8 @@ class Resim:
             self.roll("acidic")
 
         vibes = self.pitcher.vibes(self.day)
-        ruth = self.pitcher.data["ruthlessness"] * self.get_pitcher_multiplier()
-        musc = self.batter.data["musclitude"] * self.get_batter_multiplier()
+        ruth = self.pitcher.data["ruthlessness"] * self.get_pitcher_multiplier(relevant_attr="ruthlessness")
+        musc = self.batter.data["musclitude"] * self.get_batter_multiplier(relevant_attr="musclitude")
         fwd = self.stadium.data["forwardness"]
 
         constant = 0.2 if not self.is_flinching() else 0.4
@@ -1157,8 +1157,9 @@ class Resim:
         print("{}: {}".format(label, value))
         return value
 
-    def get_batter_multiplier(self, relevant_batter=None):
+    def get_batter_multiplier(self, relevant_batter=None, relevant_attr=None):
         batter = relevant_batter or self.batter
+        attr = relevant_attr
 
         batter_multiplier = 1
         for mod in itertools.chain(batter.mods, self.batting_team.mods):
@@ -1181,10 +1182,24 @@ class Resim:
                 batter_multiplier += (14 - roster_size) * 0.01
             elif mod == 'AFFINITY_FOR_CROWS' and self.weather == 11:
                 batter_multiplier += 0.5
+            elif mod == "CHUNKY" and row["weather"] == 10:
+                # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
+                #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
+                if relevant_attr in ["musclitude", "divinity", "ground_friction"]:
+                    batter_multiplier += 1.0
+            elif mod == "SMOOTH" and row["weather"] == 10:
+                # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted everything in
+                #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
+                if relevant_attr in ["musclitude", "continuation", "ground_friction", "laserlikeness"]:
+                    batter_multiplier += 1.0
+            elif mod == "ON_FIRE":
+                # todo: figure out how the heck "on fire" works
+                pass
         return batter_multiplier
 
-    def get_pitcher_multiplier(self):
+    def get_pitcher_multiplier(self, relevant_attr=None):
         pitcher_multiplier = 1
+        attr = relevant_attr
         # growth or traveling do not work for pitchers as of s14
         for mod in itertools.chain(self.pitcher.mods, self.pitching_team.mods):
             if mod == 'OVERPERFORMING':
