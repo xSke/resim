@@ -1182,12 +1182,12 @@ class Resim:
                 batter_multiplier += (14 - roster_size) * 0.01
             elif mod == 'AFFINITY_FOR_CROWS' and self.weather == 11:
                 batter_multiplier += 0.5
-            elif mod == "CHUNKY" and row["weather"] == 10:
+            elif mod == "CHUNKY" and self.weather == 10:
                 # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
                 #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
                 if relevant_attr in ["musclitude", "divinity", "ground_friction"]:
                     batter_multiplier += 1.0
-            elif mod == "SMOOTH" and row["weather"] == 10:
+            elif mod == "SMOOTH" and self.weather == 10:
                 # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted everything in
                 #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
                 if relevant_attr in ["musclitude", "continuation", "ground_friction", "laserlikeness"]:
