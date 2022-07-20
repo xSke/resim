@@ -28,6 +28,10 @@ class Resim:
         self.hr_rolls: List[RollLog] = []
         self.steal_attempt_rolls: List[RollLog] = []
         self.steal_success_rolls: List[RollLog] = []
+        self.party_rolls: List[RollLog] = []
+
+        self.what1 = None
+        self.what2 = None
 
     def handle(self, event):
         self.setup_data(event)
@@ -189,8 +193,18 @@ class Resim:
                 self.try_roll_salmon()
             return True
         if self.ty == 63:
-            self.roll("salmon?")
-            self.roll("salmon?")
+            self.roll("salmon")
+
+            last_inning = self.update["inning"]
+            last_inning_away_score, last_inning_home_score = self.score_at_inning_start[(self.game_id, last_inning)]
+            current_away_score, current_home_score = self.update["awayScore"], self.update["homeScore"]
+
+            # todo: figure out order here
+            if current_away_score != last_inning_away_score:
+                self.roll("reset runs (away)")
+            if current_home_score != last_inning_home_score:
+                self.roll("reset runs (home)")
+
             return True
         if self.ty in [11, 158, 159, 106, 154, 155, 108, 107]:
             # skipping game end
@@ -231,6 +245,10 @@ class Resim:
                 "c84df551-f639-470a-8435-bd305af0847f": 1,
                 "4d898adc-8085-406b-967d-e36321eb2a14": 1,
                 "5491123b-9d35-4cf1-9db2-422378e1541e": 1,
+                "96d81673-e752-4fc3-8e32-6068f330a278": 1,
+                "65949d33-9b8f-4422-9b63-70af548e1fbf": 1,
+                "0575b652-a5a9-40b6-ac20-3d92c72044bc": 1,
+                "1095a2fd-f0b7-4d07-a0e2-e91d7fa3f5ea": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -448,6 +466,10 @@ class Resim:
         return eligible_fielders[fielder_idx] if fielder_idx is not None else None
 
     def handle_out_advances(self):
+        # special case for a chron data gap - ground out with no runners (so no rolls), but the game update is missing
+        if self.event["created"] == "2021-04-07T08:02:52.078Z":
+            return
+
         bases_before = make_base_map(self.update)
         bases_after = make_base_map(self.next_update)
 
@@ -487,6 +509,7 @@ class Resim:
                 ((2, 1, 0), (2, 1, 0)): 2,
                 ((2, 1, 0), (2, 1)): 5,  # guessing
                 ((2, 1, 0), (2,)): 2,
+                ((2, 1, 0), (1,)): 2, # guessing
                 ((2, 1, 0), tuple()): 2,  # dp
                 ((2, 1), (1,)): 3,  # guessing
                 ((2, 0), tuple()): 2,  # double play + sac?
@@ -645,6 +668,9 @@ class Resim:
             # eclipse
             self.roll("eclipse")
 
+            if self.batter.has_mod("MARKED"):
+                self.roll("unstable")
+
             if self.ty == 54:
                 self.roll("target")
                 # self.roll("target")
@@ -686,7 +712,7 @@ class Resim:
                 self.roll("siphon proc")
 
                 # this one is 1 more for some reason. don't know
-                if self.event["created"] == "2021-03-17T03:20:31.620Z":
+                if self.event["created"] in ["2021-03-17T03:20:31.620Z", "2021-04-07T13:02:47.102Z"]:
                     self.roll("siphon proc 2?")
                 return True
         elif self.weather == 10:
@@ -805,7 +831,7 @@ class Resim:
                 # handle flood
                 for runner_id in self.update["baseRunners"]:
                     runner = self.data.get_player(runner_id)
-                    if not runner.has_any("EGO1", "EGO2", "EGO3", "EGO4", "SWIM_BLADDER"):
+                    if not runner.has_any("EGO1", "SWIM_BLADDER"):
                         self.roll("sweep ({})".format(runner.name))
                 self.roll("filthiness")
                 return True
@@ -858,21 +884,21 @@ class Resim:
         for team in teams:
             if team.data["level"] >= 5:
                 self.roll("consumers ({})".format(team.data["nickname"]))
+                if self.ty == 67:
+                    # todo: relying on first team tag is wrong here i think
+                    attacked_team = self.event["teamTags"][0]
+                    if team.id == attacked_team or True:
+                        self.roll("target")
+                        for _ in range(25):
+                            self.roll("stat change")
 
-            if self.ty == 67:
-                # can we trust ordering here
-                attacked_team = self.event["teamTags"][0]
-                if team.id == attacked_team:
-                    self.roll("target")
-                    for _ in range(25):
-                        self.roll("stat change")
-
-                    return True
+                        return True
 
     def handle_party(self):
         # lol. turns out it just rolls party all the time and throws out the roll if the team isn't partying
         party_roll = self.roll("party time")
         if self.ty == 24:
+            self.log_roll(self.party_rolls, "Party", party_roll, True)
             team_roll = self.roll("target team")  # <0.5 for home, >0.5 for away
             self.roll("target player")
             for _ in range(25):
@@ -883,8 +909,9 @@ class Resim:
         # we have a positive case at 0.005210187516443421 (2021-03-19T14:22:26.078Z)
         # and one at 0.005465967826364659 (2021-03-19T07:09:38.068Z)
         # and one at 0.0054753553805302335 (2021-03-17T11:13:54.609Z)
+        # and one at 0.005489946742006868 (2021-04-07T16:25:17.109Z)
         # this is probably influenced by ballpark myst or something
-        elif party_roll < 0.005476:
+        elif party_roll < 0.00549: # might just be 0.0055 flat??
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod("PARTY_TIME"):
                 print("!!! home team is in party time")
@@ -983,7 +1010,8 @@ class Resim:
         fwd = self.stadium.data["forwardness"]
 
         constant = 0.2 if not self.is_flinching() else 0.4
-        threshold = constant + 0.3 * (ruth * (1 + 0.2 * vibes)) + 0.2 * fwd + 0.1 * musc
+        ruth_factor = 0.3 if self.season == 13 else 0.285 # 0.3 in s14, 0.285 in s15
+        threshold = constant + ruth_factor * (ruth * (1 + 0.2 * vibes)) + 0.2 * fwd + 0.1 * musc
         threshold = min(threshold, 0.85)
 
         self.is_strike = roll < threshold
@@ -1057,10 +1085,10 @@ class Resim:
         self.pitching_team = self.home_team if update["topOfInning"] else self.away_team
 
         batter_id = update["awayBatter"] if update["topOfInning"] else update["homeBatter"]
-        if not batter_id:
+        if not batter_id and next_update:
             batter_id = next_update["awayBatter"] if next_update["topOfInning"] else next_update["homeBatter"]
         pitcher_id = update["homePitcher"] if update["topOfInning"] else update["awayPitcher"]
-        if not pitcher_id:
+        if not pitcher_id and next_update:
             pitcher_id = next_update["homePitcher"] if next_update["topOfInning"] else next_update["awayPitcher"]
 
         self.batter = self.data.get_player(batter_id) if batter_id else None
@@ -1288,6 +1316,7 @@ class Resim:
             ("hr", self.hr_rolls),
             ("steal_attempt", self.steal_attempt_rolls),
             ("steal_success", self.steal_success_rolls),
+            ("party", self.party_rolls),
         ]
         for category_name, data in to_save:
             print(f"Saving {category_name} csv...")
