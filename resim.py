@@ -14,6 +14,8 @@ class Resim:
         self.data = GameData()
         self.fetched_days = set()
 
+        self.score_at_inning_start = {}
+
         self.is_strike = None
         self.strike_roll = None
         self.strike_threshold = None
@@ -100,6 +102,13 @@ class Resim:
         if self.handle_bird_ambush():
             return
 
+        # todo: don't know where this actually is - seems to be before mild at least
+        if self.pitcher.has_mod("DEBT_THREE") and not self.batter.has_mod("COFFEE_PERIL"):
+            self.roll("debt")
+            if self.ty == 22:
+                # debt success
+                return True
+
         if self.handle_mild():
             return
 
@@ -150,6 +159,9 @@ class Resim:
         if self.ty == 3:
             # s skipping pitcher change?
             return True
+        if self.ty in [107, 115, 175]:
+            # skip liquid/plasma plot nonsense
+            return True
         if self.ty in [28]:
             # skipping inning outing
             if self.update["inning"] == 2:
@@ -166,12 +178,31 @@ class Resim:
             # todo: salmon
             return True
         if self.ty in [2]:
-            # skipping top-of
+            # skipping top-of/bottom-of
+            if self.next_update["topOfInning"]:
+                inning_key = (self.game_id, self.next_update["inning"])
+                if inning_key not in self.score_at_inning_start:
+                    # don't re-save if salmon resets inning. could do this on the prev outing message instead i guess idk
+                    self.score_at_inning_start[inning_key] = (self.next_update["awayScore"], self.next_update["homeScore"])
+
             if self.update["weather"] == 19:
                 self.try_roll_salmon()
             return True
+        if self.ty == 63:
+            self.roll("salmon?")
+            self.roll("salmon?")
+            return True
         if self.ty in [11, 158, 159, 106, 154, 155, 108, 107]:
             # skipping game end
+
+            if self.ty == 11 and self.weather in [15, 16, 17]:
+                # end of coffee game redaction
+                rosters = self.home_team.data["lineup"] + self.home_team.data["rotation"] + self.away_team.data["lineup"] + self.away_team.data["rotation"]
+                for player_id in rosters:
+                    player = self.data.get_player(player_id)
+                    if player.has_mod("COFFEE_PERIL"):
+                        self.roll("redaction ({})".format(player.name))
+
             return True
         if self.ty in [0]:
             # game start - probably like, postseason weather gen 
@@ -199,6 +230,7 @@ class Resim:
                 "3c1b4d10-78af-4b8e-a9f5-e6ea2d50e5c4": 2,
                 "c84df551-f639-470a-8435-bd305af0847f": 1,
                 "4d898adc-8085-406b-967d-e36321eb2a14": 1,
+                "5491123b-9d35-4cf1-9db2-422378e1541e": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -328,20 +360,19 @@ class Resim:
         pass
 
     def try_roll_salmon(self):
-        if self.weather == 19 and self.next_update["inning"] > 0 and not self.update["topOfInning"]:
-            last_play = self.data.get_update(self.game_id, self.play - 2)
+        # don't reroll if we *just* reset
+        if "The Salmon swim upstream!" in self.update["lastUpdate"]:
+            return
+
+        last_inning = self.next_update["inning"] - 1
+        if self.weather == 19 and last_inning >= 0 and not self.update["topOfInning"]:
+            last_inning_away_score, last_inning_home_score = self.score_at_inning_start[(self.game_id, last_inning)]
+            current_away_score, current_home_score = self.next_update["awayScore"], self.next_update["homeScore"]
 
             # only roll salmon if the last inning had any scores, but also we have to dig into game history to find this
             # how does the sim do it? no idea. i'm cheating.
-            # print("salmon state", last_play["topInningScore"], last_play["bottomInningScore"], last_play["halfInningScore"], last_play["newInningPhase"])
-            if last_play["topInningScore"] or last_play["bottomInningScore"]:
+            if current_away_score != last_inning_away_score or current_home_score != last_inning_home_score:
                 self.roll("salmon")
-
-                if self.ty == 63:
-                    self.roll("salmon effect")
-                    self.roll("salmon effect")
-                    self.roll("salmon effect")
-                    self.roll("salmon effect")
 
     def is_flinching(self):
         return self.batter.has_mod("FLINCH") and self.strikes == 0
@@ -364,7 +395,7 @@ class Resim:
             self.roll("???")
             self.roll("???")
 
-        self.roll_fielder()
+        fielder = self.roll_fielder()
 
         if self.ty == 7:
             # extra flyout roll
@@ -373,7 +404,7 @@ class Resim:
         if self.outs < self.max_outs - 1:
             self.handle_out_advances()
 
-        if self.batter.has_mod("DEBT_THREE"):
+        if self.batter.has_mod("DEBT_THREE") and fielder and not fielder.has_mod("COFFEE_PERIL"):
             self.roll("debt")
 
     def roll_fielder(self):
@@ -413,6 +444,8 @@ class Resim:
         else:
             if "fielder's choice" not in self.desc and "double play" not in self.desc:
                 print("!!! could not find fielder (name wrong?)")
+
+        return eligible_fielders[fielder_idx] if fielder_idx is not None else None
 
     def handle_out_advances(self):
         bases_before = make_base_map(self.update)
@@ -682,14 +715,15 @@ class Resim:
         elif self.weather == 12:
             # feedback
             self.roll("feedback")
-            self.roll("feedback")  # this is probably echo y/n? but ignored if the mod isn't there
+            self.roll("feedback")  # this is probably echo y/n? but ignored if the mod isn't there?
 
             if self.weather in [12, 13] and (self.batter.has_mod("ECHO") or self.pitcher.has_mod("ECHO")):
                 # echo vs static, or batter echo vs pitcher echo?
                 if self.ty == 169:
                     self.roll("echo target")
 
-                    players = self.pitching_team.data["lineup"] + self.pitching_team.data["rotation"]
+                    target_team = self.batting_team if self.pitcher.has_mod("ECHO") else self.pitching_team
+                    players = target_team.data["lineup"] + target_team.data["rotation"]
                     all_players = []
                     players_with_mods = []
                     for player_id in players:
@@ -706,11 +740,11 @@ class Resim:
                     print("players with mods:")
                     for i, player in enumerate(players_with_mods):
                         print("- {} ({}/{}, {:.03f}-{:.03f})".format(player.name, i, len(players_with_mods),
-                                                                     i / len(players_with_mods),
-                                                                     (i + 1) / len(players_with_mods)))
+                                                                    i / len(players_with_mods),
+                                                                    (i + 1) / len(players_with_mods)))
 
                     return True
-                if self.ty == 170:
+                if self.ty in [170, 174]:
                     self.roll("echo target")
                     self.roll("echo target")
                     return True
@@ -728,6 +762,10 @@ class Resim:
                 self.roll("coffee proc")
 
                 return True
+
+            if self.batter.has_mod("COFFEE_PERIL"):
+                self.roll("observed?")
+
         elif self.weather == 16:
             # coffee 2
             self.roll("coffee 2")
@@ -737,8 +775,14 @@ class Resim:
                 self.roll("coffee 2 proc")
                 self.roll("coffee 2 proc")
                 return True
+
+            if self.batter.has_mod("COFFEE_PERIL"):
+                self.roll("observed?")
+
         elif self.weather == 17:
             # coffee 3s
+            if self.batter.has_mod("COFFEE_PERIL"):
+                self.roll("observed?")
             pass
         elif self.weather == 18:
             # flooding
@@ -1143,6 +1187,19 @@ class Resim:
                 team.data["lineup"].remove(player_id)
             if player_id in team.data["rotation"]:
                 team.data["rotation"].remove(player_id)
+
+        # mod changed from one to other
+        if event["type"] == 144:
+            player = self.data.get_player(event["playerTags"][0])
+            player.data[mod_positions[meta["type"]]].remove(meta["from"])
+            player.data[mod_positions[meta["type"]]].append(meta["to"])
+
+            # todo: do this in other cases too?
+            if meta["from"] == "RECEIVER":
+                for mod, source in player.data["state"]["seasModSources"].items():
+                    if source == ["RECEIVER"]:
+                        player.data["seasAttr"].remove(mod)
+
 
     def run(self, start_timestamp, end_timestamp):
         self.data.fetch_league_data(start_timestamp)
