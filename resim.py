@@ -42,13 +42,6 @@ class Resim:
         print("===== {} {}".format(self.ty, self.desc))
         print("===== rng pos: {}".format(self.rng.get_state_str()))
 
-        if self.event["created"] in ["2021-03-19T10:10:18.388Z", "2021-03-20T00:02:46.644Z", "2021-03-20T00:19:55.994Z", "2021-03-20T00:33:05.016Z"]:
-            # could be a couple factors, maybe birds roll after party (like we see with flooding but not other weathers)
-            # or birds have another hidden effect adding a roll if it's low enough
-            # stephanie winters *is* shelled and cannot escape in this game, so it's entirely possible it's a player selection for that
-            # need more info though
-            self.roll("CORRECTION: +1 for some reason (low birds roll?)")
-
         if self.handle_misc():
             return
 
@@ -79,11 +72,6 @@ class Resim:
         if self.handle_flooding():
             return
 
-        # deploy some time around s14 earlsiesta added this roll - unsure exactly when but it'll be somewhere between day 25 and day 30 (1-indexed)
-        if (self.season, self.day) > (13, 24):
-            self.what1 = self.roll("???")
-        else:
-            self.what1 = 0
 
         if self.handle_consumers():
             return
@@ -138,6 +126,14 @@ class Resim:
 
         self.handle_batter_reverb()
 
+        if self.was_attractor_placed_in_secret_base_async():
+            self.roll("attractor?") # this roll might be up by the trigger, idk yet
+            self.roll("attractor pitching stars")
+            self.roll("attractor batting stars")
+            self.roll("attractor baserunning stars")
+            self.roll("attractor defense stars")
+
+
     def handle_misc(self):
         if self.ty in [21, 78, 91, 92, 93, 99, 173, 182, 36]:
             # skipping pregame messages
@@ -166,6 +162,12 @@ class Resim:
         if self.ty in [107, 115, 175]:
             # skip liquid/plasma plot nonsense
             return True
+        if self.ty == 132:
+            # skip reverb
+            return True
+        if self.ty == 113:
+            # skip feedback
+            return True
         if self.ty in [28]:
             # skipping inning outing
             if self.update["inning"] == 2:
@@ -184,16 +186,18 @@ class Resim:
         if self.ty in [2]:
             # skipping top-of/bottom-of
             if self.next_update["topOfInning"]:
-                inning_key = (self.game_id, self.next_update["inning"])
-                if inning_key not in self.score_at_inning_start:
-                    # don't re-save if salmon resets inning. could do this on the prev outing message instead i guess idk
-                    self.score_at_inning_start[inning_key] = (self.next_update["awayScore"], self.next_update["homeScore"])
+                pass
 
             if self.update["weather"] == 19:
                 self.try_roll_salmon()
             return True
         if self.ty == 63:
             self.roll("salmon")
+
+            # special case for a weird starting point with missing data
+            if self.event["created"] == "2021-04-08T20:06:02.627Z":
+                self.roll("salmon")
+                return True
 
             last_inning = self.update["inning"]
             last_inning_away_score, last_inning_home_score = self.score_at_inning_start[(self.game_id, last_inning)]
@@ -206,7 +210,7 @@ class Resim:
                 self.roll("reset runs (home)")
 
             return True
-        if self.ty in [11, 158, 159, 106, 154, 155, 108, 107]:
+        if self.ty in [11, 158, 159, 106, 154, 155, 108, 107, 143]:
             # skipping game end
 
             if self.ty == 11 and self.weather in [15, 16, 17]:
@@ -222,12 +226,13 @@ class Resim:
             # game start - probably like, postseason weather gen 
             if self.event["day"] >= 99:
                 self.roll("game start")
-            self.roll("game start")
+
+            if self.event["day"] != 98:
+                # *why*
+                self.roll("game start")
 
             # todo: figure out the real logic here, i'm sure there's some
             extra_start_rolls = {
-                "17651ff0-3b87-48d6-b7a8-7e5fe115f463": 2,
-                "606166b9-2aef-47e8-aa4a-52f863880408": 2,
                 "fa9dab2a-409c-4886-979c-f1c584518d5d": 1,
                 "3244b12f-838a-4d75-abde-88874b75ab04": 0,
                 "a47f2a8b-0bde-42c8-bdd0-0513da92a6b1": 1,
@@ -249,10 +254,21 @@ class Resim:
                 "65949d33-9b8f-4422-9b63-70af548e1fbf": 1,
                 "0575b652-a5a9-40b6-ac20-3d92c72044bc": 1,
                 "1095a2fd-f0b7-4d07-a0e2-e91d7fa3f5ea": 1,
+                "e9fc696d-6c4c-4bca-bbfa-301a50b7917c": 1,
+                "6c986027-2100-4372-bc90-1adad22489e2": 1,
+                "741b5632-fbf8-49e7-9a64-9c92e636ea7a": 1,
+                "cc2d060c-c0a4-471b-a848-d9038c1881e0": 1,
+                "e1748a76-eb68-4cd7-a0a4-9132155142a6": 1,
+                "15097b04-c186-4402-a7f2-e373dceb8ed6": 1,
+                "7efb55e2-8009-46da-a9aa-ca92a120d59e": 1,
+                "ec1ab96f-40e2-4335-bb7a-945cbeadb75e": 1,
+                "dcd6d171-a761-494e-a4e0-95abc4e28a60": 1,
+                "d00b2402-3756-4489-aeba-5f771da9868b": 1,
+                "3b3ad672-3846-496e-8c8a-9ac19a563644": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
-                self.roll("align start")
+                self.roll("align start {} day {}".format(self.game_id, self.day))
 
             return True
         if self.ty in [1]:
@@ -286,9 +302,13 @@ class Resim:
         # before season 16, love blood only proc'd when the player also had love blood
         if self.event["season"] < 15:
             if self.batter.data["blood"] != 9:
+                if batter_charm_eligible:
+                    print("!!! warn: batter does not have love blood, skipping")
                 batter_charm_eligible = False
 
             if self.pitcher.data["blood"] != 9:
+                if pitcher_charm_eligible:
+                    print("!!! warn: pitcher does not have love blood, skipping")
                 pitcher_charm_eligible = False
 
         # todo: figure out logic order when both teams have charm
@@ -382,9 +402,15 @@ class Resim:
         if "The Salmon swim upstream!" in self.update["lastUpdate"]:
             return
 
+        # special case for a weird starting point with missing data
+        if self.event["created"] in ["2021-04-08T20:05:02.637Z", "2021-04-08T20:08:33.340Z"]:
+            self.roll("salmon")
+            return
+
         last_inning = self.next_update["inning"] - 1
+        inning_key = (self.game_id, last_inning)
         if self.weather == 19 and last_inning >= 0 and not self.update["topOfInning"]:
-            last_inning_away_score, last_inning_home_score = self.score_at_inning_start[(self.game_id, last_inning)]
+            last_inning_away_score, last_inning_home_score = self.score_at_inning_start[inning_key]
             current_away_score, current_home_score = self.next_update["awayScore"], self.next_update["homeScore"]
 
             # only roll salmon if the last inning had any scores, but also we have to dig into game history to find this
@@ -449,6 +475,7 @@ class Resim:
                                                                                                      rolled_idx,
                                                                                                      expected_min,
                                                                                                      expected_max))
+                print(self.rng.get_state_str())
 
             matching = []
             r2 = Rng(self.rng.state, self.rng.offset)
@@ -730,18 +757,43 @@ class Resim:
 
             if self.batter.has_mod("HONEY_ROASTED"):
                 self.roll("honey roasted")
+            if self.pitcher.has_mod("HONEY_ROASTED"):
+                self.roll("honey roasted")
 
         elif self.weather == 11:
             # birds
-            self.roll("birds")
+            bird_roll = self.roll("birds")
+
+            has_shelled_player = False
+            for player_id in self.pitching_team.data["lineup"] + self.pitching_team.data["rotation"] + self.batting_team.data["lineup"] + self.batting_team.data["rotation"]:
+                # if low roll and shelled player present, roll again
+                # in s14 this doesn't seem to check (inactive) pitchers (except all shelled pitchers are inactive so idk)
+                player = self.data.get_player(player_id)
+                # also must be specifically permAttr - moses mason (shelled in s15 through receiver, so seasonal mod) is exempt
+                if "SHELLED" in player.data["permAttr"]:
+                    has_shelled_player = True
 
             if self.ty == 33:
                 # the birds circle...
                 return True
+
+            # wild guess at how this maybe kinda works. might just be myst idk
+            bird_threshold = 0.015 if self.batting_team.has_mod("BIRD_SEED") else 0.012
+            if has_shelled_player and bird_roll < bird_threshold:
+                # potentially roll for player to unshell?
+                self.roll("extra bird roll")
+                pass
         elif self.weather == 12:
             # feedback
             self.roll("feedback")
             self.roll("feedback")  # this is probably echo y/n? but ignored if the mod isn't there?
+
+            if self.ty == 41:
+                # todo: how many rolls?
+                self.roll("feedback")
+                self.roll("feedback")
+                self.roll("feedback")
+                return True
 
             if self.weather in [12, 13] and (self.batter.has_mod("ECHO") or self.pitcher.has_mod("ECHO")):
                 # echo vs static, or batter echo vs pitcher echo?
@@ -776,7 +828,22 @@ class Resim:
                     return True
         elif self.weather == 13:
             # reverb
+
+            if self.stadium.has_mod("ECHO_CHAMBER"):
+                self.roll("echo chamber")
+                if self.ty == 69: # nice
+                    self.roll("echo chamber")
+                    return True
+
             self.roll("reverb")
+            if self.ty == 49:
+                # todo: how many rolls?
+                for _ in range(2):
+                    self.roll("reverb shuffle?")
+                for _ in range(len(self.pitching_team.data["rotation"])):
+                    self.roll("reverb shuffle?")
+                return True
+
         elif self.weather == 14:
             # black hole
             pass
@@ -833,13 +900,26 @@ class Resim:
                     runner = self.data.get_player(runner_id)
                     if not runner.has_any("EGO1", "SWIM_BLADDER"):
                         self.roll("sweep ({})".format(runner.name))
-                self.roll("filthiness")
+
+                if not self.stadium.has_mod("FLOOD_PUMPS"):
+                    self.roll("filthiness")
                 return True
 
     def handle_elsewhere_scattered(self):
         # looks like elsewhere and scattered get rolled separately at least in s14?
         # not sure what the cancel logic is here
-        players = self.batting_team.data["lineup"] + self.batting_team.data["rotation"]
+
+        # "why not use self.batting_team"
+        # well! there's a bug with half-inning-ending grind rail outs that they won't properly reset the inning state
+        # and the other team's batter isn't reset. and for some reason, this means the game doesn't roll elsewhere for the next half inning
+        # see: https://reblase.sibr.dev/game/027f022e-eecc-48db-a25e-5dfb01f91c7c#55f2d7c5-846b-8dfc-66a2-cd6586dd980f
+        team = self.batting_team
+        if self.update["awayBatter"] and not self.update["topOfInning"] and self.ty not in [12, 23]:
+            return
+        if self.update["homeBatter"] and self.update["topOfInning"] and self.ty not in [12, 23]:
+            return
+
+        players = team.data["lineup"] + team.data["rotation"]
         did_elsewhere_return = False
         for player_id in players:
             player = self.data.get_player(player_id)
@@ -858,7 +938,12 @@ class Resim:
 
             if player.has_mod("SCATTERED"):
                 unscatter_roll = self.roll("unscatter ({})".format(player.raw_name))
-                if unscatter_roll < 0.0005:  # todo: find threshold
+
+                # todo: find actual threshold
+                threshold = 0.0005
+                if self.season == 14: # seems to be lower in s15?
+                    threshold = 0.0004
+                if unscatter_roll < threshold:
                     self.roll("unscatter letter ({})".format(player.raw_name))
 
     def do_elsewhere_return(self, player):
@@ -866,7 +951,7 @@ class Resim:
         should_scatter = False
         if "days" in self.desc:
             elsewhere_time = int(self.desc.split("after ")[1].split(" days")[0])
-            if elsewhere_time >= 18:
+            if elsewhere_time > 18:
                 should_scatter = True
         if "season" in self.desc:
             should_scatter = True
@@ -877,20 +962,48 @@ class Resim:
                 # todo: figure out what these are
                 self.roll("scatter letter")
 
+    def was_attractor_placed_in_secret_base_async(self):
+        update_one_after_next = self.data.get_update(self.game_id, self.play+2)
+
+        # [rob voice] ugh. this line sucks
+        # basically "do we observe an attractor enter a secret base on the tick *after* this one". because it does it weird and async or something
+        if self.next_update and not self.next_update["secretBaserunner"] and update_one_after_next and update_one_after_next["secretBaserunner"] and "enters the Secret Base" not in update_one_after_next["lastUpdate"]:
+            attractor = self.data.get_player(update_one_after_next["secretBaserunner"])
+            return attractor
+
     def handle_consumers(self):
+        # deploy some time around s14 earlsiesta added this roll - unsure exactly when but it'll be somewhere between day 25 and day 30 (1-indexed)
+        if (self.season, self.day) > (13, 24):
+            self.what1 = self.roll("???")
+        else:
+            self.what1 = 0
+
         # todo: roll order (might be home/away?)
-        teams = [self.batting_team, self.pitching_team]
+        if self.what1 < 0.5:
+            teams = [self.away_team, self.home_team]
+        else:
+            teams = [self.home_team, self.away_team]
 
         for team in teams:
             if team.data["level"] >= 5:
                 self.roll("consumers ({})".format(team.data["nickname"]))
                 if self.ty == 67:
-                    # todo: relying on first team tag is wrong here i think
-                    attacked_team = self.event["teamTags"][0]
-                    if team.id == attacked_team or True:
+                    attacked_player_id = self.event["playerTags"][0]
+                    is_on_team = attacked_player_id in (team.data["lineup"] + team.data["rotation"])
+                    if is_on_team:
+                        attacked_player = self.data.get_player(attacked_player_id)
+
                         self.roll("target")
                         for _ in range(25):
                             self.roll("stat change")
+
+                        if attacked_player.data["soul"] == 1:
+                            # lost their last soul, redact :<
+                            print("!!! {} lost last soul, redacting".format(attacked_player.name))
+                            if attacked_player_id in team.data["lineup"]:
+                                team.data["lineup"].remove(attacked_player_id)
+                            if attacked_player_id in team.data["rotation"]:
+                                team.data["rotation"].remove(attacked_player_id)
 
                         return True
 
@@ -934,8 +1047,8 @@ class Resim:
                 return True
 
         if self.stadium.has_mod("GRIND_RAIL"):
-            print("todo: grind rail handling")
-            pass  # todo
+            if self.handle_grind_rail():
+                return True
 
         league_mods = self.data.sim["attr"]
         if "SECRET_TUNNELS" in league_mods:
@@ -943,29 +1056,96 @@ class Resim:
 
     def handle_secret_base(self):
         # not sure this works
-        secret_runner = self.update["secretBaserunner"]
+        secret_runner_id = self.update["secretBaserunner"]
         bases = self.update["basesOccupied"]
 
-        secret_base_enter_eligible = 1 in bases and not secret_runner
-        secret_base_exit_eligible = 1 not in bases and secret_runner
-        secret_base_wrong_side = False
-        if secret_runner:
-            secret_runner = self.data.get_player(secret_runner)
-            if secret_runner.data["leagueTeamId"] != self.batting_team.id:
-                print("can't exit secret base on wrong team")
-                secret_base_exit_eligible = False
-                secret_base_wrong_side = True
+        # if an attractor appeared between this tick and next, and this isn't a "real" enter...
+        did_attractor_enter_this_tick = not self.update["secretBaserunner"] and self.next_update["secretBaserunner"] and self.ty != 65
+        if did_attractor_enter_this_tick:
+            secret_runner_id = self.next_update["secretBaserunner"]
 
-        attractor_eligible = not secret_runner and 1 not in bases
+        secret_base_enter_eligible = 1 in bases and not secret_runner_id
+        secret_base_exit_eligible = 1 not in bases and secret_runner_id
+        if secret_runner_id:
+            # what is the exact criteria here?
+            # we have ghost Elijah Bates entering a secret base in 42a824ba-bd7b-4b63-aeb5-a60173df136e (null leagueTeamId) and that *does* have an exit roll on the "wrong side"
+            # so maybe it just checks "if present on opposite team" rather than "is not present on current team"? or it's special handling for null team
+            pitching_lineup = self.pitching_team.data["lineup"]
+            secret_runner = self.data.get_player(secret_runner_id)
+            if secret_runner_id in pitching_lineup:
+                print("can't exit secret base on wrong team", secret_runner.name)
+                secret_base_exit_eligible = False
+
+        # weird order issues here. when an attractor is placed in the secret base, it only applies the *next* tick
+        # likely because of some kinda async function that fills in the field between ticks
+        # so we need to do this play count/next check nonsense to get the right roll order
+        attractor_eligible = not secret_runner_id
+        if attractor_eligible:
+            self.roll("secret base attract")
+
+            attractor = self.was_attractor_placed_in_secret_base_async()
+            if attractor:
+                # todo: some of these rolls seem to be done async
+                print("!!! attractor placed in secret base:", attractor.name)
+                return
 
         if secret_base_exit_eligible:
             self.roll("secret base exit")
+            if self.ty == 66:
+                return True
+
         if secret_base_enter_eligible:
-            # why does this roll twice?
             self.roll("secret base enter")
-            self.roll("secret base enter")
-        if attractor_eligible:
-            self.roll("secret base attract")
+            if self.ty == 65:
+                return True                
+
+            # if the player got redacted it doesn't interrupt the pitch and keeps going
+            # so the event type won't be 65 but the message will be there
+            if "enters the Secret Base..." in self.desc:
+                runner_idx = self.update["basesOccupied"].index(1)
+                runner_id = self.update["baseRunners"][runner_idx]
+                runner = self.data.get_player(runner_id)
+                print("!!! redacted baserunner:", runner.name)
+
+                # remove baserunner from roster so fielder math works. should probably move this logic into a function somehow
+                lineup = self.batting_team.data["lineup"]
+                lineup.remove(runner_id)
+                runner.data["permAttr"].append("REDACTED")
+
+                # and just as a cherry on top let's hack this so we don't roll for steal as well
+                self.update["basesOccupied"].remove(1)
+                self.update["baseRunners"].remove(runner_id)
+
+    def handle_grind_rail(self):
+        if 0 in self.update["basesOccupied"] and 2 not in self.update["basesOccupied"]:
+            # i have no idea why this rolls twice but it definitely *does*
+            self.roll("grind rail")
+            self.roll("grind rail")
+
+            if self.ty == 70:
+                runner = self.data.get_player(self.update["baseRunners"][-1])
+
+                self.roll("trick 1 name")
+
+                score_1_roll = self.roll("trick 1 score")
+                lo1 = runner.data["pressurization"] * 200
+                hi1 = runner.data["cinnamon"] * 1500 + 500
+                score_1 = int((hi1-lo1) * score_1_roll + lo1)
+                print("(score: {})".format(score_1))
+
+                self.roll("trick 1 success")
+
+                if "lose their balance and bail!" not in self.desc:
+                    self.roll("trick 2 name")
+                    score_2_roll = self.roll("trick 2 score")
+                    lo2 = runner.data["pressurization"] * 500
+                    hi2 = runner.data["cinnamon"] * 3000 + 1000
+                    score_2 = int((hi2-lo2) * score_2_roll + lo2)
+                    print("(score: {})".format(score_2))
+
+                    self.roll("trick 2 success")
+                return True
+
 
     def handle_steal(self):
         bases = self.update["basesOccupied"]
@@ -1117,6 +1297,12 @@ class Resim:
                 self.batter.data["name"] = self.update["homeBatterName"]
                 self.pitcher.data["name"] = self.update["awayPitcherName"]
 
+        if self.next_update:
+            inning_key = (self.game_id, self.next_update["inning"])
+            if inning_key not in self.score_at_inning_start:
+                self.score_at_inning_start[inning_key] = (self.next_update["awayScore"], self.next_update["homeScore"])
+
+
     def apply_event_changes(self, event):
         # maybe move this function to data.py?
         meta = event.get("metadata", {})
@@ -1129,7 +1315,8 @@ class Resim:
 
             if event["playerTags"]:
                 player = self.data.get_player(event["playerTags"][0])
-                player.data[position].append(meta["mod"])
+                if meta["mod"] not in player.data[position]:
+                    player.data[position].append(meta["mod"])
             else:
                 team = self.data.get_team(event["teamTags"][0])
                 team.data[position].append(meta["mod"])
@@ -1169,7 +1356,11 @@ class Resim:
             if event["playerTags"]:
                 for mod in meta["mods"]:
                     player = self.data.get_player(event["playerTags"][0])
-                    player.data[position].remove(mod)
+                    if mod not in player.data[position]:
+                        print("!!! warn: trying to remove mod {} but can't find it".format(mod))
+                    else:
+                        player.data[position].remove(mod)
+
             else:
                 for mod in meta["mods"]:
                     team = self.data.get_team(event["teamTags"][0])
@@ -1227,6 +1418,20 @@ class Resim:
                 for mod, source in player.data["state"]["seasModSources"].items():
                     if source == ["RECEIVER"]:
                         player.data["seasAttr"].remove(mod)
+
+        # roster swap
+        if event["type"] == 113:
+            a_team = self.data.get_team(meta["aTeamId"])
+            b_team = self.data.get_team(meta["bTeamId"])
+            a_location = ["lineup", "rotation"][meta["aLocation"]]
+            b_location = ["lineup", "rotation"][meta["bLocation"]]
+            a_player = meta["aPlayerId"]
+            b_player = meta["bPlayerId"]
+            a_idx = a_team.data[a_location].index(a_player)
+            b_idx = b_team.data[b_location].index(b_player)
+
+            b_team.data[b_location][b_idx] = a_player
+            a_team.data[a_location][a_idx] = b_player
 
 
     def run(self, start_timestamp, end_timestamp):
