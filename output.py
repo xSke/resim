@@ -105,11 +105,13 @@ class RollLog:
     batter_vibes_multiplied: float
     pitcher_vibes: float
     pitcher_vibes_multiplied: float
+    defender_vibes: float
 
     batter_mods: str
     batting_team_mods: str
     pitcher_mods: str
     pitching_team_mods: str
+    defender_mods: str
 
     game_id: str
     stadium_id: str
@@ -129,11 +131,12 @@ class RollLog:
     is_strike: bool
     strike_roll: float
     strike_threshold: float
+    fielder_roll: float
 
 
 def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_team, pitcher,
                   pitching_team, stadium, players, update, what1: float, what2: float, batter_multiplier: float,
-                  pitcher_multiplier: float, is_strike: bool, strike_roll: float, strike_threshold: float):
+                  pitcher_multiplier: float, is_strike: bool, strike_roll: float, strike_threshold: float, fielder_roll, fielder):
     defense_lineup = pitching_team.data['lineup']
     return RollLog(
         event_type=event_type,
@@ -199,16 +202,12 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         pitcher_cinnamon=pitcher.data["cinnamon"],
         pitcher_multiplier=pitcher_multiplier,
 
-        defense_avg_anticapitalism=sum(
-            players[pid]['anticapitalism'] for pid in defense_lineup) / len(defense_lineup),
-        defense_avg_chasiness=sum(
-            players[pid]['chasiness'] for pid in defense_lineup) / len(defense_lineup),
-        defense_avg_omniscience=sum(
-            players[pid]['omniscience'] for pid in defense_lineup) / len(defense_lineup),
-        defense_avg_tenaciousness=sum(
-            players[pid]['tenaciousness'] for pid in defense_lineup) / len(defense_lineup),
-        defense_avg_watchfulness=sum(
-            players[pid]['watchfulness'] for pid in defense_lineup) / len(defense_lineup),
+        defense_avg_anticapitalism=fielder.data['anticapitalism'] if fielder is not None else pooled_attr([pitcher.data['id']] + defense_lineup, players, 'anticapitalism', update['day']),
+        defense_avg_chasiness=fielder.data['chasiness'] if fielder is not None else pooled_attr([pitcher.data['id']] + defense_lineup, players, 'chasiness', update['day']),
+        defense_avg_omniscience=fielder.data['omniscience'] if fielder is not None else pooled_attr([pitcher.data['id']] + defense_lineup, players, 'omniscience', update['day']),
+        defense_avg_tenaciousness=fielder.data['tenaciousness'] if fielder is not None else pooled_attr([pitcher.data['id']] + defense_lineup, players, 'tenaciousness', update['day']),
+        defense_avg_watchfulness=fielder.data['watchfulness'] if fielder is not None else pooled_attr([pitcher.data['id']] + defense_lineup, players, 'watchfulness', update['day']),
+        defender_vibes=calculate_vibes(fielder.data, update['day'], 1) if fielder is not None else 0,
 
         ballpark_grandiosity=stadium.data["grandiosity"],
         ballpark_fortification=stadium.data["fortification"],
@@ -233,6 +232,7 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         batting_team_mods=";".join(batting_team.mods),
         pitcher_mods=";".join(pitcher.mods),
         pitching_team_mods=";".join(pitching_team.mods),
+        defender_mods=";".join(fielder.mods) if fielder is not None else "",
 
         game_id=update['id'],
         stadium_id=update['stadiumId'],
@@ -255,5 +255,11 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         pitching_team_roster_size=len(pitching_team.data["lineup"]) + len(pitching_team.data["rotation"]),
         is_strike=is_strike,
         strike_roll=strike_roll,
-        strike_threshold=strike_threshold
+        strike_threshold=strike_threshold,
+        fielder_roll=fielder_roll
     )
+
+
+def pooled_attr(lineup, players, attr, day):
+    return sum(
+        players[pid][attr] * players[pid]['tenaciousness'] * (1 + 0.2 * calculate_vibes(players[pid], day, 1)) for pid in lineup) / len(lineup)
