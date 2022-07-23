@@ -1,10 +1,9 @@
-import math
 import os, itertools
 from typing import List
 
 import pandas as pd
 
-from data import GameData, get_feed_between, weather_names
+from data import GameData, get_feed_between, weather_names, null_stadium
 from output import RollLog, make_roll_log
 from rng import Rng
 
@@ -544,9 +543,10 @@ class Resim:
                 if not roll_outcome or base == 1:
                     break
 
-            # edge case for holding hands I GUESS SURE WHY NOT WHO CARES ANYMORE (i guess the base map doesn't support multiple)
-            if self.update["basesOccupied"] == [2, 2]:
-                self.roll("holding hands")
+                # our code doesn't handle each baserunner twice so i'm cheating here
+                # rerolling for the "second" player on third's advance if the first successfully advanced, since it's possible for both
+                if self.update["basesOccupied"] == [2, 2] and base == 2 and roll_outcome:
+                    self.roll("holding hands")
 
         elif self.ty == 8:
             # ground out
@@ -584,8 +584,11 @@ class Resim:
             if "reaches on fielder's choice" in self.desc:
                 extras[((2, 0), (0,))] = 2  # what
 
-            rolls = extras[
-                (tuple(self.update["basesOccupied"]), tuple(self.next_update["basesOccupied"]))]
+            if "into a double play!" in self.desc:
+                # not [2, 1, 0], 2 scores, everyone advances, but instead just a dp, which is 3 shorter...?
+                extras[((2, 1, 0), (2, 1))] = 2
+
+            rolls = extras[(tuple(self.update["basesOccupied"]), tuple(self.next_update["basesOccupied"]))]
             for _ in range(rolls):
                 self.roll("extra")
 
@@ -954,7 +957,7 @@ class Resim:
                     if not runner.has_any("EGO1", "SWIM_BLADDER"):
                         self.roll("sweep ({})".format(runner.name))
 
-                if not self.stadium.has_mod("FLOOD_PUMPS"):
+                if self.stadium.id and not self.stadium.has_mod("FLOOD_PUMPS"):
                     self.roll("filthiness")
                 return True
 
@@ -1038,7 +1041,8 @@ class Resim:
             teams = [self.home_team, self.away_team]
 
         for team in teams:
-            if team.data["level"] >= 5:
+            level = team.data.get("level", 0)
+            if level >= 5:
                 self.roll("consumers ({})".format(team.data["nickname"]))
                 if self.ty == 67:
                     attacked_player_id = self.event["playerTags"][0]
@@ -1076,8 +1080,9 @@ class Resim:
         # and one at 0.005465967826364659 (2021-03-19T07:09:38.068Z)
         # and one at 0.0054753553805302335 (2021-03-17T11:13:54.609Z)
         # and one at 0.005489946742006868 (2021-04-07T16:25:17.109Z)
-        # this is probably influenced by ballpark myst or something
-        elif party_roll < 0.00549: # might just be 0.0055 flat??
+        # and one at 0.0054976162782947036 (2021-03-05T01:04:16.078Z), pre-ballparks??
+        # this is probably influenced by ballpark myst or something (or not??)
+        elif party_roll < 0.0055:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod("PARTY_TIME"):
                 print("!!! home team is in party time")
@@ -1340,7 +1345,7 @@ class Resim:
         self.home_pitcher = self.data.get_player(home_pitcher_id) if home_pitcher_id else None
         self.away_pitcher = self.data.get_player(away_pitcher_id) if away_pitcher_id else None
 
-        self.stadium = self.data.get_stadium(update["stadiumId"])
+        self.stadium = self.data.get_stadium(update["stadiumId"]) if update["stadiumId"] else null_stadium
 
         self.outs = update["halfInningOuts"]
         self.max_outs = update["awayOuts"] if update["topOfInning"] else update["homeOuts"]
