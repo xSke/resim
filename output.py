@@ -100,6 +100,7 @@ class RollLog:
 
     batter_name: str
     pitcher_name: str
+    fielder_name: str
 
     batter_vibes: float
     batter_vibes_multiplied: float
@@ -145,6 +146,7 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
 
         batter_name=batter.data["name"],
         pitcher_name=pitcher.data["name"],
+        fielder_name=fielder.data["name"] if fielder is not None else "",
 
         batter_buoyancy=batter.data["buoyancy"],
         batter_divinity=batter.data["divinity"],
