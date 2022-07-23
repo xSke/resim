@@ -116,6 +116,23 @@ class StadiumData:
     def has_mod(self, mod) -> bool:
         return mod in self.mods
 
+null_stadium = StadiumData({
+    "id": None,
+    "mods": [],
+    "name": "Null Stadium",
+    "nickname": "Null Stadium",
+    "mysticism": 0.5,
+    "viscosity": 0.5,
+    "elongation": 0.5,
+    "filthiness": 0,
+    "obtuseness": 0.5,
+    "forwardness": 0.5,
+    "grandiosity": 0.5,
+    "ominousness": 0.5,
+    "fortification": 0.5,
+    "inconvenience": 0.5,
+    "hype": 0
+})
 
 @dataclass
 class PlayerData:

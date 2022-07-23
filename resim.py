@@ -3,7 +3,7 @@ from typing import List
 
 import pandas as pd
 
-from data import GameData, get_feed_between, weather_names
+from data import GameData, get_feed_between, weather_names, null_stadium
 from output import RollLog, make_roll_log
 from rng import Rng
 
@@ -265,6 +265,9 @@ class Resim:
                 "dcd6d171-a761-494e-a4e0-95abc4e28a60": 1,
                 "d00b2402-3756-4489-aeba-5f771da9868b": 1,
                 "3b3ad672-3846-496e-8c8a-9ac19a563644": 1,
+                "196f195c-f8b2-44e9-b117-a7a46de390cd": 1,
+                "c7a63a95-53bc-44a7-a5e3-c3d9d1bf8779": 1,
+                "d022b5e3-3ab2-48e9-baae-85cc48e3d01a": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -513,7 +516,10 @@ class Resim:
 
             # edge case for holding hands I GUESS SURE WHY NOT WHO CARES ANYMORE (i guess the base map doesn't support multiple)
             if self.update["basesOccupied"] == [2, 2]:
-                self.roll("holding hands")
+                # also apparently this doesn't roll in the one instance of this i have in s13 (2021-03-10T09:28:40.693Z)
+                # so like. sure. work this out later
+                if self.season > 12:
+                    self.roll("holding hands")
 
         elif self.ty == 8:
             # ground out
@@ -550,6 +556,10 @@ class Resim:
 
             if "reaches on fielder's choice" in self.desc:
                 extras[((2, 0), (0,))] = 2  # what
+
+            if "into a double play!" in self.desc:
+                # not [2, 1, 0], 2 scores, everyone advances, but instead just a dp, which is 3 shorter...?
+                extras[((2, 1, 0), (2, 1))] = 2
 
             rolls = extras[(tuple(self.update["basesOccupied"]), tuple(self.next_update["basesOccupied"]))]
             for _ in range(rolls):
@@ -760,6 +770,11 @@ class Resim:
             if self.pitcher.has_mod("HONEY_ROASTED"):
                 self.roll("honey roasted")
 
+            if self.ty == 74:
+                self.roll("target") # might be team or index
+                self.roll("target") # probably player
+                return True
+
         elif self.weather == 11:
             # birds
             bird_roll = self.roll("birds")
@@ -901,7 +916,7 @@ class Resim:
                     if not runner.has_any("EGO1", "SWIM_BLADDER"):
                         self.roll("sweep ({})".format(runner.name))
 
-                if not self.stadium.has_mod("FLOOD_PUMPS"):
+                if self.stadium.id and not self.stadium.has_mod("FLOOD_PUMPS"):
                     self.roll("filthiness")
                 return True
 
@@ -985,7 +1000,8 @@ class Resim:
             teams = [self.home_team, self.away_team]
 
         for team in teams:
-            if team.data["level"] >= 5:
+            level = team.data.get("level", 0)
+            if level >= 5:
                 self.roll("consumers ({})".format(team.data["nickname"]))
                 if self.ty == 67:
                     attacked_player_id = self.event["playerTags"][0]
@@ -1023,8 +1039,9 @@ class Resim:
         # and one at 0.005465967826364659 (2021-03-19T07:09:38.068Z)
         # and one at 0.0054753553805302335 (2021-03-17T11:13:54.609Z)
         # and one at 0.005489946742006868 (2021-04-07T16:25:17.109Z)
-        # this is probably influenced by ballpark myst or something
-        elif party_roll < 0.00549: # might just be 0.0055 flat??
+        # and one at 0.0054976162782947036 (2021-03-05T01:04:16.078Z), pre-ballparks??
+        # this is probably influenced by ballpark myst or something (or not??)
+        elif party_roll < 0.0055:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod("PARTY_TIME"):
                 print("!!! home team is in party time")
@@ -1279,7 +1296,7 @@ class Resim:
         self.home_pitcher = self.data.get_player(home_pitcher_id) if home_pitcher_id else None
         self.away_pitcher = self.data.get_player(away_pitcher_id) if away_pitcher_id else None
 
-        self.stadium = self.data.get_stadium(update["stadiumId"])
+        self.stadium = self.data.get_stadium(update["stadiumId"]) if update["stadiumId"] else null_stadium
 
         self.outs = update["halfInningOuts"]
         self.max_outs = update["awayOuts"] if update["topOfInning"] else update["homeOuts"]
