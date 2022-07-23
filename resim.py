@@ -462,6 +462,9 @@ class Resim:
             fly_roll = self.roll("fly")
             self.log_roll(self.fly_rolls, "Flyout", fly_roll, True,
                           fielder_roll=fly_fielder_roll, fielder=fly_fielder)
+            self.log_roll(self.out_rolls, "Flyout", out_roll, False,
+                          fielder_roll=out_fielder_roll,
+                          fielder=self.get_fielder_for_roll(out_fielder_roll))
             fielder = fly_fielder
         elif self.ty == 8:  # ground out
             out_fielder_roll = self.roll("out fielder?")
@@ -471,6 +474,9 @@ class Resim:
             ground_fielder_roll, ground_fielder = self.roll_fielder()
             self.log_roll(self.fly_rolls, "GroundOut", fly_roll, False,
                           fielder_roll=fly_fielder_roll, fielder=fly_fielder)
+            self.log_roll(self.out_rolls, "GroundOut", out_roll, False,
+                          fielder_roll=out_fielder_roll,
+                          fielder=self.get_fielder_for_roll(out_fielder_roll))
             fielder = ground_fielder
 
         if self.outs < self.max_outs - 1:
@@ -544,7 +550,8 @@ class Resim:
                     break
 
                 # our code doesn't handle each baserunner twice so i'm cheating here
-                # rerolling for the "second" player on third's advance if the first successfully advanced, since it's possible for both
+                # rerolling for the "second" player on third's advance if the first successfully advanced,
+                # since it's possible for both
                 if self.update["basesOccupied"] == [2, 2] and base == 2 and roll_outcome:
                     self.roll("holding hands")
 
