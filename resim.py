@@ -272,6 +272,9 @@ class Resim:
                 "dcd6d171-a761-494e-a4e0-95abc4e28a60": 1,
                 "d00b2402-3756-4489-aeba-5f771da9868b": 1,
                 "3b3ad672-3846-496e-8c8a-9ac19a563644": 1,
+                "196f195c-f8b2-44e9-b117-a7a46de390cd": 1,
+                "c7a63a95-53bc-44a7-a5e3-c3d9d1bf8779": 1,
+                "d022b5e3-3ab2-48e9-baae-85cc48e3d01a": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -819,6 +822,11 @@ class Resim:
                 self.roll("honey roasted")
             if self.pitcher.has_mod("HONEY_ROASTED"):
                 self.roll("honey roasted")
+
+            if self.ty == 74:
+                self.roll("target") # might be team or index
+                self.roll("target") # probably player
+                return True
 
         elif self.weather == 11:
             # birds
