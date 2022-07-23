@@ -516,7 +516,10 @@ class Resim:
 
             # edge case for holding hands I GUESS SURE WHY NOT WHO CARES ANYMORE (i guess the base map doesn't support multiple)
             if self.update["basesOccupied"] == [2, 2]:
-                self.roll("holding hands")
+                # also apparently this doesn't roll in the one instance of this i have in s13 (2021-03-10T09:28:40.693Z)
+                # so like. sure. work this out later
+                if self.season > 12:
+                    self.roll("holding hands")
 
         elif self.ty == 8:
             # ground out
@@ -553,6 +556,10 @@ class Resim:
 
             if "reaches on fielder's choice" in self.desc:
                 extras[((2, 0), (0,))] = 2  # what
+
+            if "into a double play!" in self.desc:
+                # not [2, 1, 0], 2 scores, everyone advances, but instead just a dp, which is 3 shorter...?
+                extras[((2, 1, 0), (2, 1))] = 2
 
             rolls = extras[(tuple(self.update["basesOccupied"]), tuple(self.next_update["basesOccupied"]))]
             for _ in range(rolls):
