@@ -46,14 +46,6 @@ class Resim:
         print("===== {} {}".format(self.ty, self.desc))
         print("===== rng pos: {}".format(self.rng.get_state_str()))
 
-        if self.event["created"] in ["2021-03-19T10:10:18.388Z", "2021-03-20T00:02:46.644Z",
-                                     "2021-03-20T00:19:55.994Z", "2021-03-20T00:33:05.016Z"]:
-            # could be a couple factors, maybe birds roll after party (like we see with flooding but not other weathers)
-            # or birds have another hidden effect adding a roll if it's low enough
-            # stephanie winters *is* shelled and cannot escape in this game, so it's entirely possible it's a player selection for that
-            # need more info though
-            self.roll("CORRECTION: +1 for some reason (low birds roll?)")
-
         if self.handle_misc():
             return
 
@@ -485,7 +477,8 @@ class Resim:
         if self.outs < self.max_outs - 1:
             self.handle_out_advances()
 
-        if self.batter.has_mod("DEBT_THREE") and fielder and not fielder.has_mod("COFFEE_PERIL"):
+        is_fc_dp = "into a double play!" in self.desc or "reaches on fielder's choice" in self.desc
+        if not is_fc_dp and self.batter.has_mod("DEBT_THREE") and fielder and not fielder.has_mod("COFFEE_PERIL"):
             self.roll("debt")
 
     def roll_fielder(self, check_name=True):
