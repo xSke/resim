@@ -433,10 +433,12 @@ class Resim:
         return self.batter.has_mod("FLINCH") and self.strikes == 0
 
     def get_fielder_for_roll(self, fielder_roll: float):
-        candidates = [self.pitcher.id] + self.pitching_team.data['lineup']
+        # candidates = [self.pitcher.id] + self.pitching_team.data['lineup']
+        candidates = self.pitching_team.data['lineup']
         candidates = [self.data.get_player(player) for player in candidates]
         candidates = [c for c in candidates if not c.has_mod("ELSEWHERE")]
-        weights = [pl.data['tenaciousness'] + 1 for pl in candidates]
+        # weights = [pl.data['tenaciousness'] * pl.data['omniscience'] for pl in candidates]
+        weights = [1 for pl in candidates]
         sum_weights = sum(weights)
         weights = [weight / sum_weights for weight in weights]
         roll_remaining = fielder_roll
@@ -459,7 +461,7 @@ class Resim:
 
         fielder = None
         if self.ty == 7:  # flyout
-            out_fielder_roll = self.roll("out fielder?")
+            out_fielder_roll = self.roll("out fielder")
             out_roll = self.roll("out")
             fly_fielder_roll, fly_fielder = self.roll_fielder()
             fly_roll = self.roll("fly")
@@ -470,7 +472,7 @@ class Resim:
                           fielder=self.get_fielder_for_roll(out_fielder_roll))
             fielder = fly_fielder
         elif self.ty == 8:  # ground out
-            out_fielder_roll = self.roll("out fielder?")
+            out_fielder_roll = self.roll("out fielder")
             out_roll = self.roll("out")
             fly_fielder_roll, fly_fielder = self.roll_fielder(check_name=False)
             fly_roll = self.roll("fly")
@@ -679,8 +681,8 @@ class Resim:
 
         self.roll_foul(False)
 
-        fielder_roll = self.roll("???")
-        out_roll = self.roll("???")
+        fielder_roll = self.roll("out fielder?")
+        out_roll = self.roll("out")
 
         self.log_roll(self.out_rolls, "BaseHit", out_roll, True,
                       fielder_roll=fielder_roll,
@@ -689,8 +691,8 @@ class Resim:
         hr_roll = self.roll("home run")
         self.log_roll(self.hr_rolls, "BaseHit", hr_roll, False)
 
-        self.roll("???")
-        self.roll("???")
+        self.roll("hit fielder?")
+        self.roll("double?")
         triple_roll = self.roll("triple?")
 
         hit_bases = 0
