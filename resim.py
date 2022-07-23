@@ -514,11 +514,9 @@ class Resim:
                 if not roll_outcome or base == 1:
                     break
 
-            # edge case for holding hands I GUESS SURE WHY NOT WHO CARES ANYMORE (i guess the base map doesn't support multiple)
-            if self.update["basesOccupied"] == [2, 2]:
-                # also apparently this doesn't roll in the one instance of this i have in s13 (2021-03-10T09:28:40.693Z)
-                # so like. sure. work this out later
-                if self.season > 12:
+                # our code doesn't handle each baserunner twice so i'm cheating here
+                # rerolling for the "second" player on third's advance if the first successfully advanced, since it's possible for both
+                if self.update["basesOccupied"] == [2, 2] and base == 2 and roll_outcome:
                     self.roll("holding hands")
 
         elif self.ty == 8:
