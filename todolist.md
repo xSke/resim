@@ -15,6 +15,7 @@
 - Investigate items
 - Investigate weird EE mechanics
 - Clean up formulas in general
+- Figure out how Spicy/On Fire works (consecutive hits?)
 - Figure out how to go "backwards in time" through the rng stream
 
 ## In progress
