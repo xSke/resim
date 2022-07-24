@@ -466,7 +466,8 @@ class Resim:
             fly_fielder_roll, fly_fielder = self.roll_fielder()
             fly_roll = self.roll("fly")
             self.log_roll(self.fly_rolls, "Flyout", fly_roll, True,
-                          fielder_roll=fly_fielder_roll, fielder=fly_fielder)
+                          fielder_roll=out_fielder_roll,
+                          fielder=self.get_fielder_for_roll(out_fielder_roll))
             self.log_roll(self.out_rolls, "Flyout", out_roll, False,
                           fielder_roll=out_fielder_roll,
                           fielder=self.get_fielder_for_roll(out_fielder_roll))
@@ -478,7 +479,8 @@ class Resim:
             fly_roll = self.roll("fly")
             ground_fielder_roll, ground_fielder = self.roll_fielder()
             self.log_roll(self.fly_rolls, "GroundOut", fly_roll, False,
-                          fielder_roll=fly_fielder_roll, fielder=fly_fielder)
+                          fielder_roll=out_fielder_roll,
+                          fielder=self.get_fielder_for_roll(out_fielder_roll))
             self.log_roll(self.out_rolls, "GroundOut", out_roll, False,
                           fielder_roll=out_fielder_roll,
                           fielder=self.get_fielder_for_roll(out_fielder_roll))
