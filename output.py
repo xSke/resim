@@ -145,7 +145,6 @@ def make_roll_log(
     pitcher,
     pitching_team,
     stadium,
-    players,
     update,
     what1: float,
     what2: float,
@@ -157,7 +156,6 @@ def make_roll_log(
     fielder_roll,
     fielder,
 ):
-    defense_lineup = pitching_team.data["lineup"]
     return RollLog(
         event_type=event_type,
         roll=roll,
@@ -219,21 +217,11 @@ def make_roll_log(
         pitcher_pressurization=pitcher.data["pressurization"],
         pitcher_cinnamon=pitcher.data["cinnamon"],
         pitcher_multiplier=pitcher_multiplier,
-        fielder_anticapitalism=fielder.data["anticapitalism"]
-        if fielder is not None
-        else pooled_attr(defense_lineup, players, "anticapitalism", update["day"]),
-        fielder_chasiness=fielder.data["chasiness"]
-        if fielder is not None
-        else pooled_attr(defense_lineup, players, "chasiness", update["day"]),
-        fielder_omniscience=fielder.data["omniscience"]
-        if fielder is not None
-        else pooled_attr(defense_lineup, players, "omniscience", update["day"]),
-        fielder_tenaciousness=fielder.data["tenaciousness"]
-        if fielder is not None
-        else pooled_attr(defense_lineup, players, "tenaciousness", update["day"]),
-        fielder_watchfulness=fielder.data["watchfulness"]
-        if fielder is not None
-        else pooled_attr(defense_lineup, players, "watchfulness", update["day"]),
+        fielder_anticapitalism=fielder.data["anticapitalism"] if fielder is not None else 0,
+        fielder_chasiness=fielder.data["chasiness"] if fielder is not None else 0,
+        fielder_omniscience=fielder.data["omniscience"] if fielder is not None else 0,
+        fielder_tenaciousness=fielder.data["tenaciousness"] if fielder is not None else 0,
+        fielder_watchfulness=fielder.data["watchfulness"] if fielder is not None else 0,
         fielder_vibes=calculate_vibes(fielder.data, update["day"], 1) if fielder is not None else 0,
         ballpark_grandiosity=stadium.data["grandiosity"],
         ballpark_fortification=stadium.data["fortification"],
@@ -278,10 +266,3 @@ def make_roll_log(
         strike_threshold=strike_threshold,
         fielder_roll=fielder_roll,
     )
-
-
-def pooled_attr(lineup, players, attr, day):
-    return sum(
-        players[pid][attr] * players[pid]["tenaciousness"] * (1 + 0.2 * calculate_vibes(players[pid], day, 1))
-        for pid in lineup
-    ) / len(lineup)
