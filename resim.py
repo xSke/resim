@@ -253,7 +253,7 @@ class Resim:
         if self.ty in [11, 158, 159, 106, 154, 155, 108, 107, 143]:
             # skipping game end
 
-            if self.ty == 11 and Weather.is_coffee(self.weather):
+            if self.ty == 11 and self.weather.is_coffee():
                 # end of coffee game redaction
                 rosters = (
                     self.home_team.data["lineup"]
@@ -1031,7 +1031,7 @@ class Resim:
                 self.roll("feedback")
                 return True
 
-            if Weather.can_echo(self.weather) and (
+            if self.weather.can_echo() and (
                 self.batter.has_mod("ECHO") or self.pitcher.has_mod("ECHO")
             ):
                 # echo vs static, or batter echo vs pitcher echo?
@@ -1134,7 +1134,7 @@ class Resim:
         elif self.weather == Weather.SALMON:
             pass
 
-        elif Weather.is_polarity(self.weather):
+        elif self.weather.is_polarity():
             # polarity +/-
             self.roll("polarity")
         else:
