@@ -433,11 +433,9 @@ class Resim:
         return self.batter.has_mod("FLINCH") and self.strikes == 0
 
     def get_fielder_for_roll(self, fielder_roll: float):
-        # candidates = [self.pitcher.id] + self.pitching_team.data['lineup']
         candidates = self.pitching_team.data['lineup']
         candidates = [self.data.get_player(player) for player in candidates]
         candidates = [c for c in candidates if not c.has_mod("ELSEWHERE")]
-        # weights = [pl.data['tenaciousness'] * pl.data['omniscience'] for pl in candidates]
         weights = [1 for pl in candidates]
         sum_weights = sum(weights)
         weights = [weight / sum_weights for weight in weights]
@@ -655,8 +653,8 @@ class Resim:
             self.log_roll(self.contact_rolls, "HomeRun", contact_roll, True)
 
             self.roll_foul(False)
-            fielder_roll = self.roll("???")
-            out_roll = self.roll("???")
+            fielder_roll = self.roll("out fielder")
+            out_roll = self.roll("out")
 
             self.log_roll(self.out_rolls, "HR", out_roll, True,
                           fielder_roll=fielder_roll,
@@ -683,7 +681,7 @@ class Resim:
 
         self.roll_foul(False)
 
-        fielder_roll = self.roll("out fielder?")
+        fielder_roll = self.roll("out fielder")
         out_roll = self.roll("out")
 
         self.log_roll(self.out_rolls, "BaseHit", out_roll, True,

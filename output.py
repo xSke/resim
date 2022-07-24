@@ -75,11 +75,11 @@ class RollLog:
     pitcher_cinnamon: float
     pitcher_multiplier: float
 
-    defense_avg_anticapitalism: float
-    defense_avg_chasiness: float
-    defense_avg_omniscience: float
-    defense_avg_tenaciousness: float
-    defense_avg_watchfulness: float
+    fielder_anticapitalism: float
+    fielder_chasiness: float
+    fielder_omniscience: float
+    fielder_tenaciousness: float
+    fielder_watchfulness: float
 
     ballpark_grandiosity: float
     ballpark_fortification: float
@@ -106,13 +106,13 @@ class RollLog:
     batter_vibes_multiplied: float
     pitcher_vibes: float
     pitcher_vibes_multiplied: float
-    defender_vibes: float
+    fielder_vibes: float
 
     batter_mods: str
     batting_team_mods: str
     pitcher_mods: str
     pitching_team_mods: str
-    defender_mods: str
+    fielder_mods: str
 
     game_id: str
     stadium_id: str
@@ -204,12 +204,12 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         pitcher_cinnamon=pitcher.data["cinnamon"],
         pitcher_multiplier=pitcher_multiplier,
 
-        defense_avg_anticapitalism=fielder.data['anticapitalism'] if fielder is not None else pooled_attr([pitcher.data['id']] + defense_lineup, players, 'anticapitalism', update['day']),
-        defense_avg_chasiness=fielder.data['chasiness'] if fielder is not None else pooled_attr([pitcher.data['id']] + defense_lineup, players, 'chasiness', update['day']),
-        defense_avg_omniscience=fielder.data['omniscience'] if fielder is not None else pooled_attr([pitcher.data['id']] + defense_lineup, players, 'omniscience', update['day']),
-        defense_avg_tenaciousness=fielder.data['tenaciousness'] if fielder is not None else pooled_attr([pitcher.data['id']] + defense_lineup, players, 'tenaciousness', update['day']),
-        defense_avg_watchfulness=fielder.data['watchfulness'] if fielder is not None else pooled_attr([pitcher.data['id']] + defense_lineup, players, 'watchfulness', update['day']),
-        defender_vibes=calculate_vibes(fielder.data, update['day'], 1) if fielder is not None else 0,
+        fielder_anticapitalism=fielder.data['anticapitalism'] if fielder is not None else pooled_attr(defense_lineup, players, 'anticapitalism', update['day']),
+        fielder_chasiness=fielder.data['chasiness'] if fielder is not None else pooled_attr(defense_lineup, players, 'chasiness', update['day']),
+        fielder_omniscience=fielder.data['omniscience'] if fielder is not None else pooled_attr(defense_lineup, players, 'omniscience', update['day']),
+        fielder_tenaciousness=fielder.data['tenaciousness'] if fielder is not None else pooled_attr(defense_lineup, players, 'tenaciousness', update['day']),
+        fielder_watchfulness=fielder.data['watchfulness'] if fielder is not None else pooled_attr(defense_lineup, players, 'watchfulness', update['day']),
+        fielder_vibes=calculate_vibes(fielder.data, update['day'], 1) if fielder is not None else 0,
 
         ballpark_grandiosity=stadium.data["grandiosity"],
         ballpark_fortification=stadium.data["fortification"],
@@ -234,7 +234,7 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         batting_team_mods=";".join(batting_team.mods),
         pitcher_mods=";".join(pitcher.mods),
         pitching_team_mods=";".join(pitching_team.mods),
-        defender_mods=";".join(fielder.mods) if fielder is not None else "",
+        fielder_mods=";".join(fielder.mods) if fielder is not None else "",
 
         game_id=update['id'],
         stadium_id=update['stadiumId'],
