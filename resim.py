@@ -1856,18 +1856,18 @@ class Resim:
         run_name = run_name.replace(":", "_")
 
         to_save = [
-            # ("strikes", self.strike_rolls),
-            # ("fouls", self.foul_rolls),
-            # ("triples", self.triple_rolls),
-            # ("swing-on-ball", self.swing_on_ball_rolls),
-            # ("swing-on-strike", self.swing_on_strike_rolls),
-            # ("contact", self.contact_rolls),
-            # ("hr", self.hr_rolls),
-            # ("steal_attempt", self.steal_attempt_rolls),
-            # ("steal_success", self.steal_success_rolls),
-            # ("party", self.party_rolls),
-            # ("out", self.out_rolls),
-            # ("fly", self.fly_rolls),
+            ("strikes", self.strike_rolls),
+            ("fouls", self.foul_rolls),
+            ("triples", self.triple_rolls),
+            ("swing-on-ball", self.swing_on_ball_rolls),
+            ("swing-on-strike", self.swing_on_strike_rolls),
+            ("contact", self.contact_rolls),
+            ("hr", self.hr_rolls),
+            ("steal_attempt", self.steal_attempt_rolls),
+            ("steal_success", self.steal_success_rolls),
+            ("party", self.party_rolls),
+            ("out", self.out_rolls),
+            ("fly", self.fly_rolls),
             ("fc-dp", self.fc_dp_rolls),
         ]
         for category_name, data in to_save:
