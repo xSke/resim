@@ -1,7 +1,11 @@
 from dataclasses import dataclass
-import os, json, requests, math
+import os
+import json
+import requests
+import math
 from typing import Any, Dict
 from datetime import datetime, timedelta
+from enum import IntEnum
 
 
 def parse_timestamp(timestamp):
@@ -67,6 +71,28 @@ def get_feed_between(start, end):
         ),
     )
     return resp
+
+
+class Weather(IntEnum):
+    SUN_2 = 1
+    ECLIPSE = 7
+    GLITTER = 8
+    BLOODDRAIN = 9
+    PEANUTS = 10
+    BIRDS = 11
+    FEEDBACK = 12
+    REVERB = 13
+    BLACK_HOLE = 14
+    COFFEE = 15
+    COFFEE_2 = 16
+    COFFEE_3S = 17
+    FLOODING = 18
+    SALMON = 19
+    POLARITY_PLUS = 20
+    POLARITY_MINUS = 21
+    SUN_90 = 23
+    SUN_POINT_1 = 24
+    SUM_SUN = 25
 
 
 weather_names = {
@@ -181,8 +207,10 @@ class PlayerData:
 
         pressurization = self.data["pressurization"]
         cinnamon = self.data["cinnamon"] if self.data["cinnamon"] is not None else 0
-        range = 0.5 * (pressurization + cinnamon)
-        vibes = (range * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
+        viberange = 0.5 * (pressurization + cinnamon)
+        vibes = (
+            (viberange * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
+        )
         return vibes if not self.has_mod("SCATTERED") else 0
 
 

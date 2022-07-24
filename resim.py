@@ -1,9 +1,10 @@
-import os, itertools
+import os
+import itertools
 from typing import List
 
 import pandas as pd
 
-from data import GameData, get_feed_between, weather_names, null_stadium
+from data import GameData, get_feed_between, Weather, null_stadium
 from output import RollLog, make_roll_log
 from rng import Rng
 
@@ -44,7 +45,7 @@ class Resim:
                 event["created"],
                 self.update["id"],
                 self.update["playCount"],
-                weather_names[self.update["weather"]],
+                Weather(self.update["weather"]).name,
             )
         )
         print("===== {} {}".format(self.ty, self.desc))
@@ -207,12 +208,12 @@ class Resim:
                 )
                 if (
                     "TRIPLE_THREAT" in self.home_pitcher.data["permAttr"]
-                    or self.weather == 17
+                    or self.weather == Weather.COFFEE_3S
                 ):
                     self.roll("remove home pitcher triple threat")
                 if (
                     "TRIPLE_THREAT" in self.away_pitcher.data["permAttr"]
-                    or self.weather == 17
+                    or self.weather == Weather.COFFEE_3S
                 ):
                     self.roll("remove away pitcher triple threat")
             # todo: salmon
@@ -222,7 +223,7 @@ class Resim:
             if self.next_update["topOfInning"]:
                 pass
 
-            if self.update["weather"] == 19:
+            if self.update["weather"] == Weather.SALMON:
                 self.try_roll_salmon()
             return True
         if self.ty == 63:
@@ -252,7 +253,11 @@ class Resim:
         if self.ty in [11, 158, 159, 106, 154, 155, 108, 107, 143]:
             # skipping game end
 
-            if self.ty == 11 and self.weather in [15, 16, 17]:
+            if self.ty == 11 and self.weather in [
+                Weather.COFFEE,
+                Weather.COFFEE_2,
+                Weather.COFFEE_3S,
+            ]:
                 # end of coffee game redaction
                 rosters = (
                     self.home_team.data["lineup"]
@@ -326,13 +331,16 @@ class Resim:
                 timestamp = self.event["created"]
                 self.data.fetch_league_data(timestamp, 20)
 
-            if self.weather in [12, 13] and self.stadium.has_mod("PSYCHOACOUSTICS"):
+            if self.weather in [
+                Weather.FEEDBACK,
+                Weather.REVERB,
+            ] and self.stadium.has_mod("PSYCHOACOUSTICS"):
                 print("away team mods:", self.away_team.data["permAttr"])
                 self.roll("echo team mod")
             return True
 
     def handle_bird_ambush(self):
-        if self.weather == 11:
+        if self.weather == Weather.BIRDS:
             # todo: does this go here or nah
             # print("bird ambush eligible? {}s/{}b/{}o".format(self.strikes, self.balls, self.outs))
             if self.strikes == 0:
@@ -473,7 +481,11 @@ class Resim:
 
         last_inning = self.next_update["inning"] - 1
         inning_key = (self.game_id, last_inning)
-        if self.weather == 19 and last_inning >= 0 and not self.update["topOfInning"]:
+        if (
+            self.weather == Weather.SALMON
+            and last_inning >= 0
+            and not self.update["topOfInning"]
+        ):
             last_inning_away_score, last_inning_home_score = self.score_at_inning_start[
                 inning_key
             ]
@@ -497,7 +509,7 @@ class Resim:
         candidates = self.pitching_team.data["lineup"]
         candidates = [self.data.get_player(player) for player in candidates]
         candidates = [c for c in candidates if not c.has_mod("ELSEWHERE")]
-        weights = [1 for pl in candidates]
+        weights = [1] * len(candidates)
         sum_weights = sum(weights)
         weights = [weight / sum_weights for weight in weights]
         roll_remaining = fielder_roll
@@ -899,10 +911,10 @@ class Resim:
             self.roll("haunter selection")
 
     def handle_weather(self):
-        if self.weather == 1:
+        if self.weather == Weather.SUN_2:
             # sun 2
             pass
-        elif self.weather == 7:
+        elif self.weather == Weather.ECLIPSE:
             # eclipse
             self.roll("eclipse")
 
@@ -939,10 +951,10 @@ class Resim:
                         self.roll("target")
                         return True
                     break
-        elif self.weather == 8:
+        elif self.weather == Weather.GLITTER:
             # glitter
             self.roll("glitter")
-        elif self.weather == 9:
+        elif self.weather == Weather.BLOODDRAIN:
             # blooddrain
             self.roll("blooddrain")
 
@@ -959,7 +971,7 @@ class Resim:
                 ]:
                     self.roll("siphon proc 2?")
                 return True
-        elif self.weather == 10:
+        elif self.weather == Weather.PEANUTS:
             # peanuts
             self.roll("peanuts")
 
@@ -982,7 +994,7 @@ class Resim:
                 self.roll("target")  # probably player
                 return True
 
-        elif self.weather == 11:
+        elif self.weather == Weather.BIRDS:
             # birds
             bird_roll = self.roll("birds")
 
@@ -994,9 +1006,11 @@ class Resim:
                 + self.batting_team.data["rotation"]
             ):
                 # if low roll and shelled player present, roll again
-                # in s14 this doesn't seem to check (inactive) pitchers (except all shelled pitchers are inactive so idk)
+                # in s14 this doesn't seem to check (inactive) pitchers
+                # (except all shelled pitchers are inactive so idk)
                 player = self.data.get_player(player_id)
-                # also must be specifically permAttr - moses mason (shelled in s15 through receiver, so seasonal mod) is exempt
+                # also must be specifically permAttr - moses mason (shelled in s15 through receiver, so seasonal mod)
+                # is exempt
                 if "SHELLED" in player.data["permAttr"]:
                     has_shelled_player = True
 
@@ -1010,7 +1024,7 @@ class Resim:
                 # potentially roll for player to unshell?
                 self.roll("extra bird roll")
                 pass
-        elif self.weather == 12:
+        elif self.weather == Weather.FEEDBACK:
             # feedback
             self.roll("feedback")
             self.roll(
@@ -1024,7 +1038,7 @@ class Resim:
                 self.roll("feedback")
                 return True
 
-            if self.weather in [12, 13] and (
+            if self.weather in [Weather.FEEDBACK, Weather.REVERB] and (
                 self.batter.has_mod("ECHO") or self.pitcher.has_mod("ECHO")
             ):
                 # echo vs static, or batter echo vs pitcher echo?
@@ -1074,7 +1088,7 @@ class Resim:
                     self.roll("echo target")
                     self.roll("echo target")
                     return True
-        elif self.weather == 13:
+        elif self.weather == Weather.REVERB:
             # reverb
 
             if self.stadium.has_mod("ECHO_CHAMBER"):
@@ -1092,10 +1106,10 @@ class Resim:
                     self.roll("reverb shuffle?")
                 return True
 
-        elif self.weather == 14:
+        elif self.weather == Weather.BLACK_HOLE:
             # black hole
             pass
-        elif self.weather == 15:
+        elif self.weather == Weather.COFFEE:
             # coffee
             self.roll("coffee")
             if self.ty == 39:
@@ -1107,7 +1121,7 @@ class Resim:
             if self.batter.has_mod("COFFEE_PERIL"):
                 self.roll("observed?")
 
-        elif self.weather == 16:
+        elif self.weather == Weather.COFFEE_2:
             # coffee 2
             self.roll("coffee 2")
 
@@ -1120,27 +1134,27 @@ class Resim:
             if self.batter.has_mod("COFFEE_PERIL"):
                 self.roll("observed?")
 
-        elif self.weather == 17:
+        elif self.weather == Weather.COFFEE_3S:
             # coffee 3s
             if self.batter.has_mod("COFFEE_PERIL"):
                 self.roll("observed?")
             pass
-        elif self.weather == 18:
+        elif self.weather == Weather.FLOODING:
             # flooding
             pass
-        elif self.weather == 19:
+        elif self.weather == Weather.SALMON:
             # salmon
             pass
-        elif self.weather in [20, 21]:
+        elif self.weather in [Weather.POLARITY_PLUS, Weather.POLARITY_MINUS]:
             # polarity +/-
             self.roll("polarity")
         else:
             print(
-                "error: {} weather not implemented".format(weather_names[self.weather])
+                "error: {} weather not implemented".format(Weather(self.weather).name)
             )
 
     def handle_flooding(self):
-        if self.weather == 18:
+        if self.weather == Weather.FLOODING:
             if self.update["basesOccupied"]:
                 self.roll("flooding")
 
@@ -1161,7 +1175,8 @@ class Resim:
 
         # "why not use self.batting_team"
         # well! there's a bug with half-inning-ending grind rail outs that they won't properly reset the inning state
-        # and the other team's batter isn't reset. and for some reason, this means the game doesn't roll elsewhere for the next half inning
+        # and the other team's batter isn't reset. and for some reason, this means the game doesn't roll elsewhere for
+        # the next half inning
         # see: https://reblase.sibr.dev/game/027f022e-eecc-48db-a25e-5dfb01f91c7c#55f2d7c5-846b-8dfc-66a2-cd6586dd980f
         team = self.batting_team
         if (
@@ -1224,7 +1239,8 @@ class Resim:
         update_one_after_next = self.data.get_update(self.game_id, self.play + 2)
 
         # [rob voice] ugh. this line sucks
-        # basically "do we observe an attractor enter a secret base on the tick *after* this one". because it does it weird and async or something
+        # basically "do we observe an attractor enter a secret base on the tick *after* this one". because it does it
+        # weird and async or something
         if (
             self.next_update
             and not self.next_update["secretBaserunner"]
@@ -1236,7 +1252,8 @@ class Resim:
             return attractor
 
     def handle_consumers(self):
-        # deploy some time around s14 earlsiesta added this roll - unsure exactly when but it'll be somewhere between day 25 and day 30 (1-indexed)
+        # deploy some time around s14 earlsiesta added this roll - unsure exactly when but it'll be somewhere between
+        # day 25 and day 30 (1-indexed)
         if (self.season, self.day) > (13, 24):
             self.what1 = self.roll("???")
         else:
@@ -1344,8 +1361,10 @@ class Resim:
         secret_base_exit_eligible = 1 not in bases and secret_runner_id
         if secret_runner_id:
             # what is the exact criteria here?
-            # we have ghost Elijah Bates entering a secret base in 42a824ba-bd7b-4b63-aeb5-a60173df136e (null leagueTeamId) and that *does* have an exit roll on the "wrong side"
-            # so maybe it just checks "if present on opposite team" rather than "is not present on current team"? or it's special handling for null team
+            # we have ghost Elijah Bates entering a secret base in 42a824ba-bd7b-4b63-aeb5-a60173df136e
+            # (null leagueTeamId) and that *does* have an exit roll on the "wrong side"
+            # so maybe it just checks "if present on opposite team" rather than "is not present on current team"? or
+            # it's special handling for null team
             pitching_lineup = self.pitching_team.data["lineup"]
             secret_runner = self.data.get_player(secret_runner_id)
             if secret_runner_id in pitching_lineup:
@@ -1383,7 +1402,8 @@ class Resim:
                 runner = self.data.get_player(runner_id)
                 print("!!! redacted baserunner:", runner.name)
 
-                # remove baserunner from roster so fielder math works. should probably move this logic into a function somehow
+                # remove baserunner from roster so fielder math works.
+                # should probably move this logic into a function somehow
                 lineup = self.batting_team.data["lineup"]
                 lineup.remove(runner_id)
                 runner.data["permAttr"].append("REDACTED")
@@ -1803,7 +1823,10 @@ class Resim:
                 batter_multiplier += min(0.05, 0.05 * (self.day / 99))
             elif mod == "HIGH_PRESSURE":
                 # checks for flooding weather and baserunners
-                if self.update["weather"] == 18 and len(self.update["baseRunners"]) > 0:
+                if (
+                    self.update["weather"] == Weather.FLOODING
+                    and len(self.update["baseRunners"]) > 0
+                ):
                     # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
                     batter_multiplier += 0.25
             elif mod == "TRAVELING":
@@ -1814,14 +1837,14 @@ class Resim:
                     self.batting_team.data["rotation"]
                 )
                 batter_multiplier += (14 - roster_size) * 0.01
-            elif mod == "AFFINITY_FOR_CROWS" and self.weather == 11:
+            elif mod == "AFFINITY_FOR_CROWS" and self.weather == Weather.BIRDS:
                 batter_multiplier += 0.5
-            elif mod == "CHUNKY" and self.weather == 10:
+            elif mod == "CHUNKY" and self.weather == Weather.PEANUTS:
                 # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
                 #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
                 if relevant_attr in ["musclitude", "divinity", "ground_friction"]:
                     batter_multiplier += 1.0
-            elif mod == "SMOOTH" and self.weather == 10:
+            elif mod == "SMOOTH" and self.weather == Weather.PEANUTS:
                 # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted everything in
                 #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
                 if relevant_attr in [
@@ -1850,11 +1873,14 @@ class Resim:
                     self.pitching_team.data["rotation"]
                 )
                 pitcher_multiplier += (14 - roster_size) * 0.01
-            elif mod == "AFFINITY_FOR_CROWS" and self.weather == 11:
+            elif mod == "AFFINITY_FOR_CROWS" and self.weather == Weather.BIRDS:
                 pitcher_multiplier += 0.5
             elif mod == "HIGH_PRESSURE":
                 # "should we really boost the pitcher when the *other* team's batters are on base" yes.
-                if self.weather == 18 and len(self.update["baseRunners"]) > 0:
+                if (
+                    self.weather == Weather.FLOODING
+                    and len(self.update["baseRunners"]) > 0
+                ):
                     pitcher_multiplier += 0.25
         return pitcher_multiplier
 
