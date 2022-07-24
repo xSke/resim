@@ -1,13 +1,14 @@
-# from data import GameData
+import sys
+from argparse import ArgumentParser
+
+from tqdm import tqdm
+
+from data import get_feed_between
 from resim import Resim
 from rng import Rng
 
-# ((636277877949988771, 3881154616169282314), 39, -10, "2021-05-21T02:34:20.217Z", "2021-05-21T04:10:23.217Z")
-# ((16943380630585140239, 11517173126754224871), 12, -10, "2021-04-10T17:23:00.667Z", "2021-04-10T21:25:01.667Z")
-# ((588802205905282246, 793469634141293574), 37, -6, "2021-03-19T12:06:37.593Z", "2021-03-19T18:40:01.593947Z")
-
 # (s0, s1), rng offset, event offset, start timestamp, end timestamp
-for position in [
+FRAGMENTS = [
     (
         (2670250086919271083, 8757269136258650039),
         50,
@@ -64,11 +65,43 @@ for position in [
         "2021-04-08T20:04:27.501Z",
         "2021-04-09T19:40:40.804096Z",
     ),
-]:
-    rng_state, rng_offset, step, start_time, end_time = position
-    rng = Rng(rng_state, rng_offset)
-    rng.step(step)
-    resim = Resim(rng)
-    resim.run(start_time, end_time)
+]
 
-    print("state at end:", rng.get_state_str())
+
+def parse_args():
+    parser = ArgumentParser("resim")
+
+    parser.add_argument("outfile", nargs="?", default="-")
+    parser.add_argument("--silent", default=False, action="store_true")
+
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    if args.silent:
+        out_file = None
+    elif args.outfile == "-":
+        out_file = sys.stdout
+    else:
+        out_file = open(args.outfile, "w")
+
+    print("Loading events...")
+    total_events = sum(
+        len(get_feed_between(start_time, end_time))
+        for _, _, _, start_time, end_time in FRAGMENTS
+    )
+    processed_events = 0
+
+    for rng_state, rng_offset, step, start_time, end_time in FRAGMENTS:
+        rng = Rng(rng_state, rng_offset)
+        rng.step(step)
+        resim = Resim(rng, out_file)
+        processed_events += resim.run(start_time, end_time, total_events, processed_events)
+
+        tqdm.write(f"state at end: {rng.get_state_str()}")
+
+
+if __name__ == "__main__":
+    main()
