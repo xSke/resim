@@ -5,7 +5,7 @@ import requests
 import math
 from typing import Any, Dict
 from datetime import datetime, timedelta
-from enum import IntEnum
+from enum import IntEnum, unique
 
 
 def parse_timestamp(timestamp):
@@ -73,6 +73,7 @@ def get_feed_between(start, end):
     return resp
 
 
+@unique
 class Weather(IntEnum):
     SUN_2 = 1
     ECLIPSE = 7
@@ -94,28 +95,24 @@ class Weather(IntEnum):
     SUN_POINT_1 = 24
     SUM_SUN = 25
 
+    def is_coffee(self):
+        return self.value in [
+            self.COFFEE,
+            self.COFFEE_2,
+            self.COFFEE_3S,
+        ]
 
-weather_names = {
-    1: "sun 2",
-    7: "eclipse",
-    8: "glitter",
-    9: "blooddrain",
-    10: "peanuts",
-    11: "birds",
-    12: "feedback",
-    13: "reverb",
-    14: "black hole",
-    15: "coffee",
-    16: "coffee 2",
-    17: "coffee 3s",
-    18: "flooding",
-    19: "salmon",
-    20: "polarity +",
-    21: "polarity -",
-    23: "sun 90",
-    24: "sun .1",
-    25: "sum sun",
-}
+    def is_polarity(self):
+        return self.value in [
+            self.POLARITY_PLUS,
+            self.POLARITY_MINUS,
+        ]
+
+    def can_echo(self):
+        return self.value in [
+            self.FEEDBACK,
+            self.REVERB,
+        ]
 
 
 @dataclass
@@ -300,7 +297,9 @@ class GameData:
     def get_update(self, game_id, play):
         if game_id not in self.games:
             self.fetch_game(game_id)
-        return self.plays.get((game_id, play))
+        update = self.plays.get((game_id, play))
+        update["weather"] = Weather(update["weather"])
+        return update
 
     def get_player(self, player_id) -> PlayerData:
         return PlayerData(self.players[player_id])
