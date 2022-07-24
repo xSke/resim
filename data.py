@@ -49,16 +49,23 @@ def get_cached(key, url):
 
 
 def get_mods(entity):
-    return entity.get("permAttr", []) + entity.get("seasAttr", []) + entity.get("weekAttr", []) + entity.get("gameAttr",
-                                                                                                             []) + entity.get(
-        "itemAttr", [])
+    return (
+        entity.get("permAttr", [])
+        + entity.get("seasAttr", [])
+        + entity.get("weekAttr", [])
+        + entity.get("gameAttr", [])
+        + entity.get("itemAttr", [])
+    )
 
 
 def get_feed_between(start, end):
     key = "feed_range_{}_{}".format(start, end)
-    resp = get_cached(key,
-                      "https://api.sibr.dev/eventually/v2/events?after={}&before={}&sortorder=asc&limit=100000".format(
-                          start, end))
+    resp = get_cached(
+        key,
+        "https://api.sibr.dev/eventually/v2/events?after={}&before={}&sortorder=asc&limit=100000".format(
+            start, end
+        ),
+    )
     return resp
 
 
@@ -81,7 +88,7 @@ weather_names = {
     21: "polarity -",
     23: "sun 90",
     24: "sun .1",
-    25: "sum sun"
+    25: "sum sun",
 }
 
 
@@ -116,23 +123,27 @@ class StadiumData:
     def has_mod(self, mod) -> bool:
         return mod in self.mods
 
-null_stadium = StadiumData({
-    "id": None,
-    "mods": [],
-    "name": "Null Stadium",
-    "nickname": "Null Stadium",
-    "mysticism": 0.5,
-    "viscosity": 0.5,
-    "elongation": 0.5,
-    "filthiness": 0,
-    "obtuseness": 0.5,
-    "forwardness": 0.5,
-    "grandiosity": 0.5,
-    "ominousness": 0.5,
-    "fortification": 0.5,
-    "inconvenience": 0.5,
-    "hype": 0
-})
+
+null_stadium = StadiumData(
+    {
+        "id": None,
+        "mods": [],
+        "name": "Null Stadium",
+        "nickname": "Null Stadium",
+        "mysticism": 0.5,
+        "viscosity": 0.5,
+        "elongation": 0.5,
+        "filthiness": 0,
+        "obtuseness": 0.5,
+        "forwardness": 0.5,
+        "grandiosity": 0.5,
+        "ominousness": 0.5,
+        "fortification": 0.5,
+        "inconvenience": 0.5,
+        "hype": 0,
+    }
+)
+
 
 @dataclass
 class PlayerData:
@@ -165,11 +176,11 @@ class PlayerData:
         return False
 
     def vibes(self, day):
-        frequency = 6 + round(10 * self.data['buoyancy'])
+        frequency = 6 + round(10 * self.data["buoyancy"])
         phase = math.pi * ((2 / frequency) * day + 0.5)
 
-        pressurization = self.data['pressurization']
-        cinnamon = (self.data['cinnamon'] if self.data['cinnamon'] is not None else 0)
+        pressurization = self.data["pressurization"]
+        cinnamon = self.data["cinnamon"] if self.data["cinnamon"] is not None else 0
         range = 0.5 * (pressurization + cinnamon)
         vibes = (range * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
         return vibes if not self.has_mod("SCATTERED") else 0
@@ -187,43 +198,66 @@ class GameData:
     def fetch_sim(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
         key = "sim_at_{}".format(timestamp)
-        resp = get_cached(key, "https://api.sibr.dev/chronicler/v2/entities?type=sim&at={}".format(timestamp))
+        resp = get_cached(
+            key,
+            "https://api.sibr.dev/chronicler/v2/entities?type=sim&at={}".format(
+                timestamp
+            ),
+        )
         self.sim = resp["items"][0]["data"]
 
     def fetch_teams(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
         key = "teams_at_{}".format(timestamp)
-        resp = get_cached(key,
-                          "https://api.sibr.dev/chronicler/v2/entities?type=team&at={}&count=1000".format(timestamp))
+        resp = get_cached(
+            key,
+            "https://api.sibr.dev/chronicler/v2/entities?type=team&at={}&count=1000".format(
+                timestamp
+            ),
+        )
         self.teams = {e["entityId"]: e["data"] for e in resp["items"]}
 
     def fetch_players(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
         key = "players_at_{}".format(timestamp)
-        resp = get_cached(key,
-                          "https://api.sibr.dev/chronicler/v2/entities?type=player&at={}&count=2000".format(timestamp))
+        resp = get_cached(
+            key,
+            "https://api.sibr.dev/chronicler/v2/entities?type=player&at={}&count=2000".format(
+                timestamp
+            ),
+        )
         self.players = {e["entityId"]: e["data"] for e in resp["items"]}
 
     def fetch_stadiums(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
         key = "stadiums_at_{}".format(timestamp)
-        resp = get_cached(key,
-                          "https://api.sibr.dev/chronicler/v2/entities?type=stadium&at={}&count=1000".format(timestamp))
+        resp = get_cached(
+            key,
+            "https://api.sibr.dev/chronicler/v2/entities?type=stadium&at={}&count=1000".format(
+                timestamp
+            ),
+        )
         self.stadiums = {e["entityId"]: e["data"] for e in resp["items"]}
 
     def fetch_player_after(self, player_id, timestamp):
         key = "player_{}_after_{}".format(player_id, timestamp)
-        resp = get_cached(key,
-                          "https://api.sibr.dev/chronicler/v2/versions?type=player&id={}&after={}&count=1&order=asc".format(
-                              player_id, timestamp))
+        resp = get_cached(
+            key,
+            "https://api.sibr.dev/chronicler/v2/versions?type=player&id={}&after={}&count=1&order=asc".format(
+                player_id, timestamp
+            ),
+        )
         for item in resp["items"]:
             self.players[item["entityId"]] = item["data"]
 
     def fetch_game(self, game_id):
         key = "game_updates_{}".format(game_id)
-        resp = get_cached(key,
-                          "https://api.sibr.dev/chronicler/v1/games/updates?count=2000&game={}&started=true".format(
-                              game_id))
+        resp = get_cached(
+            key,
+            "https://api.sibr.dev/chronicler/v1/games/updates?count=2000&game={}&started=true".format(
+                game_id
+            ),
+        )
         self.games[game_id] = resp["data"]
         for update in resp["data"]:
             play = update["data"]["playCount"]
