@@ -1499,7 +1499,6 @@ class Resim:
                 self.pitcher,
                 self.pitching_team,
                 self.stadium,
-                self.data.players,
                 self.update,
                 self.what1,
                 self.what2,
