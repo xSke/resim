@@ -74,6 +74,152 @@ def get_feed_between(start, end):
 
 
 @unique
+class EventType(IntEnum):
+    # Can't use -1 because the Feed uses it for
+    # "Undefined type; used in the Library for Leaders
+    # and Postseason series matchups (plus currently-redacted messages)"
+    NOT_YET_HANDLED_IN_ENUM = -99999
+    # Pulled from https://www.blaseball.wiki/w/SIBR:Feed#Event_types
+    # and https://github.com/beiju/blarser/blob/main/blarser/src/api/eventually_schema.rs#L143
+    LETS_GO = 0
+    PLAY_BALL = 1
+    HALF_INNING = 2
+    PITCHER_CHANGE = 3
+    STOLEN_BASE = 4
+    WALK = 5
+    STRIKEOUT = 6
+    FLY_OUT = 7
+    GROUND_OUT = 8
+    HOME_RUN = 9
+    HIT = 10
+    GAME_END = 11
+    BATTER_UP = 12
+    STRIKE = 13
+    BALL = 14
+    FOUL_BALL = 15
+    SHAMING_RUN = 20
+    HOME_FIELD_ADVANTAGE = 21
+    HIT_BY_PITCH = 22
+    BATTER_SKIPPED = 23
+    PARTY = 24
+    STRIKE_ZAPPED = 25
+    WEATHER_CHANGE = 26
+    MILD_PITCH = 27
+    INNING_END = 28
+    BIG_DEAL = 29
+    BLACK_HOLE = 30
+    SUN2 = 31
+    BIRDS_CIRCLE = 33
+    FRIEND_OF_CROWS = 34
+    BIRDS_UNSHELL = 35
+    BECOME_TRIPLE_THREAT = 36
+    GAIN_FREE_REFILL = 37
+    COFFEE_BEAN = 39
+    FEEDBACK_BLOCKED = 40
+    FEEDBACK_SWAP = 41
+    SUPERALLERGIC_REACTION = 45
+    ALLERGIC_REACTION = 47
+    REVERB_BESTOWS_REVERBERATING = 48
+    REVERB_ROSTER_SHUFFLE = 49
+    BLOODDRAIN = 51
+    BLOODDRAIN_SIPHON = 52
+    BLOODDRAIN_BLOCKED = 53
+    INCINERATION = 54
+    INCINERATION_BLOCKED = 55
+    FLAG_PLANTED = 56
+    RENOVATION_BUILT = 57
+    LIGHT_SWITCH_TOGGLED = 58
+    DECREE_PASSED = 59
+    BLESSING_OR_GIFT_WON = 60
+    WILL_RECIEVED = 61
+    FLOODING_SWEPT = 62
+    SALMON_SWIM = 63
+    POLARITY_SHIFT = 64
+    ENTER_SECRET_BASE = 65
+    EXIT_SECRET_BASE = 66
+    CONSUMERS_ATTACK = 67
+    ECHO_CHAMBER = 69
+    GRIND_RAIL = 70
+    TUNNELS_USED = 71
+    PEANUT_MISTER = 72
+    PEANUT_FLAVOR_TEXT = 73
+    TASTE_THE_INFINITE = 74
+    EVENT_HORIZON_ACTIVATION = 76
+    EVENT_HORIZON_AWAITS = 77
+    SOLAR_PANELS_AWAIT = 78
+    SOLAR_PANELS_ACTIVATION = 79
+    TAROT_READING = 81
+    EMERGENCY_ALERT = 82
+    RETURN_FROM_ELSEWHERE = 84
+    OVER_UNDER = 85
+    UNDER_OVER = 86
+    UNDERSEA = 88
+    HOMEBODY = 91
+    SUPERYUMMY = 92
+    PERK = 93
+    EARLBIRD = 96
+    LATE_TO_THE_PARTY = 97
+    SHAME_DONOR = 99
+    ADDED_MOD = 106
+    REMOVED_MOD = 107
+    MOD_EXPIRES = 108
+    PLAYER_ADDED_TO_TEAM = 109
+    PLAYER_REPLACED_BY_NECROMANCY = 110
+    PLAYER_REPLACES_RETURNED = 111
+    PLAYER_REMOVED_FROM_TEAM = 112
+    PLAYER_TRADED = 113
+    PLAYER_SWAP = 114
+    PLAYER_MOVE = 115
+    PLAYER_BORN_FROM_INCINERATION = 116
+    PLAYER_STAT_INCREASE = 117
+    PLAYER_STAT_DECREASE = 118
+    PLAYER_STAT_REROLL = 119
+    PLAYER_STAT_DECREASE_FROM_SUPERALLERGIC = 122
+    PLAYER_MOVE_FAILED_FORCE = 124
+    ENTER_HALL_OF_FLAME = 125
+    EXIT_HALL_OF_FLAME = 126
+    PLAYER_GAINED_ITEM = 127
+    PLAYER_LOST_ITEM = 128
+    REVERB_FULL_SHUFFLE = 130
+    REVERB_LINEUP_SHUFFLE = 131
+    REVERB_ROTATION_SHUFFLE = 132
+    PLAYER_HATCHED = 137
+    FINAL_STANDINGS = 143
+    MODIFICATION_CHANGE = 144
+    ADDED_MOD_FROM_OTHER_MOD = 146
+    REMOVED_MODIFICATION = 147
+    CHANGED_MODIFIER = 148
+    TEAM_WAS_SHAMED = 154
+    TEAM_DID_SHAME = 155
+    SUN_2_OUTCOME = 156
+    BLACK_HOLE_OUTCOME = 157
+    ELIMINATED_FROM_POSTSEASON = 158
+    POSTSEASON_ADVANCE = 159
+    HIGH_PRESSURE_ON_OFF = 165
+    ECHO_MESSAGE = 169
+    ECHO_INTO_STATIC = 170
+    REMOVED_MULTIPLE_MODIFICATIONS_ECHO = 171
+    ADDED_MULTIPLE_MODIFICATIONS_ECHO = 172
+    PSYCHO_ACOUSTICS = 173
+    RECEIVER_BECOMES_ECHO = 174
+    INVESTIGATION_PROGRESS = 175
+    AMBITIOUS = 182
+    RUNS_SCORED = 209
+    WIN_COLLECTED_REGULAR = 214
+    WIN_COLLECTED_POSTSEASON = 215
+    GAME_OVER = 216
+    STORM_WARNING = 263
+    SNOWFLAKES = 264
+
+    # Ensure that not-yet-handled values warn us,
+    # then default to a safe value
+    @classmethod
+    def _missing_(cls, value):
+        print("!!! unknown type: {}".format(value))
+        return cls.NOT_YET_HANDLED_IN_ENUM
+
+
+@unique
 class Weather(IntEnum):
     SUN_2 = 1
     ECLIPSE = 7
@@ -298,7 +444,8 @@ class GameData:
         if game_id not in self.games:
             self.fetch_game(game_id)
         update = self.plays.get((game_id, play))
-        update["weather"] = Weather(update["weather"])
+        if update:
+            update["weather"] = Weather(update["weather"])
         return update
 
     def get_player(self, player_id) -> PlayerData:
