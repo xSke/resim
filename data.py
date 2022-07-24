@@ -401,7 +401,8 @@ class GameData:
         if game_id not in self.games:
             self.fetch_game(game_id)
         update = self.plays.get((game_id, play))
-        update["weather"] = Weather(update["weather"])
+        if update:
+            update["weather"] = Weather(update["weather"])
         return update
 
     def get_player(self, player_id) -> PlayerData:
