@@ -219,7 +219,13 @@ class EventType(IntEnum):
 
 @unique
 class Weather(IntEnum):
+    VOID = 0
     SUN_2 = 1
+    OVERCAST = 2
+    RAINY = 3
+    SANDSTORM = 4
+    SNOWY = 5
+    ACIDIC = 6
     ECLIPSE = 7
     GLITTER = 8
     BLOODDRAIN = 9
@@ -238,25 +244,19 @@ class Weather(IntEnum):
     SUN_90 = 23
     SUN_POINT_1 = 24
     SUM_SUN = 25
+    SUPERNOVA_ECLIPSE = 26
+    BLACK_HOLE_BLACK_HOLE = 27
+    JAZZ = 28
+    NIGHT = 29
 
     def is_coffee(self):
-        return self.value in [
-            self.COFFEE,
-            self.COFFEE_2,
-            self.COFFEE_3S,
-        ]
+        return self.value in [self.COFFEE, self.COFFEE_2, self.COFFEE_3S]
 
     def is_polarity(self):
-        return self.value in [
-            self.POLARITY_PLUS,
-            self.POLARITY_MINUS,
-        ]
+        return self.value in [self.POLARITY_PLUS, self.POLARITY_MINUS]
 
     def can_echo(self):
-        return self.value in [
-            self.FEEDBACK,
-            self.REVERB,
-        ]
+        return self.value in [self.FEEDBACK, self.REVERB]
 
 
 @dataclass
