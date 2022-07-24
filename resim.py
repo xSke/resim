@@ -80,7 +80,9 @@ class Resim:
         if self.batter:
             self.print("- batter mods: {} + {} ({})".format(self.batter.mods, self.batting_team.mods, self.batter.name))
         if self.pitcher:
-            self.print("- pitcher mods: {} + {} ({})".format(self.pitcher.mods, self.pitching_team.mods, self.pitcher.name))
+            self.print(
+                "- pitcher mods: {} + {} ({})".format(self.pitcher.mods, self.pitching_team.mods, self.pitcher.name)
+            )
         self.print("- stadium mods: {} ({})".format(self.stadium.mods, self.stadium.data["nickname"]))
 
         if self.ty == EventType.BATTER_UP:
@@ -252,8 +254,12 @@ class Resim:
                 # even if we pulled too early to catch it getting added. so i'm cheating here who cares
 
                 # it's also specifically permanent mods, not seasonal mods that may or may not be echoed/received
-                self.print("home pitcher mods: {} ({})".format(self.home_pitcher.data["permAttr"], self.home_pitcher.name))
-                self.print("away pitcher mods: {} ({})".format(self.away_pitcher.data["permAttr"], self.away_pitcher.name))
+                self.print(
+                    "home pitcher mods: {} ({})".format(self.home_pitcher.data["permAttr"], self.home_pitcher.name)
+                )
+                self.print(
+                    "away pitcher mods: {} ({})".format(self.away_pitcher.data["permAttr"], self.away_pitcher.name)
+                )
                 if "TRIPLE_THREAT" in self.home_pitcher.data["permAttr"] or self.weather == Weather.COFFEE_3S:
                     self.roll("remove home pitcher triple threat")
                 if "TRIPLE_THREAT" in self.away_pitcher.data["permAttr"] or self.weather == Weather.COFFEE_3S:
@@ -1493,9 +1499,7 @@ class Resim:
         self.strike_threshold = threshold
 
         if known_result == "strike" and roll > threshold:
-            self.print(
-                "!!! warn: too high strike roll (threshold {})".format(threshold)
-            )
+            self.print("!!! warn: too high strike roll (threshold {})".format(threshold))
         elif known_result == "ball" and roll < threshold:
             self.print("!!! warn: too low strike roll (threshold {})".format(threshold))
 
