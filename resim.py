@@ -32,6 +32,7 @@ class Resim:
         self.out_rolls: List[RollLog] = []
         self.fly_rolls: List[RollLog] = []
         self.party_rolls: List[RollLog] = []
+        self.fc_dp_rolls: List[RollLog] = []
 
         self.what1 = None
         self.what2 = None
@@ -711,21 +712,32 @@ class Resim:
                 ((2, 2), tuple()): 3,  # two players holding hands, both sac scoring???
             }
 
+            fc_dp_event_type = "Out"
             if "reaches on fielder's choice" in self.desc:
                 extras[((2, 0), (0,))] = 2  # what
+                fc_dp_event_type = "FC"
 
             if "into a double play!" in self.desc:
                 # not [2, 1, 0], 2 scores, everyone advances, but instead just a dp, which is 3 shorter...?
                 extras[((2, 1, 0), (2, 1))] = 2
+                fc_dp_event_type = "DP"
 
-            rolls = extras[
+            extra_roll_desc = extras[
                 (
                     tuple(self.update["basesOccupied"]),
                     tuple(self.next_update["basesOccupied"]),
                 )
             ]
-            for _ in range(rolls):
-                self.roll("extra")
+            extra_rolls = [self.roll("extra") for _ in range(extra_roll_desc)]
+
+            if extra_rolls:
+                self.log_roll(
+                    self.fc_dp_rolls,
+                    fc_dp_event_type,
+                    extra_rolls[1],  # we'll see if this array is ever exactly 1 long
+                    fc_dp_event_type != "Out"
+                )
+
 
             # todo: make this not use a lookup table
             # adv_eligible_runners = dict(bases_before)
@@ -1816,18 +1828,19 @@ class Resim:
         run_name = run_name.replace(":", "_")
 
         to_save = [
-            ("strikes", self.strike_rolls),
-            ("fouls", self.foul_rolls),
-            ("triples", self.triple_rolls),
-            ("swing-on-ball", self.swing_on_ball_rolls),
-            ("swing-on-strike", self.swing_on_strike_rolls),
-            ("contact", self.contact_rolls),
-            ("hr", self.hr_rolls),
-            ("steal_attempt", self.steal_attempt_rolls),
-            ("steal_success", self.steal_success_rolls),
-            ("party", self.party_rolls),
-            ("out", self.out_rolls),
-            ("fly", self.fly_rolls),
+            # ("strikes", self.strike_rolls),
+            # ("fouls", self.foul_rolls),
+            # ("triples", self.triple_rolls),
+            # ("swing-on-ball", self.swing_on_ball_rolls),
+            # ("swing-on-strike", self.swing_on_strike_rolls),
+            # ("contact", self.contact_rolls),
+            # ("hr", self.hr_rolls),
+            # ("steal_attempt", self.steal_attempt_rolls),
+            # ("steal_success", self.steal_success_rolls),
+            # ("party", self.party_rolls),
+            # ("out", self.out_rolls),
+            # ("fly", self.fly_rolls),
+            ("fc-dp", self.fc_dp_rolls),
         ]
         for category_name, data in to_save:
             print(f"Saving {category_name} csv...")

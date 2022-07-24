@@ -121,6 +121,7 @@ class RollLog:
     weather: int
     ball_count: int
     strike_count: int
+    out_count: int
     season: int
     day: int
     top_of_inning: bool
@@ -250,6 +251,7 @@ def make_roll_log(
         weather=update["weather"],
         ball_count=update["atBatBalls"],
         strike_count=update["atBatStrikes"],
+        out_count=update["halfInningOuts"],
         baserunner_count=update["baseRunners"],
         season=update["season"],
         day=update["day"],
