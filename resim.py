@@ -4,7 +4,7 @@ from typing import List
 
 import pandas as pd
 
-from data import GameData, get_feed_between, Weather, null_stadium
+from data import GameData, Weather, get_feed_between, null_stadium
 from output import RollLog, make_roll_log
 from rng import Rng
 
@@ -45,7 +45,7 @@ class Resim:
                 event["created"],
                 self.update["id"],
                 self.update["playCount"],
-                Weather(self.update["weather"]).name,
+                self.weather.name,
             )
         )
         print("===== {} {}".format(self.ty, self.desc))
@@ -223,7 +223,7 @@ class Resim:
             if self.next_update["topOfInning"]:
                 pass
 
-            if self.update["weather"] == Weather.SALMON:
+            if self.weather == Weather.SALMON:
                 self.try_roll_salmon()
             return True
         if self.ty == 63:
@@ -253,11 +253,7 @@ class Resim:
         if self.ty in [11, 158, 159, 106, 154, 155, 108, 107, 143]:
             # skipping game end
 
-            if self.ty == 11 and self.weather in [
-                Weather.COFFEE,
-                Weather.COFFEE_2,
-                Weather.COFFEE_3S,
-            ]:
+            if self.ty == 11 and Weather.is_coffee(self.weather):
                 # end of coffee game redaction
                 rosters = (
                     self.home_team.data["lineup"]
@@ -912,10 +908,9 @@ class Resim:
 
     def handle_weather(self):
         if self.weather == Weather.SUN_2:
-            # sun 2
             pass
+
         elif self.weather == Weather.ECLIPSE:
-            # eclipse
             self.roll("eclipse")
 
             if self.batter.has_mod("MARKED"):
@@ -952,10 +947,9 @@ class Resim:
                         return True
                     break
         elif self.weather == Weather.GLITTER:
-            # glitter
             self.roll("glitter")
+
         elif self.weather == Weather.BLOODDRAIN:
-            # blooddrain
             self.roll("blooddrain")
 
             if self.ty == 52:
@@ -971,8 +965,8 @@ class Resim:
                 ]:
                     self.roll("siphon proc 2?")
                 return True
+
         elif self.weather == Weather.PEANUTS:
-            # peanuts
             self.roll("peanuts")
 
             if self.ty == 73:
@@ -995,7 +989,6 @@ class Resim:
                 return True
 
         elif self.weather == Weather.BIRDS:
-            # birds
             bird_roll = self.roll("birds")
 
             has_shelled_player = False
@@ -1024,8 +1017,8 @@ class Resim:
                 # potentially roll for player to unshell?
                 self.roll("extra bird roll")
                 pass
+
         elif self.weather == Weather.FEEDBACK:
-            # feedback
             self.roll("feedback")
             self.roll(
                 "feedback"
@@ -1038,7 +1031,7 @@ class Resim:
                 self.roll("feedback")
                 return True
 
-            if self.weather in [Weather.FEEDBACK, Weather.REVERB] and (
+            if Weather.can_echo(self.weather) and (
                 self.batter.has_mod("ECHO") or self.pitcher.has_mod("ECHO")
             ):
                 # echo vs static, or batter echo vs pitcher echo?
@@ -1089,8 +1082,6 @@ class Resim:
                     self.roll("echo target")
                     return True
         elif self.weather == Weather.REVERB:
-            # reverb
-
             if self.stadium.has_mod("ECHO_CHAMBER"):
                 self.roll("echo chamber")
                 if self.ty == 69:  # nice
@@ -1107,10 +1098,9 @@ class Resim:
                 return True
 
         elif self.weather == Weather.BLACK_HOLE:
-            # black hole
             pass
+
         elif self.weather == Weather.COFFEE:
-            # coffee
             self.roll("coffee")
             if self.ty == 39:
                 self.roll("coffee proc")
@@ -1122,7 +1112,6 @@ class Resim:
                 self.roll("observed?")
 
         elif self.weather == Weather.COFFEE_2:
-            # coffee 2
             self.roll("coffee 2")
 
             if self.ty == 37:
@@ -1135,23 +1124,21 @@ class Resim:
                 self.roll("observed?")
 
         elif self.weather == Weather.COFFEE_3S:
-            # coffee 3s
             if self.batter.has_mod("COFFEE_PERIL"):
                 self.roll("observed?")
             pass
+
         elif self.weather == Weather.FLOODING:
-            # flooding
             pass
+
         elif self.weather == Weather.SALMON:
-            # salmon
             pass
-        elif self.weather in [Weather.POLARITY_PLUS, Weather.POLARITY_MINUS]:
+
+        elif Weather.is_polarity(self.weather):
             # polarity +/-
             self.roll("polarity")
         else:
-            print(
-                "error: {} weather not implemented".format(Weather(self.weather).name)
-            )
+            print("error: {} weather not implemented".format(self.weather.name))
 
     def handle_flooding(self):
         if self.weather == Weather.FLOODING:
@@ -1746,12 +1733,12 @@ class Resim:
                     stats_before = {}
 
                 self.data.fetch_player_after(player_id, event["created"])
-                stats_after = dict(self.data.get_player(player_id).data)
+                # stats_after = dict(self.data.get_player(player_id).data)
 
                 for k, v in stats_before.items():
                     if type(v) != float:
                         continue
-                    delta = stats_after[k] - v
+                    # delta = stats_after[k] - v
                     # print("stat delta: {} {}".format(k, delta))
 
         # scatter player name
@@ -1811,7 +1798,7 @@ class Resim:
 
     def get_batter_multiplier(self, relevant_batter=None, relevant_attr=None):
         batter = relevant_batter or self.batter
-        attr = relevant_attr
+        # attr = relevant_attr
 
         batter_multiplier = 1
         for mod in itertools.chain(batter.mods, self.batting_team.mods):
@@ -1824,7 +1811,7 @@ class Resim:
             elif mod == "HIGH_PRESSURE":
                 # checks for flooding weather and baserunners
                 if (
-                    self.update["weather"] == Weather.FLOODING
+                    self.weather == Weather.FLOODING
                     and len(self.update["baseRunners"]) > 0
                 ):
                     # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
@@ -1861,7 +1848,7 @@ class Resim:
 
     def get_pitcher_multiplier(self, relevant_attr=None):
         pitcher_multiplier = 1
-        attr = relevant_attr
+        # attr = relevant_attr
         # growth or traveling do not work for pitchers as of s14
         for mod in itertools.chain(self.pitcher.mods, self.pitching_team.mods):
             if mod == "OVERPERFORMING":
