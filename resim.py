@@ -58,7 +58,7 @@ class Resim:
             return
 
         if self.ty in [
-            EventType.PLAYER_SKIPPED_DUE_TO_BEING_SHELLED_FROZEN_OR_ELSEWHERE,
+            EventType.BATTER_SKIPPED,
             EventType.RETURN_FROM_ELSEWHERE,
         ]:
             # skipping elsewhere/elsewhere return
@@ -82,7 +82,7 @@ class Resim:
             )
         )
 
-        if self.ty == EventType.PLATE_APPEARANCE:
+        if self.ty == EventType.BATTER_UP:
             self.handle_batter_up()
             return
 
@@ -102,10 +102,7 @@ class Resim:
         if self.handle_ballpark():
             return
 
-        if (
-            self.ty
-            == EventType.HIGH_PRESSURE_THE_PRESSURE_IS_ON_OFF_OVERPERFORMING_ADDED_AND_REMOVED
-        ):
+        if self.ty == EventType.HIGH_PRESSURE_ON_OFF:
             # s14 high pressure proc, not sure when this should interrupt
             return
 
@@ -144,21 +141,21 @@ class Resim:
             self.handle_ball()
 
         elif self.ty in [
-            EventType.FLYOUT,
+            EventType.FLY_OUT,
             EventType.GROUND_OUT,
         ]:
             self.handle_out()
 
         elif self.ty in [
             EventType.STRIKEOUT,
-            EventType.STRIKE_NOT_INCLUDING_FOUL_BALLS,
+            EventType.STRIKE,
         ]:
             self.handle_strike()
 
         elif self.ty in [EventType.HOME_RUN]:
             self.handle_hr()
 
-        elif self.ty in [EventType.HIT_SINGLE_DOUBLE_TRIPLE]:
+        elif self.ty in [EventType.HIT]:
             self.handle_base_hit()
 
         elif self.ty in [EventType.FOUL_BALL]:
@@ -179,11 +176,11 @@ class Resim:
 
     def handle_misc(self):
         if self.ty in [
-            EventType.HOME_FIELD_ADVANTAGE_ACTIVATION,
-            EventType.COFFEE_3S_GAINING_TRIPLE_THREAT,
-            EventType.SOLAR_PANELS_START_UP_TEXT,
-            EventType.HOMEBODY_HOMESICK_HAPPY_TO_BE_HOME,
-            EventType.SUPERYUMMY_LOVES_MISSES_PEANUTS,
+            EventType.HOME_FIELD_ADVANTAGE,
+            EventType.BECOME_TRIPLE_THREAT,
+            EventType.SOLAR_PANELS_AWAIT,
+            EventType.HOMEBODY,
+            EventType.SUPERYUMMY,
             EventType.PERK,
             EventType.SHAME_DONOR,
             EventType.PSYCHO_ACOUSTICS,
@@ -195,19 +192,19 @@ class Resim:
             EventType.OVER_UNDER,
             EventType.UNDER_OVER,
             EventType.UNDERSEA,
-            EventType.ADDED_MODIFICATION_DUE_TO_ANOTHER_MOD_UNDER_OVER_PERK_PSYCHO_ACOUSTICS_ETC,
-            EventType.REMOVED_MODIFICATION_ADDED_DUE_TO_ANOTHER_MOD_UNDER_OVER_PERK,
-            EventType.CHANGED_MODIFIER_DUE_TO_ANOTHER_MODIFIER,
-            EventType.REMOVED_MULTIPLE_MODIFICATIONS_ADDED_DUE_TO_ANOTHER_MOD_ECHO,
-            EventType.ADDED_MULTIPLE_MODIFICATIONS_DUE_TO_ANOTHER_MOD_ECHO,
+            EventType.ADDED_MOD_FROM_OTHER_MOD,
+            EventType.REMOVED_MODIFICATION,
+            EventType.CHANGED_MODIFIER,
+            EventType.REMOVED_MULTIPLE_MODIFICATIONS_ECHO,
+            EventType.ADDED_MULTIPLE_MODIFICATIONS_ECHO,
         ]:
             # skipping mod added/removed
             return True
         if self.ty in [
-            EventType.BLACK_HOLE_COLLECT_10_IN_GAME,
-            EventType.SUN_2_COLLECT_10_IN_GAME,
-            EventType.SUN_2_GRANTS_A_WIN_OUTCOME_PRE_S20,
-            EventType.BLACK_HOLE_SWALLOWS_A_WIN_OUTCOME_PRE_S20,
+            EventType.BLACK_HOLE,
+            EventType.SUN2,
+            EventType.SUN_2_OUTCOME,
+            EventType.BLACK_HOLE_OUTCOME,
         ]:
             # skipping sun 2 / black hole proc
             return True
@@ -218,41 +215,38 @@ class Resim:
             # skip party/consumer stat change
             return True
         if self.ty in [
-            EventType.PLAYER_INCINERATION_REPLACEMENT,
-            EventType.PLAYER_TEAM_ENTERS_THE_HALL_OF_FLAME,
-            EventType.PLAYER_HATCHED_REPLICA_CREATED,
+            EventType.PLAYER_BORN_FROM_INCINERATION,
+            EventType.ENTER_HALL_OF_FLAME,
+            EventType.PLAYER_HATCHED,
         ]:
             # skipping incineration stuff
             return True
         if self.ty in [
             EventType.PLAYER_REMOVED_FROM_TEAM,
-            EventType.MODIFICATION_CHANGE_WIRED_TIRED_TRANSITIONS_REROLL_EGO_UPGRADE_ETC,
+            EventType.MODIFICATION_CHANGE,
         ]:
             # skipping echo/static
             return True
-        if (
-            self.ty == EventType.SOLAR_ECLIPSE_INCINERATION
-            and "parent" in self.event["metadata"]
-        ):
+        if self.ty == EventType.INCINERATION and "parent" in self.event["metadata"]:
             # incin has two events and one's a subevent so ignore one of them
             return True
         if self.ty == EventType.PITCHER_CHANGE:
             # s skipping pitcher change?
             return True
         if self.ty in [
-            EventType.REMOVED_MODIFICATION_SAME_AS_ABOVE_BUT_WHEN_THEY_DISAPPEAR,
-            EventType.PLAYER_MOVE_RECRUIT_ETC,
-            EventType.INVESTIGATION_PROGRESS_UPSHELLABLE_FOR_FISH,
+            EventType.REMOVED_MOD,
+            EventType.PLAYER_MOVE,
+            EventType.INVESTIGATION_PROGRESS,
         ]:
             # skip liquid/plasma plot nonsense
             return True
-        if self.ty == EventType.REVERB_SHUFFLE_ROTATION:
+        if self.ty == EventType.REVERB_ROTATION_SHUFFLE:
             # skip reverb
             return True
-        if self.ty == EventType.PLAYER_TRADE:
+        if self.ty == EventType.PLAYER_TRADED:
             # skip feedback
             return True
-        if self.ty in [EventType.END_OF_INNING]:
+        if self.ty in [EventType.INNING_END]:
             # skipping inning outing
             if self.update["inning"] == 2:
                 # so if this *is* a coffee 3s game the pitchers are definitely gonna have the mod
@@ -289,7 +283,7 @@ class Resim:
             if self.weather == Weather.SALMON:
                 self.try_roll_salmon()
             return True
-        if self.ty == EventType.SALMON_INNING_BEGINS_AGAIN:
+        if self.ty == EventType.SALMON_SWIM:
             self.roll("salmon")
 
             # special case for a weird starting point with missing data
@@ -314,19 +308,19 @@ class Resim:
 
             return True
         if self.ty in [
-            EventType.GAME_END_LOG,
-            EventType.ADDED_MODIFICATION_TRIPLE_THREAT_FREE_REFILL_MAGMATIC_INHABITING_ETC,
-            EventType.REMOVED_MODIFICATION_SAME_AS_ABOVE_BUT_WHEN_THEY_DISAPPEAR,
-            EventType.TIMED_MODIFICATION_EXPIRES,
+            EventType.GAME_END,
+            EventType.ADDED_MOD,
+            EventType.REMOVED_MOD,
+            EventType.MOD_EXPIRES,
             EventType.FINAL_STANDINGS,
-            EventType.TEAM_SHAMED_BY_ANOTHER,
-            EventType.TEAM_SHAMES_ANOTHER,
+            EventType.TEAM_WAS_SHAMED,
+            EventType.TEAM_DID_SHAME,
             EventType.ELIMINATED_FROM_POSTSEASON,
             EventType.POSTSEASON_ADVANCE,
         ]:
             # skipping game end
 
-            if self.ty == EventType.GAME_END_LOG and self.weather.is_coffee():
+            if self.ty == EventType.GAME_END and self.weather.is_coffee():
                 # end of coffee game redaction
                 rosters = (
                     self.home_team.data["lineup"]
@@ -414,7 +408,7 @@ class Resim:
             # print("bird ambush eligible? {}s/{}b/{}o".format(self.strikes, self.balls, self.outs))
             if self.strikes == 0:
                 self.roll("bird ambush")
-                if self.ty == EventType.BIRDS_FRIEND_OF_CROWS_PROC:
+                if self.ty == EventType.FRIEND_OF_CROWS:
                     self.handle_batter_reverb()  # i guess???
                     return True
 
@@ -464,7 +458,7 @@ class Resim:
             if self.batter.data["blood"] != 8:
                 print("!!! warn: batter does not have electric blood")
 
-            if self.ty == EventType.STRIKE_ZAPPED_BY_ELECTRIC_BLOOD:
+            if self.ty == EventType.STRIKE_ZAPPED:
                 # successful zap!
                 return True
 
@@ -473,16 +467,16 @@ class Resim:
             is_at_bat_end = self.ty in [
                 EventType.WALK,
                 EventType.STRIKEOUT,
-                EventType.FLYOUT,
+                EventType.FLY_OUT,
                 EventType.GROUND_OUT,
-                EventType.BIRDS_FRIEND_OF_CROWS_PROC,
+                EventType.FRIEND_OF_CROWS,
             ]  # ambush i guess
             # s14: hrs/hits (type 9/10) do not trigger reverberating, this probably changed later
             # home runs might not either?
 
             if self.ty in [
                 EventType.HOME_RUN,
-                EventType.HIT_SINGLE_DOUBLE_TRIPLE,
+                EventType.HIT,
             ]:
                 print("!!! warn: no reverb on hit?")
                 is_at_bat_end = False
@@ -613,7 +607,7 @@ class Resim:
         self.roll_foul(False)
 
         fielder = None
-        if self.ty == EventType.FLYOUT:  # flyout
+        if self.ty == EventType.FLY_OUT:  # flyout
             out_fielder_roll = self.roll("out fielder")
             out_roll = self.roll("out")
             fly_fielder_roll, fly_fielder = self.roll_fielder()
@@ -725,7 +719,7 @@ class Resim:
         bases_before = make_base_map(self.update)
         bases_after = make_base_map(self.next_update)
 
-        if self.ty == EventType.FLYOUT:
+        if self.ty == EventType.FLY_OUT:
             # flyouts are nice and simple
             for runner_id, base, roll_outcome in calculate_advances(
                 bases_before, bases_after, 0
@@ -1000,7 +994,7 @@ class Resim:
             if self.batter.has_mod("MARKED"):
                 self.roll("unstable")
 
-            if self.ty == EventType.SOLAR_ECLIPSE_INCINERATION:
+            if self.ty == EventType.INCINERATION:
                 self.roll("target")
                 # self.roll("target")
                 self.roll("first name")
@@ -1025,10 +1019,7 @@ class Resim:
                 if player.has_mod("FIRE_EATER") and not player.has_mod("ELSEWHERE"):
                     self.roll("fire eater ({})".format(player.name))
 
-                    if (
-                        self.ty
-                        == EventType.SOLAR_ECLIPSE_INCINERATION_BLOCKED_FIREPROOF_FIRE_EATER
-                    ):
+                    if self.ty == EventType.INCINERATION_BLOCKED_FIREPROOF_FIRE_EATER:
                         # fire eater proc - target roll maybe?
                         self.roll("target")
                         return True
@@ -1039,7 +1030,7 @@ class Resim:
         elif self.weather == Weather.BLOODDRAIN:
             self.roll("blooddrain")
 
-            if self.ty == EventType.BLOODDRAIN_SIPHON_PROC:
+            if self.ty == EventType.BLOODDRAIN_SIPHON:
                 self.roll("siphon proc")
                 self.roll("siphon proc")
                 self.roll("siphon proc")
@@ -1056,12 +1047,12 @@ class Resim:
         elif self.weather == Weather.PEANUTS:
             self.roll("peanuts")
 
-            if self.ty == EventType.PEANUTS_FLAVOR_TEXT:
+            if self.ty == EventType.PEANUT_FLAVOR_TEXT:
                 self.roll("peanut message")
                 return True
 
             self.roll("peanuts")
-            if self.ty == EventType.PEANUTS_ALLERGIC_REACTION:
+            if self.ty == EventType.ALLERGIC_REACTION:
                 self.roll("target")
                 return True
 
@@ -1070,7 +1061,7 @@ class Resim:
             if self.pitcher.has_mod("HONEY_ROASTED"):
                 self.roll("honey roasted")
 
-            if self.ty == EventType.TASTING_THE_INFINITE_SHELLING_VIA_HONEY_ROASTED:
+            if self.ty == EventType.TASTE_THE_INFINITE:
                 self.roll("target")  # might be team or index
                 self.roll("target")  # probably player
                 return True
@@ -1094,7 +1085,7 @@ class Resim:
                 if "SHELLED" in player.data["permAttr"]:
                     has_shelled_player = True
 
-            if self.ty == EventType.BIRDS_CIRCLING_NO_SHELLED_PLAYER:
+            if self.ty == EventType.BIRDS_CIRCLE:
                 # the birds circle...
                 return True
 
@@ -1165,8 +1156,8 @@ class Resim:
 
                     return True
                 if self.ty in [
-                    EventType.SUPERPOSITION_ECHO_INTO_STATIC,
-                    EventType.RECEIVER_BECOMES_AN_ECHO,
+                    EventType.ECHO_INTO_STATIC,
+                    EventType.RECEIVER_BECOMES_ECHO,
                 ]:
                     self.roll("echo target")
                     self.roll("echo target")
@@ -1192,7 +1183,7 @@ class Resim:
 
         elif self.weather == Weather.COFFEE:
             self.roll("coffee")
-            if self.ty == EventType.COFFEE_GAINING_LOSING_WIRED_TIRED:
+            if self.ty == EventType.COFFEE_BEAN:
                 self.roll("coffee proc")
                 self.roll("coffee proc")
 
@@ -1204,7 +1195,7 @@ class Resim:
         elif self.weather == Weather.COFFEE_2:
             self.roll("coffee 2")
 
-            if self.ty == EventType.COFFEE_2_GAINING_A_FREE_REFILL:
+            if self.ty == EventType.GAIN_FREE_REFILL:
                 self.roll("coffee 2 proc")
                 self.roll("coffee 2 proc")
                 self.roll("coffee 2 proc")
@@ -1235,7 +1226,7 @@ class Resim:
             if self.update["basesOccupied"]:
                 self.roll("flooding")
 
-            if self.ty == EventType.FLOODING_BASERUNNERS_SWEPT:
+            if self.ty == EventType.FLOODING_SWEPT:
                 # handle flood
                 for runner_id in self.update["baseRunners"]:
                     runner = self.data.get_player(runner_id)
@@ -1257,8 +1248,8 @@ class Resim:
         # see: https://reblase.sibr.dev/game/027f022e-eecc-48db-a25e-5dfb01f91c7c#55f2d7c5-846b-8dfc-66a2-cd6586dd980f
         team = self.batting_team
         plate_types = [
-            EventType.PLATE_APPEARANCE,
-            EventType.PLAYER_SKIPPED_DUE_TO_BEING_SHELLED_FROZEN_OR_ELSEWHERE,
+            EventType.BATTER_UP,
+            EventType.BATTER_SKIPPED,
         ]
         if (
             self.update["awayBatter"]
@@ -1353,7 +1344,7 @@ class Resim:
             level = team.data.get("level", 0)
             if level >= 5:
                 self.roll("consumers ({})".format(team.data["nickname"]))
-                if self.ty == EventType.CONSUMERS_ATTACK_INCL_DEFENSE_WITH_ITEMS_YOLKED:
+                if self.ty == EventType.CONSUMERS_ATTACK:
                     attacked_player_id = self.event["playerTags"][0]
                     is_on_team = attacked_player_id in (
                         team.data["lineup"] + team.data["rotation"]
@@ -1382,7 +1373,7 @@ class Resim:
     def handle_party(self):
         # lol. turns out it just rolls party all the time and throws out the roll if the team isn't partying
         party_roll = self.roll("party time")
-        if self.ty == EventType.PARTYING:
+        if self.ty == EventType.PARTY:
             self.log_roll(self.party_rolls, "Party", party_roll, True)
             team_roll = self.roll("target team")  # <0.5 for home, >0.5 for away
             self.roll("target player")
@@ -1436,7 +1427,7 @@ class Resim:
         did_attractor_enter_this_tick = (
             not self.update["secretBaserunner"]
             and self.next_update["secretBaserunner"]
-            and self.ty != EventType.ENTERING_THE_SECRET_BASE
+            and self.ty != EventType.ENTER_SECRET_BASE
         )
         if did_attractor_enter_this_tick:
             secret_runner_id = self.next_update["secretBaserunner"]
@@ -1470,12 +1461,12 @@ class Resim:
 
         if secret_base_exit_eligible:
             self.roll("secret base exit")
-            if self.ty == EventType.EXITING_THE_SECRET_BASE:
+            if self.ty == EventType.EXIT_SECRET_BASE:
                 return True
 
         if secret_base_enter_eligible:
             self.roll("secret base enter")
-            if self.ty == EventType.ENTERING_THE_SECRET_BASE:
+            if self.ty == EventType.ENTER_SECRET_BASE:
                 return True
 
             # if the player got redacted it doesn't interrupt the pitch and keeps going
@@ -1752,8 +1743,8 @@ class Resim:
 
         # player or team mod added
         if event["type"] in [
-            EventType.ADDED_MODIFICATION_TRIPLE_THREAT_FREE_REFILL_MAGMATIC_INHABITING_ETC,
-            EventType.ADDED_MODIFICATION_DUE_TO_ANOTHER_MOD_UNDER_OVER_PERK_PSYCHO_ACOUSTICS_ETC,
+            EventType.ADDED_MOD,
+            EventType.ADDED_MOD_FROM_OTHER_MOD,
         ]:
             position = mod_positions[meta["type"]]
 
@@ -1767,8 +1758,8 @@ class Resim:
 
         # player or team mod removed
         if event["type"] in [
-            EventType.REMOVED_MODIFICATION_SAME_AS_ABOVE_BUT_WHEN_THEY_DISAPPEAR,
-            EventType.REMOVED_MODIFICATION_ADDED_DUE_TO_ANOTHER_MOD_UNDER_OVER_PERK,
+            EventType.REMOVED_MOD,
+            EventType.REMOVED_MODIFICATION,
         ]:
             position = mod_positions[meta["type"]]
 
@@ -1788,7 +1779,7 @@ class Resim:
                     team.data[position].remove(meta["mod"])
 
         # mod replaced
-        if event["type"] in [EventType.CHANGED_MODIFIER_DUE_TO_ANOTHER_MODIFIER]:
+        if event["type"] in [EventType.CHANGED_MODIFIER]:
             position = mod_positions[meta["type"]]
 
             if event["playerTags"]:
@@ -1801,7 +1792,7 @@ class Resim:
                 team.data[position].append(meta["to"])
 
         # timed mods wore off
-        if event["type"] in [EventType.TIMED_MODIFICATION_EXPIRES]:
+        if event["type"] in [EventType.MOD_EXPIRES]:
             position = mod_positions[meta["type"]]
 
             if event["playerTags"]:
@@ -1823,8 +1814,8 @@ class Resim:
 
         # echo mods added/removed
         if event["type"] in [
-            EventType.REMOVED_MULTIPLE_MODIFICATIONS_ADDED_DUE_TO_ANOTHER_MOD_ECHO,
-            EventType.ADDED_MULTIPLE_MODIFICATIONS_DUE_TO_ANOTHER_MOD_ECHO,
+            EventType.REMOVED_MULTIPLE_MODIFICATIONS_ECHO,
+            EventType.ADDED_MULTIPLE_MODIFICATIONS_ECHO,
         ]:
             player = self.data.get_player(event["playerTags"][0])
             for mod in meta.get("adds", []):
@@ -1836,7 +1827,7 @@ class Resim:
         if event["type"] in [
             EventType.PLAYER_STAT_INCREASE,
             EventType.PLAYER_STAT_DECREASE,
-            EventType.PLAYER_HATCHED_REPLICA_CREATED,
+            EventType.PLAYER_HATCHED,
         ]:
             for player_id in event["playerTags"]:
                 if self.data.has_player(player_id):
@@ -1854,11 +1845,7 @@ class Resim:
                     # print("stat delta: {} {}".format(k, delta))
 
         # scatter player name
-        if (
-            event["type"]
-            == EventType.ADDED_MODIFICATION_TRIPLE_THREAT_FREE_REFILL_MAGMATIC_INHABITING_ETC
-            and "was Scattered..." in desc
-        ):
+        if event["type"] == EventType.ADDED_MOD and "was Scattered..." in desc:
             new_name = desc.split(" was Scattered")[0]
             player = self.data.get_player(event["playerTags"][0])
             player.data["name"] = new_name
@@ -1874,10 +1861,7 @@ class Resim:
                 team.data["rotation"].remove(player_id)
 
         # mod changed from one to other
-        if (
-            event["type"]
-            == EventType.MODIFICATION_CHANGE_WIRED_TIRED_TRANSITIONS_REROLL_EGO_UPGRADE_ETC
-        ):
+        if event["type"] == EventType.MODIFICATION_CHANGE:
             player = self.data.get_player(event["playerTags"][0])
             player.data[mod_positions[meta["type"]]].remove(meta["from"])
             player.data[mod_positions[meta["type"]]].append(meta["to"])
@@ -1889,7 +1873,7 @@ class Resim:
                         player.data["seasAttr"].remove(mod)
 
         # roster swap
-        if event["type"] == EventType.PLAYER_TRADE:
+        if event["type"] == EventType.PLAYER_TRADED:
             a_team = self.data.get_team(meta["aTeamId"])
             b_team = self.data.get_team(meta["bTeamId"])
             a_location = ["lineup", "rotation"][meta["aLocation"]]
