@@ -1019,7 +1019,7 @@ class Resim:
                 if player.has_mod("FIRE_EATER") and not player.has_mod("ELSEWHERE"):
                     self.roll("fire eater ({})".format(player.name))
 
-                    if self.ty == EventType.INCINERATION_BLOCKED_FIREPROOF_FIRE_EATER:
+                    if self.ty == EventType.INCINERATION_BLOCKED:
                         # fire eater proc - target roll maybe?
                         self.roll("target")
                         return True
