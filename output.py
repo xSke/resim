@@ -9,9 +9,7 @@ def calculate_vibes(player, day, multiplier):
     phase = math.pi * ((2 / frequency) * day + 0.5)
 
     pressurization = player["pressurization"] * multiplier
-    cinnamon = (
-        player["cinnamon"] if player["cinnamon"] is not None else 0
-    ) * multiplier
+    cinnamon = (player["cinnamon"] if player["cinnamon"] is not None else 0) * multiplier
     viberange = 0.5 * (pressurization + cinnamon)
     return (viberange * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
 
@@ -236,9 +234,7 @@ def make_roll_log(
         fielder_watchfulness=fielder.data["watchfulness"]
         if fielder is not None
         else pooled_attr(defense_lineup, players, "watchfulness", update["day"]),
-        fielder_vibes=calculate_vibes(fielder.data, update["day"], 1)
-        if fielder is not None
-        else 0,
+        fielder_vibes=calculate_vibes(fielder.data, update["day"], 1) if fielder is not None else 0,
         ballpark_grandiosity=stadium.data["grandiosity"],
         ballpark_fortification=stadium.data["fortification"],
         ballpark_obtuseness=stadium.data["obtuseness"],
@@ -252,13 +248,9 @@ def make_roll_log(
         batting_team_hype=stadium.data["hype"] if not update["topOfInning"] else 0,
         pitching_team_hype=stadium.data["hype"] if update["topOfInning"] else 0,
         batter_vibes=calculate_vibes(batter.data, update["day"], 1),
-        batter_vibes_multiplied=calculate_vibes(
-            batter.data, update["day"], batter_multiplier
-        ),
+        batter_vibes_multiplied=calculate_vibes(batter.data, update["day"], batter_multiplier),
         pitcher_vibes=calculate_vibes(pitcher.data, update["day"], 1),
-        pitcher_vibes_multiplied=calculate_vibes(
-            pitcher.data, update["day"], pitcher_multiplier
-        ),
+        pitcher_vibes_multiplied=calculate_vibes(pitcher.data, update["day"], pitcher_multiplier),
         batter_mods=";".join(batter.mods),
         batting_team_mods=";".join(batting_team.mods),
         pitcher_mods=";".join(pitcher.mods),
@@ -279,10 +271,8 @@ def make_roll_log(
         inning=update["inning"],
         what1=what1,
         what2=what2,
-        batting_team_roster_size=len(batting_team.data["lineup"])
-        + len(batting_team.data["rotation"]),
-        pitching_team_roster_size=len(pitching_team.data["lineup"])
-        + len(pitching_team.data["rotation"]),
+        batting_team_roster_size=len(batting_team.data["lineup"]) + len(batting_team.data["rotation"]),
+        pitching_team_roster_size=len(pitching_team.data["lineup"]) + len(pitching_team.data["rotation"]),
         is_strike=is_strike,
         strike_roll=strike_roll,
         strike_threshold=strike_threshold,
@@ -292,8 +282,6 @@ def make_roll_log(
 
 def pooled_attr(lineup, players, attr, day):
     return sum(
-        players[pid][attr]
-        * players[pid]["tenaciousness"]
-        * (1 + 0.2 * calculate_vibes(players[pid], day, 1))
+        players[pid][attr] * players[pid]["tenaciousness"] * (1 + 0.2 * calculate_vibes(players[pid], day, 1))
         for pid in lineup
     ) / len(lineup)
