@@ -3,11 +3,14 @@ from typing import Tuple
 
 MASK = 0xFFFFFFFFFFFFFFFF
 
+
 def reverse17(val):
     return val ^ (val >> 17) ^ (val >> 34) ^ (val >> 51)
 
+
 def reverse23(val):
     return (val ^ (val << 23) ^ (val << 46)) & MASK
+
 
 def xs128p(state):
     s1 = state[0] & MASK
@@ -20,6 +23,7 @@ def xs128p(state):
     state1 = s1 & MASK
     return state0, state1
 
+
 def xs128p_backward(state):
     prev_state1 = state[0]
     prev_state0 = state[1] ^ (state[0] >> 26)
@@ -28,17 +32,21 @@ def xs128p_backward(state):
     prev_state0 = reverse23(prev_state0)
     return prev_state0, prev_state1
 
+
 def to_double(out):
     double_bits = ((out & MASK) >> 12) | 0x3FF0000000000000
     return struct.unpack("d", struct.pack("<Q", double_bits))[0] - 1
 
+
 def state_str(s0, s1, offset):
     return "({}, {})+{:>02}".format(s0, s1, offset)
+
 
 def dbg_str(s0, s1, offset, note=None):
     state = state_str(s0, s1, offset)
     val = to_double(s0)
     return "s={:<47}  val={:<22} {}".format(state, val, note or "")
+
 
 class Rng(object):
     state: Tuple[int, int]

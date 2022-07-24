@@ -4,11 +4,13 @@ import math
 
 
 def calculate_vibes(player, day, multiplier):
-    frequency = 6 + round(10 * player['buoyancy'] * multiplier)
+    frequency = 6 + round(10 * player["buoyancy"] * multiplier)
     phase = math.pi * ((2 / frequency) * day + 0.5)
 
-    pressurization = player['pressurization'] * multiplier
-    cinnamon = (player['cinnamon'] if player['cinnamon'] is not None else 0) * multiplier
+    pressurization = player["pressurization"] * multiplier
+    cinnamon = (
+        player["cinnamon"] if player["cinnamon"] is not None else 0
+    ) * multiplier
     range = 0.5 * (pressurization + cinnamon)
     return (range * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
 
@@ -135,19 +137,35 @@ class RollLog:
     fielder_roll: float
 
 
-def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_team, pitcher,
-                  pitching_team, stadium, players, update, what1: float, what2: float, batter_multiplier: float,
-                  pitcher_multiplier: float, is_strike: bool, strike_roll: float, strike_threshold: float, fielder_roll, fielder):
-    defense_lineup = pitching_team.data['lineup']
+def make_roll_log(
+    event_type: str,
+    roll: float,
+    passed: bool,
+    batter,
+    batting_team,
+    pitcher,
+    pitching_team,
+    stadium,
+    players,
+    update,
+    what1: float,
+    what2: float,
+    batter_multiplier: float,
+    pitcher_multiplier: float,
+    is_strike: bool,
+    strike_roll: float,
+    strike_threshold: float,
+    fielder_roll,
+    fielder,
+):
+    defense_lineup = pitching_team.data["lineup"]
     return RollLog(
         event_type=event_type,
         roll=roll,
         passed=passed,
-
         batter_name=batter.data["name"],
         pitcher_name=pitcher.data["name"],
         fielder_name=fielder.data["name"] if fielder is not None else "",
-
         batter_buoyancy=batter.data["buoyancy"],
         batter_divinity=batter.data["divinity"],
         batter_martyrdom=batter.data["martyrdom"],
@@ -175,7 +193,6 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         batter_pressurization=batter.data["pressurization"],
         batter_cinnamon=(batter.data.get("cinnamon") or 0),
         batter_multiplier=batter_multiplier,
-
         pitcher_buoyancy=pitcher.data["buoyancy"],
         pitcher_divinity=pitcher.data["divinity"],
         pitcher_martyrdom=pitcher.data["martyrdom"],
@@ -203,14 +220,24 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         pitcher_pressurization=pitcher.data["pressurization"],
         pitcher_cinnamon=pitcher.data["cinnamon"],
         pitcher_multiplier=pitcher_multiplier,
-
-        fielder_anticapitalism=fielder.data['anticapitalism'] if fielder is not None else pooled_attr(defense_lineup, players, 'anticapitalism', update['day']),
-        fielder_chasiness=fielder.data['chasiness'] if fielder is not None else pooled_attr(defense_lineup, players, 'chasiness', update['day']),
-        fielder_omniscience=fielder.data['omniscience'] if fielder is not None else pooled_attr(defense_lineup, players, 'omniscience', update['day']),
-        fielder_tenaciousness=fielder.data['tenaciousness'] if fielder is not None else pooled_attr(defense_lineup, players, 'tenaciousness', update['day']),
-        fielder_watchfulness=fielder.data['watchfulness'] if fielder is not None else pooled_attr(defense_lineup, players, 'watchfulness', update['day']),
-        fielder_vibes=calculate_vibes(fielder.data, update['day'], 1) if fielder is not None else 0,
-
+        fielder_anticapitalism=fielder.data["anticapitalism"]
+        if fielder is not None
+        else pooled_attr(defense_lineup, players, "anticapitalism", update["day"]),
+        fielder_chasiness=fielder.data["chasiness"]
+        if fielder is not None
+        else pooled_attr(defense_lineup, players, "chasiness", update["day"]),
+        fielder_omniscience=fielder.data["omniscience"]
+        if fielder is not None
+        else pooled_attr(defense_lineup, players, "omniscience", update["day"]),
+        fielder_tenaciousness=fielder.data["tenaciousness"]
+        if fielder is not None
+        else pooled_attr(defense_lineup, players, "tenaciousness", update["day"]),
+        fielder_watchfulness=fielder.data["watchfulness"]
+        if fielder is not None
+        else pooled_attr(defense_lineup, players, "watchfulness", update["day"]),
+        fielder_vibes=calculate_vibes(fielder.data, update["day"], 1)
+        if fielder is not None
+        else 0,
         ballpark_grandiosity=stadium.data["grandiosity"],
         ballpark_fortification=stadium.data["fortification"],
         ballpark_obtuseness=stadium.data["obtuseness"],
@@ -221,47 +248,51 @@ def make_roll_log(event_type: str, roll: float, passed: bool, batter, batting_te
         ballpark_mysticism=stadium.data["mysticism"],
         ballpark_elongation=stadium.data["elongation"],
         ballpark_filthiness=stadium.data["filthiness"],
-
         batting_team_hype=stadium.data["hype"] if not update["topOfInning"] else 0,
         pitching_team_hype=stadium.data["hype"] if update["topOfInning"] else 0,
-
         batter_vibes=calculate_vibes(batter.data, update["day"], 1),
-        batter_vibes_multiplied=calculate_vibes(batter.data, update["day"], batter_multiplier),
+        batter_vibes_multiplied=calculate_vibes(
+            batter.data, update["day"], batter_multiplier
+        ),
         pitcher_vibes=calculate_vibes(pitcher.data, update["day"], 1),
-        pitcher_vibes_multiplied=calculate_vibes(pitcher.data, update["day"], pitcher_multiplier),
-
+        pitcher_vibes_multiplied=calculate_vibes(
+            pitcher.data, update["day"], pitcher_multiplier
+        ),
         batter_mods=";".join(batter.mods),
         batting_team_mods=";".join(batting_team.mods),
         pitcher_mods=";".join(pitcher.mods),
         pitching_team_mods=";".join(pitching_team.mods),
         fielder_mods=";".join(fielder.mods) if fielder is not None else "",
-
-        game_id=update['id'],
-        stadium_id=update['stadiumId'],
-        play_count=update['playCount'],
+        game_id=update["id"],
+        stadium_id=update["stadiumId"],
+        play_count=update["playCount"],
         weather=update["weather"],
         ball_count=update["atBatBalls"],
         strike_count=update["atBatStrikes"],
         baserunner_count=update["baseRunners"],
-
         season=update["season"],
         day=update["day"],
         top_of_inning=update["topOfInning"],
         home_score=update["homeScore"],
         away_score=update["awayScore"],
         inning=update["inning"],
-
         what1=what1,
         what2=what2,
-        batting_team_roster_size=len(batting_team.data["lineup"]) + len(batting_team.data["rotation"]),
-        pitching_team_roster_size=len(pitching_team.data["lineup"]) + len(pitching_team.data["rotation"]),
+        batting_team_roster_size=len(batting_team.data["lineup"])
+        + len(batting_team.data["rotation"]),
+        pitching_team_roster_size=len(pitching_team.data["lineup"])
+        + len(pitching_team.data["rotation"]),
         is_strike=is_strike,
         strike_roll=strike_roll,
         strike_threshold=strike_threshold,
-        fielder_roll=fielder_roll
+        fielder_roll=fielder_roll,
     )
 
 
 def pooled_attr(lineup, players, attr, day):
     return sum(
-        players[pid][attr] * players[pid]['tenaciousness'] * (1 + 0.2 * calculate_vibes(players[pid], day, 1)) for pid in lineup) / len(lineup)
+        players[pid][attr]
+        * players[pid]["tenaciousness"]
+        * (1 + 0.2 * calculate_vibes(players[pid], day, 1))
+        for pid in lineup
+    ) / len(lineup)
