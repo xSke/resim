@@ -66,9 +66,7 @@ def get_feed_between(start, end):
     key = "feed_range_{}_{}".format(start, end)
     resp = get_cached(
         key,
-        "https://api.sibr.dev/eventually/v2/events?after={}&before={}&sortorder=asc&limit=100000".format(
-            start, end
-        ),
+        "https://api.sibr.dev/eventually/v2/events?after={}&before={}&sortorder=asc&limit=100000".format(start, end),
     )
     return resp
 
@@ -351,9 +349,7 @@ class PlayerData:
         pressurization = self.data["pressurization"]
         cinnamon = self.data["cinnamon"] if self.data["cinnamon"] is not None else 0
         viberange = 0.5 * (pressurization + cinnamon)
-        vibes = (
-            (viberange * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
-        )
+        vibes = (viberange * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
         return vibes if not self.has_mod("SCATTERED") else 0
 
 
@@ -371,9 +367,7 @@ class GameData:
         key = "sim_at_{}".format(timestamp)
         resp = get_cached(
             key,
-            "https://api.sibr.dev/chronicler/v2/entities?type=sim&at={}".format(
-                timestamp
-            ),
+            "https://api.sibr.dev/chronicler/v2/entities?type=sim&at={}".format(timestamp),
         )
         self.sim = resp["items"][0]["data"]
 
@@ -382,9 +376,7 @@ class GameData:
         key = "teams_at_{}".format(timestamp)
         resp = get_cached(
             key,
-            "https://api.sibr.dev/chronicler/v2/entities?type=team&at={}&count=1000".format(
-                timestamp
-            ),
+            "https://api.sibr.dev/chronicler/v2/entities?type=team&at={}&count=1000".format(timestamp),
         )
         self.teams = {e["entityId"]: e["data"] for e in resp["items"]}
 
@@ -393,9 +385,7 @@ class GameData:
         key = "players_at_{}".format(timestamp)
         resp = get_cached(
             key,
-            "https://api.sibr.dev/chronicler/v2/entities?type=player&at={}&count=2000".format(
-                timestamp
-            ),
+            "https://api.sibr.dev/chronicler/v2/entities?type=player&at={}&count=2000".format(timestamp),
         )
         self.players = {e["entityId"]: e["data"] for e in resp["items"]}
 
@@ -404,9 +394,7 @@ class GameData:
         key = "stadiums_at_{}".format(timestamp)
         resp = get_cached(
             key,
-            "https://api.sibr.dev/chronicler/v2/entities?type=stadium&at={}&count=1000".format(
-                timestamp
-            ),
+            "https://api.sibr.dev/chronicler/v2/entities?type=stadium&at={}&count=1000".format(timestamp),
         )
         self.stadiums = {e["entityId"]: e["data"] for e in resp["items"]}
 
@@ -425,9 +413,7 @@ class GameData:
         key = "game_updates_{}".format(game_id)
         resp = get_cached(
             key,
-            "https://api.sibr.dev/chronicler/v1/games/updates?count=2000&game={}&started=true".format(
-                game_id
-            ),
+            "https://api.sibr.dev/chronicler/v1/games/updates?count=2000&game={}&started=true".format(game_id),
         )
         self.games[game_id] = resp["data"]
         for update in resp["data"]:

@@ -65,22 +65,10 @@ class Resim:
             return
 
         if self.batter:
-            print(
-                "- batter mods: {} + {} ({})".format(
-                    self.batter.mods, self.batting_team.mods, self.batter.name
-                )
-            )
+            print("- batter mods: {} + {} ({})".format(self.batter.mods, self.batting_team.mods, self.batter.name))
         if self.pitcher:
-            print(
-                "- pitcher mods: {} + {} ({})".format(
-                    self.pitcher.mods, self.pitching_team.mods, self.pitcher.name
-                )
-            )
-        print(
-            "- stadium mods: {} ({})".format(
-                self.stadium.mods, self.stadium.data["nickname"]
-            )
-        )
+            print("- pitcher mods: {} + {} ({})".format(self.pitcher.mods, self.pitching_team.mods, self.pitcher.name))
+        print("- stadium mods: {} ({})".format(self.stadium.mods, self.stadium.data["nickname"]))
 
         if self.ty == EventType.BATTER_UP:
             self.handle_batter_up()
@@ -118,9 +106,7 @@ class Resim:
             return
 
         # todo: don't know where this actually is - seems to be before mild at least
-        if self.pitcher.has_mod("DEBT_THREE") and not self.batter.has_mod(
-            "COFFEE_PERIL"
-        ):
+        if self.pitcher.has_mod("DEBT_THREE") and not self.batter.has_mod("COFFEE_PERIL"):
             self.roll("debt")
             if self.ty == EventType.HIT_BY_PITCH:
                 # debt success
@@ -253,25 +239,11 @@ class Resim:
                 # even if we pulled too early to catch it getting added. so i'm cheating here who cares
 
                 # it's also specifically permanent mods, not seasonal mods that may or may not be echoed/received
-                print(
-                    "home pitcher mods: {} ({})".format(
-                        self.home_pitcher.data["permAttr"], self.home_pitcher.name
-                    )
-                )
-                print(
-                    "away pitcher mods: {} ({})".format(
-                        self.away_pitcher.data["permAttr"], self.away_pitcher.name
-                    )
-                )
-                if (
-                    "TRIPLE_THREAT" in self.home_pitcher.data["permAttr"]
-                    or self.weather == Weather.COFFEE_3S
-                ):
+                print("home pitcher mods: {} ({})".format(self.home_pitcher.data["permAttr"], self.home_pitcher.name))
+                print("away pitcher mods: {} ({})".format(self.away_pitcher.data["permAttr"], self.away_pitcher.name))
+                if "TRIPLE_THREAT" in self.home_pitcher.data["permAttr"] or self.weather == Weather.COFFEE_3S:
                     self.roll("remove home pitcher triple threat")
-                if (
-                    "TRIPLE_THREAT" in self.away_pitcher.data["permAttr"]
-                    or self.weather == Weather.COFFEE_3S
-                ):
+                if "TRIPLE_THREAT" in self.away_pitcher.data["permAttr"] or self.weather == Weather.COFFEE_3S:
                     self.roll("remove away pitcher triple threat")
             # todo: salmon
             return True
@@ -292,9 +264,7 @@ class Resim:
                 return True
 
             last_inning = self.update["inning"]
-            last_inning_away_score, last_inning_home_score = self.score_at_inning_start[
-                (self.game_id, last_inning)
-            ]
+            last_inning_away_score, last_inning_home_score = self.score_at_inning_start[(self.game_id, last_inning)]
             current_away_score, current_home_score = (
                 self.update["awayScore"],
                 self.update["homeScore"],
@@ -413,15 +383,9 @@ class Resim:
                     return True
 
     def handle_charm(self):
-        pitch_charm_eligible = (
-            self.update["atBatBalls"] == 0 and self.update["atBatStrikes"] == 0
-        )
-        batter_charm_eligible = (
-            self.batting_team.has_mod("LOVE") and pitch_charm_eligible
-        )
-        pitcher_charm_eligible = (
-            self.pitching_team.has_mod("LOVE") and pitch_charm_eligible
-        )
+        pitch_charm_eligible = self.update["atBatBalls"] == 0 and self.update["atBatStrikes"] == 0
+        batter_charm_eligible = self.batting_team.has_mod("LOVE") and pitch_charm_eligible
+        pitcher_charm_eligible = self.pitching_team.has_mod("LOVE") and pitch_charm_eligible
 
         # before season 16, love blood only proc'd when the player also had love blood
         if self.event["season"] < 15:
@@ -514,9 +478,7 @@ class Resim:
             self.throw_pitch()
             swing_roll = self.roll("swing")
             self.log_roll(
-                self.swing_on_strike_rolls
-                if self.is_strike
-                else self.swing_on_ball_rolls,
+                self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
                 "StrikeSwinging",
                 swing_roll,
                 True,
@@ -530,9 +492,7 @@ class Resim:
 
             if not self.is_flinching():
                 swing_roll = self.roll("swing")
-                self.log_roll(
-                    self.swing_on_strike_rolls, "StrikeLooking", swing_roll, False
-                )
+                self.log_roll(self.swing_on_strike_rolls, "StrikeLooking", swing_roll, False)
         elif ", flinching" in self.desc:
             value = self.throw_pitch("strike")
             self.log_roll(self.strike_rolls, "StrikeFlinching", value, True)
@@ -553,14 +513,8 @@ class Resim:
 
         last_inning = self.next_update["inning"] - 1
         inning_key = (self.game_id, last_inning)
-        if (
-            self.weather == Weather.SALMON
-            and last_inning >= 0
-            and not self.update["topOfInning"]
-        ):
-            last_inning_away_score, last_inning_home_score = self.score_at_inning_start[
-                inning_key
-            ]
+        if self.weather == Weather.SALMON and last_inning >= 0 and not self.update["topOfInning"]:
+            last_inning_away_score, last_inning_home_score = self.score_at_inning_start[inning_key]
             current_away_score, current_home_score = (
                 self.next_update["awayScore"],
                 self.next_update["homeScore"],
@@ -568,10 +522,7 @@ class Resim:
 
             # only roll salmon if the last inning had any scores, but also we have to dig into game history to find this
             # how does the sim do it? no idea. i'm cheating.
-            if (
-                current_away_score != last_inning_away_score
-                or current_home_score != last_inning_home_score
-            ):
+            if current_away_score != last_inning_away_score or current_home_score != last_inning_home_score:
                 self.roll("salmon")
 
     def is_flinching(self):
@@ -656,16 +607,8 @@ class Resim:
         if self.outs < self.max_outs - 1:
             self.handle_out_advances()
 
-        is_fc_dp = (
-            "into a double play!" in self.desc
-            or "reaches on fielder's choice" in self.desc
-        )
-        if (
-            not is_fc_dp
-            and self.batter.has_mod("DEBT_THREE")
-            and fielder
-            and not fielder.has_mod("COFFEE_PERIL")
-        ):
+        is_fc_dp = "into a double play!" in self.desc or "reaches on fielder's choice" in self.desc
+        if not is_fc_dp and self.batter.has_mod("DEBT_THREE") and fielder and not fielder.has_mod("COFFEE_PERIL"):
             self.roll("debt")
 
     def roll_fielder(self, check_name=True):
@@ -721,9 +664,7 @@ class Resim:
 
         if self.ty == EventType.FLY_OUT:
             # flyouts are nice and simple
-            for runner_id, base, roll_outcome in calculate_advances(
-                bases_before, bases_after, 0
-            ):
+            for runner_id, base, roll_outcome in calculate_advances(bases_before, bases_after, 0):
                 self.roll("adv ({}, {})".format(base, roll_outcome))
 
                 # or are they? [2,0] -> [2,0] = 1 roll?
@@ -735,11 +676,7 @@ class Resim:
                 # our code doesn't handle each baserunner twice so i'm cheating here
                 # rerolling for the "second" player on third's advance if the first successfully advanced,
                 # since it's possible for both
-                if (
-                    self.update["basesOccupied"] == [2, 2]
-                    and base == 2
-                    and roll_outcome
-                ):
+                if self.update["basesOccupied"] == [2, 2] and base == 2 and roll_outcome:
                     self.roll("holding hands")
 
         elif self.ty == EventType.GROUND_OUT:
@@ -828,9 +765,7 @@ class Resim:
     def handle_hit_advances(self, bases_hit):
         bases_before = make_base_map(self.update)
         bases_after = make_base_map(self.next_update)
-        for runner_id, base, roll_outcome in calculate_advances(
-            bases_before, bases_after, bases_hit
-        ):
+        for runner_id, base, roll_outcome in calculate_advances(bases_before, bases_after, bases_hit):
             self.roll("adv ({}, {})".format(base, roll_outcome))
 
     def handle_hr(self):
@@ -838,9 +773,7 @@ class Resim:
             self.throw_pitch()
             swing_roll = self.roll("swing")
             self.log_roll(
-                self.swing_on_strike_rolls
-                if self.is_strike
-                else self.swing_on_ball_rolls,
+                self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
                 "HR",
                 swing_roll,
                 True,
@@ -922,42 +855,23 @@ class Resim:
         fwd = self.stadium.data["forwardness"]
         obt = self.stadium.data["obtuseness"]
         musc = (
-            self.batter.data["musclitude"]
-            * self.get_batter_multiplier(relevant_attr="musclitude")
-            * (1 + 0.2 * vibes)
+            self.batter.data["musclitude"] * self.get_batter_multiplier(relevant_attr="musclitude") * (1 + 0.2 * vibes)
         )
         thwack = (
             self.batter.data["thwackability"]
             * self.get_batter_multiplier(relevant_attr="thwackability")
             * (1 + 0.2 * vibes)
         )
-        div = (
-            self.batter.data["divinity"]
-            * self.get_batter_multiplier(relevant_attr="divinity")
-            * (1 + 0.2 * vibes)
-        )
-        foul_threshold = (
-            0.25
-            + 0.1 * fwd
-            - 0.1 * obt
-            + (1 / 30) * musc
-            + (1 / 30) * thwack
-            + (1 / 30) * div
-        )
+        div = self.batter.data["divinity"] * self.get_batter_multiplier(relevant_attr="divinity") * (1 + 0.2 * vibes)
+        foul_threshold = 0.25 + 0.1 * fwd - 0.1 * obt + (1 / 30) * musc + (1 / 30) * thwack + (1 / 30) * div
 
         foul_roll = self.roll("foul")
-        is_0_no_eligible = (
-            self.batting_team.has_mod("O_NO") and self.strikes == 2 and self.balls == 0
-        )
+        is_0_no_eligible = self.batting_team.has_mod("O_NO") and self.strikes == 2 and self.balls == 0
         if not is_0_no_eligible:
             if known_outcome and foul_roll > foul_threshold:
-                print(
-                    "!!! too high foul roll ({} > {})".format(foul_roll, foul_threshold)
-                )
+                print("!!! too high foul roll ({} > {})".format(foul_roll, foul_threshold))
             elif not known_outcome and foul_roll < foul_threshold:
-                print(
-                    "!!! too low foul roll ({} < {})".format(foul_roll, foul_threshold)
-                )
+                print("!!! too low foul roll ({} < {})".format(foul_roll, foul_threshold))
         self.log_roll(self.foul_rolls, "uhhhhh", foul_roll, known_outcome)
 
     def handle_foul(self):
@@ -1098,9 +1012,7 @@ class Resim:
 
         elif self.weather == Weather.FEEDBACK:
             self.roll("feedback")
-            self.roll(
-                "feedback"
-            )  # this is probably echo y/n? but ignored if the mod isn't there?
+            self.roll("feedback")  # this is probably echo y/n? but ignored if the mod isn't there?
 
             if self.ty == EventType.FEEDBACK_SWAP:
                 # todo: how many rolls?
@@ -1109,18 +1021,12 @@ class Resim:
                 self.roll("feedback")
                 return True
 
-            if self.weather.can_echo() and (
-                self.batter.has_mod("ECHO") or self.pitcher.has_mod("ECHO")
-            ):
+            if self.weather.can_echo() and (self.batter.has_mod("ECHO") or self.pitcher.has_mod("ECHO")):
                 # echo vs static, or batter echo vs pitcher echo?
                 if self.ty == EventType.ECHO_MESSAGE:
                     self.roll("echo target")
 
-                    target_team = (
-                        self.batting_team
-                        if self.pitcher.has_mod("ECHO")
-                        else self.pitching_team
-                    )
+                    target_team = self.batting_team if self.pitcher.has_mod("ECHO") else self.pitching_team
                     players = target_team.data["lineup"] + target_team.data["rotation"]
                     all_players = []
                     players_with_mods = []
@@ -1251,17 +1157,9 @@ class Resim:
             EventType.BATTER_UP,
             EventType.BATTER_SKIPPED,
         ]
-        if (
-            self.update["awayBatter"]
-            and not self.update["topOfInning"]
-            and self.ty not in plate_types
-        ):
+        if self.update["awayBatter"] and not self.update["topOfInning"] and self.ty not in plate_types:
             return
-        if (
-            self.update["homeBatter"]
-            and self.update["topOfInning"]
-            and self.ty not in plate_types
-        ):
+        if self.update["homeBatter"] and self.update["topOfInning"] and self.ty not in plate_types:
             return
 
         players = team.data["lineup"] + team.data["rotation"]
@@ -1272,10 +1170,7 @@ class Resim:
             if player.has_mod("ELSEWHERE"):
                 self.roll("elsewhere ({})".format(player.raw_name))
 
-                if (
-                    self.ty == EventType.RETURN_FROM_ELSEWHERE
-                    and player.raw_name in self.desc
-                ):
+                if self.ty == EventType.RETURN_FROM_ELSEWHERE and player.raw_name in self.desc:
                     self.do_elsewhere_return(player)
                     did_elsewhere_return = True
         if did_elsewhere_return:
@@ -1346,9 +1241,7 @@ class Resim:
                 self.roll("consumers ({})".format(team.data["nickname"]))
                 if self.ty == EventType.CONSUMERS_ATTACK:
                     attacked_player_id = self.event["playerTags"][0]
-                    is_on_team = attacked_player_id in (
-                        team.data["lineup"] + team.data["rotation"]
-                    )
+                    is_on_team = attacked_player_id in (team.data["lineup"] + team.data["rotation"])
                     if is_on_team:
                         attacked_player = self.data.get_player(attacked_player_id)
 
@@ -1358,11 +1251,7 @@ class Resim:
 
                         if attacked_player.data["soul"] == 1:
                             # lost their last soul, redact :<
-                            print(
-                                "!!! {} lost last soul, redacting".format(
-                                    attacked_player.name
-                                )
-                            )
+                            print("!!! {} lost last soul, redacting".format(attacked_player.name))
                             if attacked_player_id in team.data["lineup"]:
                                 team.data["lineup"].remove(attacked_player_id)
                             if attacked_player_id in team.data["rotation"]:
@@ -1535,9 +1424,7 @@ class Resim:
 
                 steal_roll = self.roll("steal ({})".format(base))
 
-                was_success = (
-                    self.ty == EventType.STOLEN_BASE and base + 1 == base_stolen
-                )
+                was_success = self.ty == EventType.STOLEN_BASE and base + 1 == base_stolen
                 self.log_roll(
                     self.steal_attempt_rolls,
                     "StealAttempt{}".format(base),
@@ -1569,19 +1456,13 @@ class Resim:
             self.roll("acidic")
 
         vibes = self.pitcher.vibes(self.day)
-        ruth = self.pitcher.data["ruthlessness"] * self.get_pitcher_multiplier(
-            relevant_attr="ruthlessness"
-        )
-        musc = self.batter.data["musclitude"] * self.get_batter_multiplier(
-            relevant_attr="musclitude"
-        )
+        ruth = self.pitcher.data["ruthlessness"] * self.get_pitcher_multiplier(relevant_attr="ruthlessness")
+        musc = self.batter.data["musclitude"] * self.get_batter_multiplier(relevant_attr="musclitude")
         fwd = self.stadium.data["forwardness"]
 
         constant = 0.2 if not self.is_flinching() else 0.4
         ruth_factor = 0.3 if self.season == 13 else 0.285  # 0.3 in s14, 0.285 in s15
-        threshold = (
-            constant + ruth_factor * (ruth * (1 + 0.2 * vibes)) + 0.2 * fwd + 0.1 * musc
-        )
+        threshold = constant + ruth_factor * (ruth * (1 + 0.2 * vibes)) + 0.2 * fwd + 0.1 * musc
         threshold = min(threshold, 0.85)
 
         self.is_strike = roll < threshold
@@ -1668,55 +1549,29 @@ class Resim:
         self.batting_team = self.away_team if update["topOfInning"] else self.home_team
         self.pitching_team = self.home_team if update["topOfInning"] else self.away_team
 
-        batter_id = (
-            update["awayBatter"] if update["topOfInning"] else update["homeBatter"]
-        )
+        batter_id = update["awayBatter"] if update["topOfInning"] else update["homeBatter"]
         if not batter_id and next_update:
-            batter_id = (
-                next_update["awayBatter"]
-                if next_update["topOfInning"]
-                else next_update["homeBatter"]
-            )
-        pitcher_id = (
-            update["homePitcher"] if update["topOfInning"] else update["awayPitcher"]
-        )
+            batter_id = next_update["awayBatter"] if next_update["topOfInning"] else next_update["homeBatter"]
+        pitcher_id = update["homePitcher"] if update["topOfInning"] else update["awayPitcher"]
         if not pitcher_id and next_update:
-            pitcher_id = (
-                next_update["homePitcher"]
-                if next_update["topOfInning"]
-                else next_update["awayPitcher"]
-            )
+            pitcher_id = next_update["homePitcher"] if next_update["topOfInning"] else next_update["awayPitcher"]
 
         self.batter = self.data.get_player(batter_id) if batter_id else None
         self.pitcher = self.data.get_player(pitcher_id) if pitcher_id else None
 
         home_pitcher_id = update["homePitcher"] or next_update["homePitcher"]
         away_pitcher_id = update["awayPitcher"] or next_update["awayPitcher"]
-        self.home_pitcher = (
-            self.data.get_player(home_pitcher_id) if home_pitcher_id else None
-        )
-        self.away_pitcher = (
-            self.data.get_player(away_pitcher_id) if away_pitcher_id else None
-        )
+        self.home_pitcher = self.data.get_player(home_pitcher_id) if home_pitcher_id else None
+        self.away_pitcher = self.data.get_player(away_pitcher_id) if away_pitcher_id else None
 
-        self.stadium = (
-            self.data.get_stadium(update["stadiumId"])
-            if update["stadiumId"]
-            else null_stadium
-        )
+        self.stadium = self.data.get_stadium(update["stadiumId"]) if update["stadiumId"] else null_stadium
 
         self.outs = update["halfInningOuts"]
-        self.max_outs = (
-            update["awayOuts"] if update["topOfInning"] else update["homeOuts"]
-        )
+        self.max_outs = update["awayOuts"] if update["topOfInning"] else update["homeOuts"]
         self.strikes = update["atBatStrikes"]
-        self.max_strikes = (
-            update["awayStrikes"] if update["topOfInning"] else update["homeStrikes"]
-        )
+        self.max_strikes = update["awayStrikes"] if update["topOfInning"] else update["homeStrikes"]
         self.balls = update["atBatBalls"]
-        self.max_balls = (
-            update["awayBalls"] if update["topOfInning"] else update["homeBalls"]
-        )
+        self.max_balls = update["awayBalls"] if update["topOfInning"] else update["homeBalls"]
 
         # handle player name unscattering etc, not perfect but helps a lot
         if self.batter and self.pitcher:
@@ -1770,11 +1625,7 @@ class Resim:
                 team = self.data.get_team(event["teamTags"][0])
 
                 if meta["mod"] not in team.data[position]:
-                    print(
-                        "!!! warn: trying to remove mod {} but can't find it".format(
-                            meta["mod"]
-                        )
-                    )
+                    print("!!! warn: trying to remove mod {} but can't find it".format(meta["mod"]))
                 else:
                     team.data[position].remove(meta["mod"])
 
@@ -1799,11 +1650,7 @@ class Resim:
                 for mod in meta["mods"]:
                     player = self.data.get_player(event["playerTags"][0])
                     if mod not in player.data[position]:
-                        print(
-                            "!!! warn: trying to remove mod {} but can't find it".format(
-                                mod
-                            )
-                        )
+                        print("!!! warn: trying to remove mod {} but can't find it".format(mod))
                     else:
                         player.data[position].remove(mod)
 
@@ -1914,19 +1761,14 @@ class Resim:
                 batter_multiplier += min(0.05, 0.05 * (self.day / 99))
             elif mod == "HIGH_PRESSURE":
                 # checks for flooding weather and baserunners
-                if (
-                    self.weather == Weather.FLOODING
-                    and len(self.update["baseRunners"]) > 0
-                ):
+                if self.weather == Weather.FLOODING and len(self.update["baseRunners"]) > 0:
                     # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
                     batter_multiplier += 0.25
             elif mod == "TRAVELING":
                 if self.update["topOfInning"]:
                     batter_multiplier += 0.05
             elif mod == "SINKING_SHIP":
-                roster_size = len(self.batting_team.data["lineup"]) + len(
-                    self.batting_team.data["rotation"]
-                )
+                roster_size = len(self.batting_team.data["lineup"]) + len(self.batting_team.data["rotation"])
                 batter_multiplier += (14 - roster_size) * 0.01
             elif mod == "AFFINITY_FOR_CROWS" and self.weather == Weather.BIRDS:
                 batter_multiplier += 0.5
@@ -1960,18 +1802,13 @@ class Resim:
             elif mod == "UNDERPERFORMING":
                 pitcher_multiplier -= 0.2
             elif mod == "SINKING_SHIP":
-                roster_size = len(self.pitching_team.data["lineup"]) + len(
-                    self.pitching_team.data["rotation"]
-                )
+                roster_size = len(self.pitching_team.data["lineup"]) + len(self.pitching_team.data["rotation"])
                 pitcher_multiplier += (14 - roster_size) * 0.01
             elif mod == "AFFINITY_FOR_CROWS" and self.weather == Weather.BIRDS:
                 pitcher_multiplier += 0.5
             elif mod == "HIGH_PRESSURE":
                 # "should we really boost the pitcher when the *other* team's batters are on base" yes.
-                if (
-                    self.weather == Weather.FLOODING
-                    and len(self.update["baseRunners"]) > 0
-                ):
+                if self.weather == Weather.FLOODING and len(self.update["baseRunners"]) > 0:
                     pitcher_multiplier += 0.25
         return pitcher_multiplier
 
