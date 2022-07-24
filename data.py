@@ -95,21 +95,21 @@ class Weather(IntEnum):
     SUN_POINT_1 = 24
     SUM_SUN = 25
 
-    def is_coffee(self, weather):
-        return weather in [
+    def is_coffee(self):
+        return self.value in [
             self.COFFEE,
             self.COFFEE_2,
             self.COFFEE_3S,
         ]
 
-    def is_polarity(self, weather):
-        return weather in [
+    def is_polarity(self):
+        return self.value in [
             self.POLARITY_PLUS,
             self.POLARITY_MINUS,
         ]
 
-    def can_echo(self, weather):
-        return weather in [
+    def can_echo(self):
+        return self.value in [
             self.FEEDBACK,
             self.REVERB,
         ]
