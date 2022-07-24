@@ -4,7 +4,7 @@ from typing import List
 
 import pandas as pd
 
-from data import GameData, Weather, get_feed_between, null_stadium
+from data import EventType, GameData, Weather, get_feed_between, null_stadium
 from output import RollLog, make_roll_log
 from rng import Rng
 
@@ -48,7 +48,7 @@ class Resim:
                 self.weather.name,
             )
         )
-        print("===== {} {}".format(self.ty, self.desc))
+        print("===== {} {}".format(self.ty.value, self.desc))
         print("===== rng pos: {}".format(self.rng.get_state_str()))
 
         if self.handle_misc():
@@ -143,7 +143,7 @@ class Resim:
         elif self.ty in [15]:
             self.handle_foul()
         else:
-            print("!!! unknown type: {}".format(self.ty))
+            print("!!! unknown type: {}".format(self.ty.value))
         pass
 
         self.handle_batter_reverb()
@@ -743,7 +743,9 @@ class Resim:
 
         print(
             "OUT {} {} -> {}".format(
-                self.ty, self.update["basesOccupied"], self.next_update["basesOccupied"]
+                self.ty.value,
+                self.update["basesOccupied"],
+                self.next_update["basesOccupied"],
             )
         )
 
@@ -1787,6 +1789,7 @@ class Resim:
         self.data.fetch_league_data(start_timestamp)
         feed_events = get_feed_between(start_timestamp, end_timestamp)
         for event in feed_events:
+            event["type"] = EventType(event["type"])
             self.handle(event)
 
         self.save_data(start_timestamp)
