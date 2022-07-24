@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-import itertools
+
+# import itertools
 import math
 
 
@@ -11,8 +12,8 @@ def calculate_vibes(player, day, multiplier):
     cinnamon = (
         player["cinnamon"] if player["cinnamon"] is not None else 0
     ) * multiplier
-    range = 0.5 * (pressurization + cinnamon)
-    return (range * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
+    viberange = 0.5 * (pressurization + cinnamon)
+    return (viberange * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
 
 
 @dataclass

@@ -1,5 +1,4 @@
 ## Short-term to do
-- Change name of "defense_avg_stat" to "fielder_stat"
 - Update known ??? roll names (steal fielder, out fielder, bases fielder, doubles, triples, etc.)
 - Update resim to identify a fielder/pull their attrs for steal attempts and successes
 - Update resim to identify a fielder/pull their attrs for doubles and triples

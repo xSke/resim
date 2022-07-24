@@ -1,4 +1,4 @@
-from data import GameData
+# from data import GameData
 from resim import Resim
 from rng import Rng
 
