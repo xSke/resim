@@ -3,15 +3,24 @@ import itertools
 from typing import List
 
 import pandas as pd
+from tqdm import tqdm
 
 from data import EventType, GameData, Weather, get_feed_between, null_stadium
 from output import RollLog, make_roll_log
 from rng import Rng
 
 
+def no_op(*_, **__):
+    pass
+
+
 class Resim:
-    def __init__(self, rng):
+    def __init__(self, rng, out_file):
         self.rng = rng
+        self.out_file = out_file
+        if out_file is None:
+            # I am being too clever here, in hopes that this is faster
+            self.print = no_op
         self.data = GameData()
         self.fetched_days = set()
 
@@ -37,11 +46,14 @@ class Resim:
         self.what1 = None
         self.what2 = None
 
+    def print(self, *args, **kwargs):
+        print(*args, **kwargs, file=self.out_file)
+
     def handle(self, event):
         self.setup_data(event)
 
-        print()
-        print(
+        self.print()
+        self.print(
             "===== {} {}/{} {}".format(
                 event["created"],
                 self.update["id"],
@@ -49,8 +61,8 @@ class Resim:
                 self.weather.name,
             )
         )
-        print("===== {} {}".format(self.ty.value, self.desc))
-        print("===== rng pos: {}".format(self.rng.get_state_str()))
+        self.print("===== {} {}".format(self.ty.value, self.desc))
+        self.print("===== rng pos: {}".format(self.rng.get_state_str()))
 
         if self.handle_misc():
             return
@@ -66,10 +78,10 @@ class Resim:
             return
 
         if self.batter:
-            print("- batter mods: {} + {} ({})".format(self.batter.mods, self.batting_team.mods, self.batter.name))
+            self.print("- batter mods: {} + {} ({})".format(self.batter.mods, self.batting_team.mods, self.batter.name))
         if self.pitcher:
-            print("- pitcher mods: {} + {} ({})".format(self.pitcher.mods, self.pitching_team.mods, self.pitcher.name))
-        print("- stadium mods: {} ({})".format(self.stadium.mods, self.stadium.data["nickname"]))
+            self.print("- pitcher mods: {} + {} ({})".format(self.pitcher.mods, self.pitching_team.mods, self.pitcher.name))
+        self.print("- stadium mods: {} ({})".format(self.stadium.mods, self.stadium.data["nickname"]))
 
         if self.ty == EventType.BATTER_UP:
             self.handle_batter_up()
@@ -149,7 +161,7 @@ class Resim:
             self.handle_foul()
 
         else:
-            print("!!! unknown type: {}".format(self.ty.value))
+            self.print("!!! unknown type: {}".format(self.ty.value))
         pass
 
         self.handle_batter_reverb()
@@ -240,8 +252,8 @@ class Resim:
                 # even if we pulled too early to catch it getting added. so i'm cheating here who cares
 
                 # it's also specifically permanent mods, not seasonal mods that may or may not be echoed/received
-                print("home pitcher mods: {} ({})".format(self.home_pitcher.data["permAttr"], self.home_pitcher.name))
-                print("away pitcher mods: {} ({})".format(self.away_pitcher.data["permAttr"], self.away_pitcher.name))
+                self.print("home pitcher mods: {} ({})".format(self.home_pitcher.data["permAttr"], self.home_pitcher.name))
+                self.print("away pitcher mods: {} ({})".format(self.away_pitcher.data["permAttr"], self.away_pitcher.name))
                 if "TRIPLE_THREAT" in self.home_pitcher.data["permAttr"] or self.weather == Weather.COFFEE_3S:
                     self.roll("remove home pitcher triple threat")
                 if "TRIPLE_THREAT" in self.away_pitcher.data["permAttr"] or self.weather == Weather.COFFEE_3S:
@@ -369,14 +381,14 @@ class Resim:
                 Weather.FEEDBACK,
                 Weather.REVERB,
             ] and self.stadium.has_mod("PSYCHOACOUSTICS"):
-                print("away team mods:", self.away_team.data["permAttr"])
+                self.print("away team mods:", self.away_team.data["permAttr"])
                 self.roll("echo team mod")
             return True
 
     def handle_bird_ambush(self):
         if self.weather == Weather.BIRDS:
             # todo: does this go here or nah
-            # print("bird ambush eligible? {}s/{}b/{}o".format(self.strikes, self.balls, self.outs))
+            # self.print("bird ambush eligible? {}s/{}b/{}o".format(self.strikes, self.balls, self.outs))
             if self.strikes == 0:
                 self.roll("bird ambush")
                 if self.ty == EventType.FRIEND_OF_CROWS:
@@ -392,12 +404,12 @@ class Resim:
         if self.event["season"] < 15:
             if self.batter.data["blood"] != 9:
                 if batter_charm_eligible:
-                    print("!!! warn: batter does not have love blood, skipping")
+                    self.print("!!! warn: batter does not have love blood, skipping")
                 batter_charm_eligible = False
 
             if self.pitcher.data["blood"] != 9:
                 if pitcher_charm_eligible:
-                    print("!!! warn: pitcher does not have love blood, skipping")
+                    self.print("!!! warn: pitcher does not have love blood, skipping")
                 pitcher_charm_eligible = False
 
         # todo: figure out logic order when both teams have charm
@@ -421,7 +433,7 @@ class Resim:
         if self.batting_team.has_mod("ELECTRIC") and self.update["atBatStrikes"] > 0:
             self.roll("electric")
             if self.batter.data["blood"] != 8:
-                print("!!! warn: batter does not have electric blood")
+                self.print("!!! warn: batter does not have electric blood")
 
             if self.ty == EventType.STRIKE_ZAPPED:
                 # successful zap!
@@ -443,7 +455,7 @@ class Resim:
                 EventType.HOME_RUN,
                 EventType.HIT,
             ]:
-                print("!!! warn: no reverb on hit?")
+                self.print("!!! warn: no reverb on hit?")
                 is_at_bat_end = False
 
             if is_at_bat_end:
@@ -462,10 +474,10 @@ class Resim:
         if not self.is_flinching():
             swing_roll = self.roll("swing")
             if swing_roll < 0.05:
-                print("!!! very low swing roll on ball")
+                self.print("!!! very low swing roll on ball")
             self.log_roll(self.swing_on_ball_rolls, "Ball", swing_roll, False)
         else:
-            print("!!! warn: flinching ball")
+            self.print("!!! warn: flinching ball")
 
         if self.ty == EventType.WALK and self.batting_team.has_mod("BASE_INSTINCTS"):
             self.roll("base instincts")
@@ -633,12 +645,12 @@ class Resim:
             if rolled_idx != fielder_idx:
                 expected_min = fielder_idx / len(eligible_fielders)
                 expected_max = (fielder_idx + 1) / len(eligible_fielders)
-                print(
+                self.print(
                     "!!! incorrect fielder! expected {}, got {}, needs to be {:.3f}-{:.3f}".format(
                         fielder_idx, rolled_idx, expected_min, expected_max
                     )
                 )
-                print(self.rng.get_state_str())
+                self.print(self.rng.get_state_str())
 
             matching = []
             r2 = Rng(self.rng.state, self.rng.offset)
@@ -648,10 +660,10 @@ class Resim:
                 val = r2.next()
                 if int(val * len(eligible_fielders)) == fielder_idx:
                     matching.append(i - check_range + 1)
-            print("(matching offsets: {})".format(matching))
+            self.print("(matching offsets: {})".format(matching))
         elif check_name:
             if "fielder's choice" not in self.desc and "double play" not in self.desc:
-                print("!!! could not find fielder (name wrong?)")
+                self.print("!!! could not find fielder (name wrong?)")
 
         return roll_value, eligible_fielders[rolled_idx]
 
@@ -735,9 +747,8 @@ class Resim:
                     self.fc_dp_rolls,
                     fc_dp_event_type,
                     extra_rolls[1],  # we'll see if this array is ever exactly 1 long
-                    fc_dp_event_type != "Out"
+                    fc_dp_event_type != "Out",
                 )
-
 
             # todo: make this not use a lookup table
             # adv_eligible_runners = dict(bases_before)
@@ -750,23 +761,23 @@ class Resim:
 
             #     for base in range(5):
             #         if base in bases_before:
-            #             print("base {} force advance".format(base))
+            #             self.print("base {} force advance".format(base))
             #             del adv_eligible_runners[base]
             #         else:
-            #             print("base {} is clear, stopping".format(base))
+            #             self.print("base {} is clear, stopping".format(base))
             #             break
 
-            # print("after force:", adv_eligible_runners)
+            # self.print("after force:", adv_eligible_runners)
             # # do "regular" adv for rest
             # for runner_id, base, roll_outcome in calculate_advances(adv_eligible_runners, bases_after, 0):
             #     self.roll("adv ({}, {})".format(base, roll_outcome))
 
             #     if base == 1:
-            #         print("extra adv 1?")
+            #         self.print("extra adv 1?")
             #     if base == 2:
             #         self.roll("extra adv 2?")
 
-        print(
+        self.print(
             "OUT {} {} -> {}".format(
                 self.ty.value,
                 self.update["basesOccupied"],
@@ -881,9 +892,9 @@ class Resim:
         is_0_no_eligible = self.batting_team.has_mod("O_NO") and self.strikes == 2 and self.balls == 0
         if not is_0_no_eligible:
             if known_outcome and foul_roll > foul_threshold:
-                print("!!! too high foul roll ({} > {})".format(foul_roll, foul_threshold))
+                self.print("!!! too high foul roll ({} > {})".format(foul_roll, foul_threshold))
             elif not known_outcome and foul_roll < foul_threshold:
-                print("!!! too low foul roll ({} < {})".format(foul_roll, foul_threshold))
+                self.print("!!! too low foul roll ({} < {})".format(foul_roll, foul_threshold))
         self.log_roll(self.foul_rolls, "uhhhhh", foul_roll, known_outcome)
 
     def handle_foul(self):
@@ -1048,9 +1059,9 @@ class Resim:
                         if player.mods:
                             players_with_mods.append(player)
 
-                    print("all players:")
+                    self.print("all players:")
                     for i, player in enumerate(all_players):
-                        print(
+                        self.print(
                             "- {} ({}/{}, {:.03f}-{:.03f}) {}".format(
                                 player.name,
                                 i,
@@ -1060,9 +1071,9 @@ class Resim:
                                 player.mods,
                             )
                         )
-                    print("players with mods:")
+                    self.print("players with mods:")
                     for i, player in enumerate(players_with_mods):
-                        print(
+                        self.print(
                             "- {} ({}/{}, {:.03f}-{:.03f})".format(
                                 player.name,
                                 i,
@@ -1137,7 +1148,7 @@ class Resim:
             # polarity +/-
             self.roll("polarity")
         else:
-            print("error: {} weather not implemented".format(self.weather.name))
+            self.print("error: {} weather not implemented".format(self.weather.name))
 
     def handle_flooding(self):
         if self.weather == Weather.FLOODING:
@@ -1263,7 +1274,7 @@ class Resim:
 
                         if attacked_player.data["soul"] == 1:
                             # lost their last soul, redact :<
-                            print("!!! {} lost last soul, redacting".format(attacked_player.name))
+                            self.print("!!! {} lost last soul, redacting".format(attacked_player.name))
                             if attacked_player_id in team.data["lineup"]:
                                 team.data["lineup"].remove(attacked_player_id)
                             if attacked_player_id in team.data["rotation"]:
@@ -1292,9 +1303,9 @@ class Resim:
         elif party_roll < 0.0055:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod("PARTY_TIME"):
-                print("!!! home team is in party time")
+                self.print("!!! home team is in party time")
             elif team_roll > 0.5 and self.away_team.has_mod("PARTY_TIME"):
-                print("!!! away team is in party time")
+                self.print("!!! away team is in party time")
 
     def handle_ballpark(self):
         if self.stadium.has_mod("PEANUT_MISTER"):
@@ -1344,7 +1355,7 @@ class Resim:
             pitching_lineup = self.pitching_team.data["lineup"]
             secret_runner = self.data.get_player(secret_runner_id)
             if secret_runner_id in pitching_lineup:
-                print("can't exit secret base on wrong team", secret_runner.name)
+                self.print("can't exit secret base on wrong team", secret_runner.name)
                 secret_base_exit_eligible = False
 
         # weird order issues here. when an attractor is placed in the secret base, it only applies the *next* tick
@@ -1357,7 +1368,7 @@ class Resim:
             attractor = self.was_attractor_placed_in_secret_base_async()
             if attractor:
                 # todo: some of these rolls seem to be done async
-                print("!!! attractor placed in secret base:", attractor.name)
+                self.print("!!! attractor placed in secret base:", attractor.name)
                 return
 
         if secret_base_exit_eligible:
@@ -1376,7 +1387,7 @@ class Resim:
                 runner_idx = self.update["basesOccupied"].index(1)
                 runner_id = self.update["baseRunners"][runner_idx]
                 runner = self.data.get_player(runner_id)
-                print("!!! redacted baserunner:", runner.name)
+                self.print("!!! redacted baserunner:", runner.name)
 
                 # remove baserunner from roster so fielder math works.
                 # should probably move this logic into a function somehow
@@ -1403,7 +1414,7 @@ class Resim:
                 lo1 = runner.data["pressurization"] * 200
                 hi1 = runner.data["cinnamon"] * 1500 + 500
                 score_1 = int((hi1 - lo1) * score_1_roll + lo1)
-                print("(score: {})".format(score_1))
+                self.print("(score: {})".format(score_1))
 
                 self.roll("trick 1 success")
 
@@ -1413,14 +1424,14 @@ class Resim:
                     lo2 = runner.data["pressurization"] * 500
                     hi2 = runner.data["cinnamon"] * 3000 + 1000
                     score_2 = int((hi2 - lo2) * score_2_roll + lo2)
-                    print("(score: {})".format(score_2))
+                    self.print("(score: {})".format(score_2))
 
                     self.roll("trick 2 success")
                 return True
 
     def handle_steal(self):
         bases = self.update["basesOccupied"]
-        print("- base states: {}".format(bases))
+        self.print("- base states: {}".format(bases))
 
         base_stolen = None
         if "second base" in self.desc:
@@ -1482,9 +1493,11 @@ class Resim:
         self.strike_threshold = threshold
 
         if known_result == "strike" and roll > threshold:
-            print("!!! warn: too high strike roll (threshold {})".format(threshold))
+            self.print(
+                "!!! warn: too high strike roll (threshold {})".format(threshold)
+            )
         elif known_result == "ball" and roll < threshold:
-            print("!!! warn: too low strike roll (threshold {})".format(threshold))
+            self.print("!!! warn: too low strike roll (threshold {})".format(threshold))
 
         # todo: double strike
 
@@ -1529,7 +1542,7 @@ class Resim:
 
         meta = event.get("metadata") or {}
         if meta.get("subPlay", -1) != -1:
-            print("=== EXTRA:", event["type"], event["description"], meta)
+            self.print("=== EXTRA:", event["type"], event["description"], meta)
             pass
 
         self.event = event
@@ -1636,7 +1649,7 @@ class Resim:
                 team = self.data.get_team(event["teamTags"][0])
 
                 if meta["mod"] not in team.data[position]:
-                    print("!!! warn: trying to remove mod {} but can't find it".format(meta["mod"]))
+                    self.print("!!! warn: trying to remove mod {} but can't find it".format(meta["mod"]))
                 else:
                     team.data[position].remove(meta["mod"])
 
@@ -1661,7 +1674,7 @@ class Resim:
                 for mod in meta["mods"]:
                     player = self.data.get_player(event["playerTags"][0])
                     if mod not in player.data[position]:
-                        print("!!! warn: trying to remove mod {} but can't find it".format(mod))
+                        self.print("!!! warn: trying to remove mod {} but can't find it".format(mod))
                     else:
                         player.data[position].remove(mod)
 
@@ -1700,7 +1713,7 @@ class Resim:
                     if type(v) != float:
                         continue
                     # delta = stats_after[k] - v
-                    # print("stat delta: {} {}".format(k, delta))
+                    # self.print("stat delta: {} {}".format(k, delta))
 
         # scatter player name
         if event["type"] == EventType.ADDED_MOD and "was Scattered..." in desc:
@@ -1744,18 +1757,29 @@ class Resim:
             b_team.data[b_location][b_idx] = a_player
             a_team.data[a_location][a_idx] = b_player
 
-    def run(self, start_timestamp, end_timestamp):
+    def run(self, start_timestamp, end_timestamp, total_events, prev_processed_events):
+        tqdm.write(f"Starting fragment at {start_timestamp}")
         self.data.fetch_league_data(start_timestamp)
         feed_events = get_feed_between(start_timestamp, end_timestamp)
-        for event in feed_events:
+
+        processed_events = 0
+        for event in tqdm(
+            feed_events,
+            total=total_events,
+            initial=prev_processed_events,
+            unit="events",
+        ):
+            processed_events += 1
             event["type"] = EventType(event["type"])
             self.handle(event)
 
         self.save_data(start_timestamp)
 
+        return processed_events
+
     def roll(self, label) -> float:
         value = self.rng.next()
-        print("{}: {}".format(label, value))
+        self.print("{}: {}".format(label, value))
         return value
 
     def get_batter_multiplier(self, relevant_batter=None, relevant_attr=None):
@@ -1843,7 +1867,7 @@ class Resim:
             ("fc-dp", self.fc_dp_rolls),
         ]
         for category_name, data in to_save:
-            print(f"Saving {category_name} csv...")
+            tqdm.write(f"Saving {category_name} csv...")
             pd.DataFrame(data).to_csv(f"roll_data/{run_name}-{category_name}.csv")
 
 
