@@ -617,7 +617,7 @@ class Resim:
             fielder = ground_fielder
 
         if self.outs < self.max_outs - 1:
-            self.handle_out_advances()
+            self.handle_out_advances(fielder)
 
         is_fc_dp = "into a double play!" in self.desc or "reaches on fielder's choice" in self.desc
         if not is_fc_dp and self.batter.has_mod("DEBT_THREE") and fielder and not fielder.has_mod("COFFEE_PERIL"):
@@ -650,6 +650,7 @@ class Resim:
                     )
                 )
                 self.print(self.rng.get_state_str())
+                raise RuntimeError("Incorrect fielder")
 
             matching = []
             r2 = Rng(self.rng.state, self.rng.offset)
@@ -666,7 +667,7 @@ class Resim:
 
         return roll_value, eligible_fielders[rolled_idx]
 
-    def handle_out_advances(self):
+    def handle_out_advances(self, fielder):
         # special case for a chron data gap - ground out with no runners (so no rolls), but the game update is missing
         if self.event["created"] == "2021-04-07T08:02:52.078Z":
             return
@@ -741,12 +742,14 @@ class Resim:
             ]
             extra_rolls = [self.roll("extra") for _ in range(extra_roll_desc)]
 
-            if extra_rolls:
+            if 0 in self.update["basesOccupied"]:
+                # fielder = self.get_fielder_for_roll(extra_rolls[0])
                 self.log_roll(
                     self.fc_dp_csv,
                     fc_dp_event_type,
-                    extra_rolls[1],  # we'll see if this array is ever exactly 1 long
-                    fc_dp_event_type != "Out",
+                    extra_rolls[1],  # it seems like there's never exactly 1 extra roll
+                    fc_dp_event_type == "Out",
+                    fielder=fielder,
                 )
 
             # todo: make this not use a lookup table
@@ -1510,6 +1513,12 @@ class Resim:
         fielder_roll=None,
         fielder=None,
     ):
+        runners = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 0]
+        if runners:
+            runner_on_first = self.data.get_player(runners[0])
+            runner_on_first_multiplier = self.get_batter_multiplier(runner_on_first)
+        else:
+            runner_on_first, runner_on_first_multiplier = None, 0
         roll_csv.write(
             event_type,
             roll,
@@ -1522,13 +1531,16 @@ class Resim:
             self.update,
             self.what1,
             self.what2,
-            self.get_batter_multiplier(relevant_batter),
+            self.get_batter_multiplier(relevant_batter),  # hmmmmmm
             self.get_pitcher_multiplier(),
             self.is_strike,
             self.strike_roll,
             self.strike_threshold,
             fielder_roll,
             fielder,
+            self.get_batter_multiplier(fielder),  # uhhhhhhhhh
+            runner_on_first,
+            runner_on_first_multiplier,
         )
 
     def setup_data(self, event):
