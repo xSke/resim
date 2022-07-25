@@ -55,10 +55,9 @@ def get_mods(entity):
 
 
 def get_feed_between(start, end):
-    key = "feed_range_{}_{}".format(start, end)
+    key = f"feed_range_{start}_{end}"
     resp = get_cached(
-        key,
-        "https://api.sibr.dev/eventually/v2/events?after={}&before={}&sortorder=asc&limit=100000".format(start, end),
+        key, f"https://api.sibr.dev/eventually/v2/events?after={start}&before={end}&sortorder=asc&limit=100000"
     )
     return resp
 
@@ -205,7 +204,7 @@ class EventType(IntEnum):
     # then default to a safe value
     @classmethod
     def _missing_(cls, value):
-        print("!!! unknown type: {}".format(value))
+        print(f"!!! unknown type: {value}")
         return cls.NOT_YET_HANDLED_IN_ENUM
 
 
@@ -346,6 +345,9 @@ class PlayerData:
         return (viberange * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
 
 
+CHRONICLER_URI = "https://api.sibr.dev/chronicler"
+
+
 class GameData:
     def __init__(self):
         self.teams = {}
@@ -357,56 +359,54 @@ class GameData:
 
     def fetch_sim(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
-        key = "sim_at_{}".format(timestamp)
+        key = f"sim_at_{timestamp}"
         resp = get_cached(
             key,
-            "https://api.sibr.dev/chronicler/v2/entities?type=sim&at={}".format(timestamp),
+            f"{CHRONICLER_URI}/v2/entities?type=sim&at={timestamp}",
         )
         self.sim = resp["items"][0]["data"]
 
     def fetch_teams(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
-        key = "teams_at_{}".format(timestamp)
+        key = f"teams_at_{timestamp}"
         resp = get_cached(
             key,
-            "https://api.sibr.dev/chronicler/v2/entities?type=team&at={}&count=1000".format(timestamp),
+            f"{CHRONICLER_URI}/v2/entities?type=team&at={timestamp}&count=1000",
         )
         self.teams = {e["entityId"]: e["data"] for e in resp["items"]}
 
     def fetch_players(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
-        key = "players_at_{}".format(timestamp)
+        key = f"players_at_{timestamp}"
         resp = get_cached(
             key,
-            "https://api.sibr.dev/chronicler/v2/entities?type=player&at={}&count=2000".format(timestamp),
+            f"{CHRONICLER_URI}/v2/entities?type=player&at={timestamp}&count=2000",
         )
         self.players = {e["entityId"]: e["data"] for e in resp["items"]}
 
     def fetch_stadiums(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
-        key = "stadiums_at_{}".format(timestamp)
+        key = f"stadiums_at_{timestamp}"
         resp = get_cached(
             key,
-            "https://api.sibr.dev/chronicler/v2/entities?type=stadium&at={}&count=1000".format(timestamp),
+            f"{CHRONICLER_URI}/v2/entities?type=stadium&at={timestamp}&count=1000",
         )
         self.stadiums = {e["entityId"]: e["data"] for e in resp["items"]}
 
     def fetch_player_after(self, player_id, timestamp):
-        key = "player_{}_after_{}".format(player_id, timestamp)
+        key = f"player_{player_id}_after_{timestamp}"
         resp = get_cached(
             key,
-            "https://api.sibr.dev/chronicler/v2/versions?type=player&id={}&after={}&count=1&order=asc".format(
-                player_id, timestamp
-            ),
+            f"{CHRONICLER_URI}/v2/versions?type=player&id={player_id}&after={timestamp}&count=1&order=asc",
         )
         for item in resp["items"]:
             self.players[item["entityId"]] = item["data"]
 
     def fetch_game(self, game_id):
-        key = "game_updates_{}".format(game_id)
+        key = f"game_updates_{game_id}"
         resp = get_cached(
             key,
-            "https://api.sibr.dev/chronicler/v1/games/updates?count=2000&game={}&started=true".format(game_id),
+            f"{CHRONICLER_URI}/v1/games/updates?count=2000&game={game_id}&started=true",
         )
         self.games[game_id] = resp["data"]
         for update in resp["data"]:
