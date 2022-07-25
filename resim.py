@@ -1,3 +1,4 @@
+import math
 import os
 import itertools
 
@@ -550,20 +551,10 @@ class Resim:
         return self.batter.has_mod("FLINCH") and self.strikes == 0
 
     def get_fielder_for_roll(self, fielder_roll: float):
-        candidates = self.pitching_team.data["lineup"]
-        candidates = [self.data.get_player(player) for player in candidates]
+        candidates = [self.data.get_player(player) for player in self.pitching_team.data["lineup"]]
         candidates = [c for c in candidates if not c.has_mod("ELSEWHERE")]
-        weights = [1] * len(candidates)
-        sum_weights = sum(weights)
-        weights = [weight / sum_weights for weight in weights]
-        roll_remaining = fielder_roll
-        for i, weight in enumerate(weights):
-            if roll_remaining < weight:
-                return candidates[i]
-            roll_remaining -= weight
 
-        # Should never get here, I think
-        return candidates[-1]
+        return candidates[math.floor(fielder_roll * len(candidates))]
 
     def handle_out(self):
         self.throw_pitch()
