@@ -1,17 +1,6 @@
 import csv
-
-import math
 import os
-
-
-def calculate_vibes(player, day, multiplier):
-    frequency = 6 + round(10 * player["buoyancy"] * multiplier)
-    phase = math.pi * ((2 / frequency) * day + 0.5)
-
-    pressurization = player["pressurization"] * multiplier
-    cinnamon = (player["cinnamon"] if player["cinnamon"] is not None else 0) * multiplier
-    viberange = 0.5 * (pressurization + cinnamon)
-    return (viberange * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
+from data import calculate_vibes
 
 
 class SaveCsv:
@@ -299,10 +288,10 @@ class SaveCsv:
             pitcher.data["name"],
             fielder.data["name"] if fielder is not None else "",
             runner_on_first.data["name"] if runner_on_first is not None else "",
-            calculate_vibes(batter.data, update["day"], 1),
-            calculate_vibes(pitcher.data, update["day"], 1),
-            calculate_vibes(fielder.data, update["day"], 1) if fielder is not None else 0,
-            calculate_vibes(runner_on_first.data, update["day"], 1) if runner_on_first is not None else 0,
+            calculate_vibes(batter.data, update["day"]),
+            calculate_vibes(pitcher.data, update["day"]),
+            calculate_vibes(fielder.data, update["day"]) if fielder is not None else 0,
+            calculate_vibes(runner_on_first.data, update["day"]) if runner_on_first is not None else 0,
             ";".join(batter.mods),
             ";".join(batting_team.mods),
             ";".join(pitcher.mods),
