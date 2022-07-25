@@ -9,17 +9,13 @@ from output import SaveCsv
 from rng import Rng
 
 
-def no_op(*_, **__):
-    pass
-
-
 class Resim:
     def __init__(self, rng, out_file, run_name):
         self.rng = rng
         self.out_file = out_file
         if out_file is None:
             # I am being too clever here, in hopes that this is faster
-            self.print = no_op
+            self.print = lambda *a, **k: None
         self.data = GameData()
         self.fetched_days = set()
 
