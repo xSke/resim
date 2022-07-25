@@ -88,19 +88,18 @@ def main():
         out_file = open(args.outfile, "w")
 
     print("Loading events...")
-    total_events = sum(
-        len(get_feed_between(start_time, end_time))
-        for _, _, _, start_time, end_time in FRAGMENTS
-    )
-    processed_events = 0
+    total_events = sum(len(get_feed_between(start_time, end_time)) for _, _, _, start_time, end_time in FRAGMENTS)
 
-    for rng_state, rng_offset, step, start_time, end_time in FRAGMENTS:
-        rng = Rng(rng_state, rng_offset)
-        rng.step(step)
-        resim = Resim(rng, out_file)
-        processed_events += resim.run(start_time, end_time, total_events, processed_events)
+    with tqdm(total=total_events, unit="events") as progress:
+        for rng_state, rng_offset, step, start_time, end_time in FRAGMENTS:
+            rng = Rng(rng_state, rng_offset)
+            rng.step(step)
+            resim = Resim(rng, out_file, start_time)
+            resim.run(start_time, end_time, progress)
 
-        tqdm.write(f"state at end: {rng.get_state_str()}")
+            tqdm.write(f"state at end: {rng.get_state_str()}")
+
+        progress.close()
 
 
 if __name__ == "__main__":
