@@ -1429,6 +1429,8 @@ class Resim:
                 return True
 
     def handle_steal(self):
+        # theory: self.what2 is fielder selection for this function
+        steal_fielder_roll = self.what2
         bases = self.update["basesOccupied"]
         self.print(f"- base states: {bases}")
 
@@ -1453,6 +1455,8 @@ class Resim:
                     steal_roll,
                     was_success,
                     runner,
+                    fielder_roll=steal_fielder_roll,
+                    fielder=self.get_fielder_for_roll(steal_fielder_roll),
                 )
 
                 if was_success:
@@ -1465,6 +1469,8 @@ class Resim:
                         success_roll,
                         not was_caught,
                         runner,
+                        fielder_roll=steal_fielder_roll,
+                        fielder=self.get_fielder_for_roll(steal_fielder_roll),
                     )
                     return True
 
