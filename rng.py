@@ -39,13 +39,13 @@ def to_double(out):
 
 
 def state_str(s0, s1, offset):
-    return "({}, {})+{:>02}".format(s0, s1, offset)
+    return f"({s0}, {s1})+{offset:>02}"
 
 
 def dbg_str(s0, s1, offset, note=None):
     state = state_str(s0, s1, offset)
     val = to_double(s0)
-    return "s={:<47}  val={:<22} {}".format(state, val, note or "")
+    return f"s={state:<47}  val={val:<22} {note or ''}"
 
 
 class Rng(object):
