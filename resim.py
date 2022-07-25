@@ -1,12 +1,10 @@
 import os
 import itertools
-from typing import List
 
-import pandas as pd
 from tqdm import tqdm
 
 from data import EventType, GameData, Weather, get_feed_between, null_stadium
-from output import RollLog, make_roll_log
+from output import SaveCsv
 from rng import Rng
 
 
@@ -15,7 +13,7 @@ def no_op(*_, **__):
 
 
 class Resim:
-    def __init__(self, rng, out_file):
+    def __init__(self, rng, out_file, run_name):
         self.rng = rng
         self.out_file = out_file
         if out_file is None:
@@ -29,19 +27,23 @@ class Resim:
         self.is_strike = None
         self.strike_roll = None
         self.strike_threshold = None
-        self.strike_rolls: List[RollLog] = []
-        self.foul_rolls: List[RollLog] = []
-        self.triple_rolls: List[RollLog] = []
-        self.swing_on_ball_rolls: List[RollLog] = []
-        self.swing_on_strike_rolls: List[RollLog] = []
-        self.contact_rolls: List[RollLog] = []
-        self.hr_rolls: List[RollLog] = []
-        self.steal_attempt_rolls: List[RollLog] = []
-        self.steal_success_rolls: List[RollLog] = []
-        self.out_rolls: List[RollLog] = []
-        self.fly_rolls: List[RollLog] = []
-        self.party_rolls: List[RollLog] = []
-        self.fc_dp_rolls: List[RollLog] = []
+
+        os.makedirs("roll_data", exist_ok=True)
+        run_name = run_name.replace(":", "_")
+
+        self.strike_csv = SaveCsv(run_name, "strikes")
+        self.foul_csv = SaveCsv(run_name, "fouls")
+        self.triple_csv = SaveCsv(run_name, "triples")
+        self.swing_on_ball_csv = SaveCsv(run_name, "swing-on-ball")
+        self.swing_on_strike_csv = SaveCsv(run_name, "swing-on-strike")
+        self.contact_csv = SaveCsv(run_name, "contact")
+        self.hr_csv = SaveCsv(run_name, "hr")
+        self.steal_attempt_csv = SaveCsv(run_name, "steal_attempt")
+        self.steal_success_csv = SaveCsv(run_name, "steal_success")
+        self.out_csv = SaveCsv(run_name, "out")
+        self.fly_csv = SaveCsv(run_name, "fly")
+        self.party_csv = SaveCsv(run_name, "party")
+        self.fc_dp_csv = SaveCsv(run_name, "fc-dp")
 
         self.what1 = None
         self.what2 = None
@@ -475,13 +477,13 @@ class Resim:
 
     def handle_ball(self):
         value = self.throw_pitch("ball")
-        self.log_roll(self.strike_rolls, "Ball", value, False)
+        self.log_roll(self.strike_csv, "Ball", value, False)
 
         if not self.is_flinching():
             swing_roll = self.roll("swing")
             if swing_roll < 0.05:
                 self.print("!!! very low swing roll on ball")
-            self.log_roll(self.swing_on_ball_rolls, "Ball", swing_roll, False)
+            self.log_roll(self.swing_on_ball_csv, "Ball", swing_roll, False)
         else:
             self.print("!!! warn: flinching ball")
 
@@ -497,24 +499,24 @@ class Resim:
             self.throw_pitch()
             swing_roll = self.roll("swing")
             self.log_roll(
-                self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
+                self.swing_on_strike_csv if self.is_strike else self.swing_on_ball_csv,
                 "StrikeSwinging",
                 swing_roll,
                 True,
             )
 
             contact_roll = self.roll("contact")
-            self.log_roll(self.contact_rolls, "StrikeSwinging", contact_roll, False)
+            self.log_roll(self.contact_csv, "StrikeSwinging", contact_roll, False)
         elif ", looking" in self.desc or "strikes out looking." in self.desc:
             value = self.throw_pitch("strike")
-            self.log_roll(self.strike_rolls, "StrikeLooking", value, True)
+            self.log_roll(self.strike_csv, "StrikeLooking", value, True)
 
             if not self.is_flinching():
                 swing_roll = self.roll("swing")
-                self.log_roll(self.swing_on_strike_rolls, "StrikeLooking", swing_roll, False)
+                self.log_roll(self.swing_on_strike_csv, "StrikeLooking", swing_roll, False)
         elif ", flinching" in self.desc:
             value = self.throw_pitch("strike")
-            self.log_roll(self.strike_rolls, "StrikeFlinching", value, True)
+            self.log_roll(self.strike_csv, "StrikeFlinching", value, True)
         pass
 
     def try_roll_salmon(self):
@@ -567,13 +569,13 @@ class Resim:
         self.throw_pitch()
         swing_roll = self.roll("swing")
         self.log_roll(
-            self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
+            self.swing_on_strike_csv if self.is_strike else self.swing_on_ball_csv,
             "Out",
             swing_roll,
             True,
         )
         contact_roll = self.roll("contact")
-        self.log_roll(self.contact_rolls, "Out", contact_roll, True)
+        self.log_roll(self.contact_csv, "Out", contact_roll, True)
         self.roll_foul(False)
 
         fielder = None
@@ -583,7 +585,7 @@ class Resim:
             fly_fielder_roll, fly_fielder = self.roll_fielder()
             fly_roll = self.roll("fly")
             self.log_roll(
-                self.fly_rolls,
+                self.fly_csv,
                 "Flyout",
                 fly_roll,
                 True,
@@ -591,7 +593,7 @@ class Resim:
                 fielder=self.get_fielder_for_roll(out_fielder_roll),
             )
             self.log_roll(
-                self.out_rolls,
+                self.out_csv,
                 "Flyout",
                 out_roll,
                 False,
@@ -606,7 +608,7 @@ class Resim:
             fly_roll = self.roll("fly")
             ground_fielder_roll, ground_fielder = self.roll_fielder()
             self.log_roll(
-                self.fly_rolls,
+                self.fly_csv,
                 "GroundOut",
                 fly_roll,
                 False,
@@ -614,7 +616,7 @@ class Resim:
                 fielder=self.get_fielder_for_roll(out_fielder_roll),
             )
             self.log_roll(
-                self.out_rolls,
+                self.out_csv,
                 "GroundOut",
                 out_roll,
                 False,
@@ -750,7 +752,7 @@ class Resim:
 
             if extra_rolls:
                 self.log_roll(
-                    self.fc_dp_rolls,
+                    self.fc_dp_csv,
                     fc_dp_event_type,
                     extra_rolls[1],  # we'll see if this array is ever exactly 1 long
                     fc_dp_event_type != "Out",
@@ -802,21 +804,21 @@ class Resim:
             self.throw_pitch()
             swing_roll = self.roll("swing")
             self.log_roll(
-                self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
+                self.swing_on_strike_csv if self.is_strike else self.swing_on_ball_csv,
                 "HR",
                 swing_roll,
                 True,
             )
 
             contact_roll = self.roll("contact")
-            self.log_roll(self.contact_rolls, "HomeRun", contact_roll, True)
+            self.log_roll(self.contact_csv, "HomeRun", contact_roll, True)
 
             self.roll_foul(False)
             fielder_roll = self.roll("out fielder")
             out_roll = self.roll("out")
 
             self.log_roll(
-                self.out_rolls,
+                self.out_csv,
                 "HR",
                 out_roll,
                 True,
@@ -825,7 +827,7 @@ class Resim:
             )
 
             hr_roll = self.roll("home run")
-            self.log_roll(self.hr_rolls, "HomeRun", hr_roll, True)
+            self.log_roll(self.hr_csv, "HomeRun", hr_roll, True)
         else:
             # not sure why we need this
             self.roll("magmatic")
@@ -837,14 +839,14 @@ class Resim:
         self.throw_pitch()
         swing_roll = self.roll("swing")
         self.log_roll(
-            self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
+            self.swing_on_strike_csv if self.is_strike else self.swing_on_ball_csv,
             "BaseHit",
             swing_roll,
             True,
         )
 
         contact_roll = self.roll("contact")
-        self.log_roll(self.contact_rolls, "BaseHit", contact_roll, True)
+        self.log_roll(self.contact_csv, "BaseHit", contact_roll, True)
 
         self.roll_foul(False)
 
@@ -852,7 +854,7 @@ class Resim:
         out_roll = self.roll("out")
 
         self.log_roll(
-            self.out_rolls,
+            self.out_csv,
             "BaseHit",
             out_roll,
             True,
@@ -861,7 +863,7 @@ class Resim:
         )
 
         hr_roll = self.roll("home run")
-        self.log_roll(self.hr_rolls, "BaseHit", hr_roll, False)
+        self.log_roll(self.hr_csv, "BaseHit", hr_roll, False)
 
         self.roll("hit fielder?")
         self.roll("double?")
@@ -875,7 +877,7 @@ class Resim:
         elif "hits a Triple!" in self.desc:
             hit_bases = 3
 
-        self.log_roll(self.triple_rolls, f"Hit{hit_bases}", triple_roll, hit_bases == 3)
+        self.log_roll(self.triple_csv, f"Hit{hit_bases}", triple_roll, hit_bases == 3)
 
         self.handle_hit_advances(hit_bases)
 
@@ -901,21 +903,21 @@ class Resim:
                 self.print("!!! too high foul roll ({} > {})".format(foul_roll, foul_threshold))
             elif not known_outcome and foul_roll < foul_threshold:
                 self.print("!!! too low foul roll ({} < {})".format(foul_roll, foul_threshold))
-        self.log_roll(self.foul_rolls, "uhhhhh", foul_roll, known_outcome)
+        self.log_roll(self.foul_csv, "uhhhhh", foul_roll, known_outcome)
 
     def handle_foul(self):
         self.throw_pitch()
 
         swing_roll = self.roll("swing")
         self.log_roll(
-            self.swing_on_strike_rolls if self.is_strike else self.swing_on_ball_rolls,
+            self.swing_on_strike_csv if self.is_strike else self.swing_on_ball_csv,
             "Foul",
             swing_roll,
             True,
         )
 
         contact_roll = self.roll("contact")
-        self.log_roll(self.contact_rolls, "Foul", contact_roll, True)
+        self.log_roll(self.contact_csv, "Foul", contact_roll, True)
 
         self.roll_foul(True)
 
@@ -1292,7 +1294,7 @@ class Resim:
         # lol. turns out it just rolls party all the time and throws out the roll if the team isn't partying
         party_roll = self.roll("party time")
         if self.ty == EventType.PARTY:
-            self.log_roll(self.party_rolls, "Party", party_roll, True)
+            self.log_roll(self.party_csv, "Party", party_roll, True)
             team_roll = self.roll("target team")  # <0.5 for home, >0.5 for away
             self.roll("target player")
             for _ in range(25):
@@ -1455,7 +1457,7 @@ class Resim:
 
                 was_success = self.ty == EventType.STOLEN_BASE and base + 1 == base_stolen
                 self.log_roll(
-                    self.steal_attempt_rolls,
+                    self.steal_attempt_csv,
                     "StealAttempt{}".format(base),
                     steal_roll,
                     was_success,
@@ -1467,7 +1469,7 @@ class Resim:
                     was_caught = "caught stealing" in self.desc
 
                     self.log_roll(
-                        self.steal_success_rolls,
+                        self.steal_success_csv,
                         "StealSuccess{}".format(base),
                         success_roll,
                         not was_caught,
@@ -1509,7 +1511,7 @@ class Resim:
 
     def log_roll(
         self,
-        roll_list: List[RollLog],
+        roll_csv: SaveCsv,
         event_type: str,
         roll: float,
         passed: bool,
@@ -1517,28 +1519,25 @@ class Resim:
         fielder_roll=None,
         fielder=None,
     ):
-
-        roll_list.append(
-            make_roll_log(
-                event_type,
-                roll,
-                passed,
-                relevant_batter or self.batter,
-                self.batting_team,
-                self.pitcher,
-                self.pitching_team,
-                self.stadium,
-                self.update,
-                self.what1,
-                self.what2,
-                self.get_batter_multiplier(relevant_batter),
-                self.get_pitcher_multiplier(),
-                self.is_strike,
-                self.strike_roll,
-                self.strike_threshold,
-                fielder_roll,
-                fielder,
-            )
+        roll_csv.write(
+            event_type,
+            roll,
+            passed,
+            relevant_batter or self.batter,
+            self.batting_team,
+            self.pitcher,
+            self.pitching_team,
+            self.stadium,
+            self.update,
+            self.what1,
+            self.what2,
+            self.get_batter_multiplier(relevant_batter),
+            self.get_pitcher_multiplier(),
+            self.is_strike,
+            self.strike_roll,
+            self.strike_threshold,
+            fielder_roll,
+            fielder,
         )
 
     def setup_data(self, event):
@@ -1761,25 +1760,18 @@ class Resim:
             b_team.data[b_location][b_idx] = a_player
             a_team.data[a_location][a_idx] = b_player
 
-    def run(self, start_timestamp, end_timestamp, total_events, prev_processed_events):
+    def run(self, start_timestamp, end_timestamp, progress):
         tqdm.write(f"Starting fragment at {start_timestamp}")
         self.data.fetch_league_data(start_timestamp)
         feed_events = get_feed_between(start_timestamp, end_timestamp)
 
-        processed_events = 0
-        for event in tqdm(
-            feed_events,
-            total=total_events,
-            initial=prev_processed_events,
-            unit="events",
-        ):
-            processed_events += 1
+        for event in feed_events:
+            if progress:
+                progress.update()
             event["type"] = EventType(event["type"])
             self.handle(event)
 
-        self.save_data(start_timestamp)
-
-        return processed_events
+        self.save_data()
 
     def roll(self, label) -> float:
         value = self.rng.next()
@@ -1851,28 +1843,21 @@ class Resim:
                     pitcher_multiplier += 0.25
         return pitcher_multiplier
 
-    def save_data(self, run_name):
-        os.makedirs("roll_data", exist_ok=True)
-        run_name = run_name.replace(":", "_")
-
-        to_save = [
-            ("strikes", self.strike_rolls),
-            ("fouls", self.foul_rolls),
-            ("triples", self.triple_rolls),
-            ("swing-on-ball", self.swing_on_ball_rolls),
-            ("swing-on-strike", self.swing_on_strike_rolls),
-            ("contact", self.contact_rolls),
-            ("hr", self.hr_rolls),
-            ("steal_attempt", self.steal_attempt_rolls),
-            ("steal_success", self.steal_success_rolls),
-            ("party", self.party_rolls),
-            ("out", self.out_rolls),
-            ("fly", self.fly_rolls),
-            ("fc-dp", self.fc_dp_rolls),
-        ]
-        for category_name, data in to_save:
-            tqdm.write(f"Saving {category_name} csv...")
-            pd.DataFrame(data).to_csv(f"roll_data/{run_name}-{category_name}.csv")
+    def save_data(self):
+        print("Saving data...")
+        self.strike_csv.close()
+        self.foul_csv.close()
+        self.triple_csv.close()
+        self.swing_on_ball_csv.close()
+        self.swing_on_strike_csv.close()
+        self.contact_csv.close()
+        self.hr_csv.close()
+        self.steal_attempt_csv.close()
+        self.steal_success_csv.close()
+        self.out_csv.close()
+        self.fly_csv.close()
+        self.party_csv.close()
+        self.fc_dp_csv.close()
 
 
 def advance_bases(occupied, amount, up_to=4):

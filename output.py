@@ -1,7 +1,7 @@
-from dataclasses import dataclass
+import csv
 
-# import itertools
 import math
+import os
 
 
 def calculate_vibes(player, day, multiplier):
@@ -14,257 +14,263 @@ def calculate_vibes(player, day, multiplier):
     return (viberange * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
 
 
-@dataclass
-class RollLog:
-    event_type: str
-    roll: float
-    passed: bool
+class SaveCsv:
+    def __init__(self, run_name: str, category_name: str):
+        self.final_filename = f"roll_data/{run_name}-{category_name}.csv"
+        self.partial_filename = f"{self.final_filename}.partial"
+        self.file = open(self.partial_filename, "w", newline="")
 
-    batter_buoyancy: float
-    batter_divinity: float
-    batter_martyrdom: float
-    batter_moxie: float
-    batter_musclitude: float
-    batter_patheticism: float
-    batter_thwackability: float
-    batter_tragicness: float
-    batter_coldness: float
-    batter_overpowerment: float
-    batter_ruthlessness: float
-    batter_shakespearianism: float
-    batter_suppression: float
-    batter_unthwackability: float
-    batter_base_thirst: float
-    batter_continuation: float
-    batter_ground_friction: float
-    batter_indulgence: float
-    batter_laserlikeness: float
-    batter_anticapitalism: float
-    batter_chasiness: float
-    batter_omniscience: float
-    batter_tenaciousness: float
-    batter_watchfulness: float
-    batter_pressurization: float
-    batter_cinnamon: float
-    batter_multiplier: float
+        self.csv = csv.writer(self.file)
 
-    pitcher_buoyancy: float
-    pitcher_divinity: float
-    pitcher_martyrdom: float
-    pitcher_moxie: float
-    pitcher_musclitude: float
-    pitcher_patheticism: float
-    pitcher_thwackability: float
-    pitcher_tragicness: float
-    pitcher_ruthlessness: float
-    pitcher_overpowerment: float
-    pitcher_unthwackability: float
-    pitcher_shakespearianism: float
-    pitcher_suppression: float
-    pitcher_coldness: float
-    pitcher_base_thirst: float
-    pitcher_continuation: float
-    pitcher_ground_friction: float
-    pitcher_indulgence: float
-    pitcher_laserlikeness: float
-    pitcher_anticapitalism: float
-    pitcher_chasiness: float
-    pitcher_omniscience: float
-    pitcher_tenaciousness: float
-    pitcher_watchfulness: float
-    pitcher_pressurization: float
-    pitcher_cinnamon: float
-    pitcher_multiplier: float
+        # Write header
+        self.csv.writerow(
+            [
+                "event_type",
+                "roll",
+                "passed",
+                "batter_buoyancy",
+                "batter_divinity",
+                "batter_martyrdom",
+                "batter_moxie",
+                "batter_musclitude",
+                "batter_patheticism",
+                "batter_thwackability",
+                "batter_tragicness",
+                "batter_coldness",
+                "batter_overpowerment",
+                "batter_ruthlessness",
+                "batter_shakespearianism",
+                "batter_suppression",
+                "batter_unthwackability",
+                "batter_base_thirst",
+                "batter_continuation",
+                "batter_ground_friction",
+                "batter_indulgence",
+                "batter_laserlikeness",
+                "batter_anticapitalism",
+                "batter_chasiness",
+                "batter_omniscience",
+                "batter_tenaciousness",
+                "batter_watchfulness",
+                "batter_pressurization",
+                "batter_cinnamon",
+                "batter_multiplier",
+                "pitcher_buoyancy",
+                "pitcher_divinity",
+                "pitcher_martyrdom",
+                "pitcher_moxie",
+                "pitcher_musclitude",
+                "pitcher_patheticism",
+                "pitcher_thwackability",
+                "pitcher_tragicness",
+                "pitcher_ruthlessness",
+                "pitcher_overpowerment",
+                "pitcher_unthwackability",
+                "pitcher_shakespearianism",
+                "pitcher_suppression",
+                "pitcher_coldness",
+                "pitcher_base_thirst",
+                "pitcher_continuation",
+                "pitcher_ground_friction",
+                "pitcher_indulgence",
+                "pitcher_laserlikeness",
+                "pitcher_anticapitalism",
+                "pitcher_chasiness",
+                "pitcher_omniscience",
+                "pitcher_tenaciousness",
+                "pitcher_watchfulness",
+                "pitcher_pressurization",
+                "pitcher_cinnamon",
+                "pitcher_multiplier",
+                "fielder_anticapitalism",
+                "fielder_chasiness",
+                "fielder_omniscience",
+                "fielder_tenaciousness",
+                "fielder_watchfulness",
+                "ballpark_grandiosity",
+                "ballpark_fortification",
+                "ballpark_obtuseness",
+                "ballpark_ominousness",
+                "ballpark_inconvenience",
+                "ballpark_viscosity",
+                "ballpark_forwardness",
+                "ballpark_mysticism",
+                "ballpark_elongation",
+                "ballpark_filthiness",
+                "what1",
+                "what2",
+                "batting_team_hype",
+                "pitching_team_hype",
+                "batter_name",
+                "pitcher_name",
+                "fielder_name",
+                "batter_vibes",
+                "pitcher_vibes",
+                "fielder_vibes",
+                "batter_mods",
+                "batting_team_mods",
+                "pitcher_mods",
+                "pitching_team_mods",
+                "fielder_mods",
+                "game_id",
+                "stadium_id",
+                "play_count",
+                "weather",
+                "ball_count",
+                "strike_count",
+                "out_count",
+                "season",
+                "day",
+                "top_of_inning",
+                "home_score",
+                "away_score",
+                "inning",
+                "batting_team_roster_size",
+                "pitching_team_roster_size",
+                "baserunner_count",
+                "is_strike",
+                "strike_roll",
+                "strike_threshold",
+                "fielder_roll",
+            ]
+        )
 
-    fielder_anticapitalism: float
-    fielder_chasiness: float
-    fielder_omniscience: float
-    fielder_tenaciousness: float
-    fielder_watchfulness: float
+    def write(
+        self,
+        event_type: str,
+        roll: float,
+        passed: bool,
+        batter,
+        batting_team,
+        pitcher,
+        pitching_team,
+        stadium,
+        update,
+        what1: float,
+        what2: float,
+        batter_multiplier: float,
+        pitcher_multiplier: float,
+        is_strike: bool,
+        strike_roll: float,
+        strike_threshold: float,
+        fielder_roll,
+        fielder,
+    ):
+        self.csv.writerow(
+            [
+                event_type,
+                roll,
+                passed,
+                batter.data["buoyancy"],
+                batter.data["divinity"],
+                batter.data["martyrdom"],
+                batter.data["moxie"],
+                batter.data["musclitude"],
+                batter.data["patheticism"],
+                batter.data["thwackability"],
+                batter.data["tragicness"],
+                batter.data["coldness"],
+                batter.data["overpowerment"],
+                batter.data["ruthlessness"],
+                batter.data["shakespearianism"],
+                batter.data["suppression"],
+                batter.data["unthwackability"],
+                batter.data["baseThirst"],
+                batter.data["continuation"],
+                batter.data["groundFriction"],
+                batter.data["indulgence"],
+                batter.data["laserlikeness"],
+                batter.data["anticapitalism"],
+                batter.data["chasiness"],
+                batter.data["omniscience"],
+                batter.data["tenaciousness"],
+                batter.data["watchfulness"],
+                batter.data["pressurization"],
+                batter.data.get("cinnamon", 0),
+                batter_multiplier,
+                pitcher.data["buoyancy"],
+                pitcher.data["divinity"],
+                pitcher.data["martyrdom"],
+                pitcher.data["moxie"],
+                pitcher.data["musclitude"],
+                pitcher.data["patheticism"],
+                pitcher.data["thwackability"],
+                pitcher.data["tragicness"],
+                pitcher.data["ruthlessness"],
+                pitcher.data["overpowerment"],
+                pitcher.data["unthwackability"],
+                pitcher.data["shakespearianism"],
+                pitcher.data["suppression"],
+                pitcher.data["coldness"],
+                pitcher.data["baseThirst"],
+                pitcher.data["continuation"],
+                pitcher.data["groundFriction"],
+                pitcher.data["indulgence"],
+                pitcher.data["laserlikeness"],
+                pitcher.data["anticapitalism"],
+                pitcher.data["chasiness"],
+                pitcher.data["omniscience"],
+                pitcher.data["tenaciousness"],
+                pitcher.data["watchfulness"],
+                pitcher.data["pressurization"],
+                pitcher.data["cinnamon"],
+                pitcher_multiplier,
+                fielder.data["anticapitalism"] if fielder is not None else 0,
+                fielder.data["chasiness"] if fielder is not None else 0,
+                fielder.data["omniscience"] if fielder is not None else 0,
+                fielder.data["tenaciousness"] if fielder is not None else 0,
+                fielder.data["watchfulness"] if fielder is not None else 0,
+                stadium.data["grandiosity"],
+                stadium.data["fortification"],
+                stadium.data["obtuseness"],
+                stadium.data["ominousness"],
+                stadium.data["inconvenience"],
+                stadium.data["viscosity"],
+                stadium.data["forwardness"],
+                stadium.data["mysticism"],
+                stadium.data["elongation"],
+                stadium.data["filthiness"],
+                what1,
+                what2,
+                stadium.data["hype"] if not update["topOfInning"] else 0,
+                stadium.data["hype"] if update["topOfInning"] else 0,
+                batter.data["name"],
+                pitcher.data["name"],
+                fielder.data["name"] if fielder is not None else "",
+                calculate_vibes(batter.data, update["day"], 1),
+                calculate_vibes(pitcher.data, update["day"], 1),
+                calculate_vibes(fielder.data, update["day"], 1) if fielder is not None else 0,
+                ";".join(batter.mods),
+                ";".join(batting_team.mods),
+                ";".join(pitcher.mods),
+                ";".join(pitching_team.mods),
+                ";".join(fielder.mods) if fielder is not None else "",
+                update["id"],
+                update["stadiumId"],
+                update["playCount"],
+                update["weather"],
+                update["atBatBalls"],
+                update["atBatStrikes"],
+                update["halfInningOuts"],
+                update["season"],
+                update["day"],
+                update["topOfInning"],
+                update["homeScore"],
+                update["awayScore"],
+                update["inning"],
+                len(batting_team.data["lineup"]) + len(batting_team.data["rotation"]),
+                len(pitching_team.data["lineup"]) + len(pitching_team.data["rotation"]),
+                update["baserunnerCount"],
+                is_strike,
+                strike_roll,
+                strike_threshold,
+                fielder_roll,
+            ]
+        )
 
-    ballpark_grandiosity: float
-    ballpark_fortification: float
-    ballpark_obtuseness: float
-    ballpark_ominousness: float
-    ballpark_inconvenience: float
-    ballpark_viscosity: float
-    ballpark_forwardness: float
-    ballpark_mysticism: float
-    ballpark_elongation: float
-    ballpark_filthiness: float
+    def close(self):
+        self.file.close()
+        self.file = None
+        self.csv = None
 
-    what1: float
-    what2: float
-
-    batting_team_hype: float
-    pitching_team_hype: float
-
-    batter_name: str
-    pitcher_name: str
-    fielder_name: str
-
-    batter_vibes: float
-    batter_vibes_multiplied: float
-    pitcher_vibes: float
-    pitcher_vibes_multiplied: float
-    fielder_vibes: float
-
-    batter_mods: str
-    batting_team_mods: str
-    pitcher_mods: str
-    pitching_team_mods: str
-    fielder_mods: str
-
-    game_id: str
-    stadium_id: str
-    play_count: int
-    weather: int
-    ball_count: int
-    strike_count: int
-    out_count: int
-    season: int
-    day: int
-    top_of_inning: bool
-    home_score: float
-    away_score: float
-    inning: int
-    batting_team_roster_size: int
-    pitching_team_roster_size: int
-    baserunner_count: int
-    is_strike: bool
-    strike_roll: float
-    strike_threshold: float
-    fielder_roll: float
-
-
-def make_roll_log(
-    event_type: str,
-    roll: float,
-    passed: bool,
-    batter,
-    batting_team,
-    pitcher,
-    pitching_team,
-    stadium,
-    update,
-    what1: float,
-    what2: float,
-    batter_multiplier: float,
-    pitcher_multiplier: float,
-    is_strike: bool,
-    strike_roll: float,
-    strike_threshold: float,
-    fielder_roll,
-    fielder,
-):
-    return RollLog(
-        event_type=event_type,
-        roll=roll,
-        passed=passed,
-        batter_name=batter.data["name"],
-        pitcher_name=pitcher.data["name"],
-        fielder_name=fielder.data["name"] if fielder is not None else "",
-        batter_buoyancy=batter.data["buoyancy"],
-        batter_divinity=batter.data["divinity"],
-        batter_martyrdom=batter.data["martyrdom"],
-        batter_moxie=batter.data["moxie"],
-        batter_musclitude=batter.data["musclitude"],
-        batter_patheticism=batter.data["patheticism"],
-        batter_thwackability=batter.data["thwackability"],
-        batter_tragicness=batter.data["tragicness"],
-        batter_coldness=batter.data["coldness"],
-        batter_overpowerment=batter.data["overpowerment"],
-        batter_ruthlessness=batter.data["ruthlessness"],
-        batter_shakespearianism=batter.data["shakespearianism"],
-        batter_suppression=batter.data["suppression"],
-        batter_unthwackability=batter.data["unthwackability"],
-        batter_base_thirst=batter.data["baseThirst"],
-        batter_continuation=batter.data["continuation"],
-        batter_ground_friction=batter.data["groundFriction"],
-        batter_indulgence=batter.data["indulgence"],
-        batter_laserlikeness=batter.data["laserlikeness"],
-        batter_anticapitalism=batter.data["anticapitalism"],
-        batter_chasiness=batter.data["chasiness"],
-        batter_omniscience=batter.data["omniscience"],
-        batter_tenaciousness=batter.data["tenaciousness"],
-        batter_watchfulness=batter.data["watchfulness"],
-        batter_pressurization=batter.data["pressurization"],
-        batter_cinnamon=(batter.data.get("cinnamon") or 0),
-        batter_multiplier=batter_multiplier,
-        pitcher_buoyancy=pitcher.data["buoyancy"],
-        pitcher_divinity=pitcher.data["divinity"],
-        pitcher_martyrdom=pitcher.data["martyrdom"],
-        pitcher_moxie=pitcher.data["moxie"],
-        pitcher_musclitude=pitcher.data["musclitude"],
-        pitcher_patheticism=pitcher.data["patheticism"],
-        pitcher_thwackability=pitcher.data["thwackability"],
-        pitcher_tragicness=pitcher.data["tragicness"],
-        pitcher_coldness=pitcher.data["coldness"],
-        pitcher_overpowerment=pitcher.data["overpowerment"],
-        pitcher_ruthlessness=pitcher.data["ruthlessness"],
-        pitcher_shakespearianism=pitcher.data["shakespearianism"],
-        pitcher_suppression=pitcher.data["suppression"],
-        pitcher_unthwackability=pitcher.data["unthwackability"],
-        pitcher_base_thirst=pitcher.data["baseThirst"],
-        pitcher_continuation=pitcher.data["continuation"],
-        pitcher_ground_friction=pitcher.data["groundFriction"],
-        pitcher_indulgence=pitcher.data["indulgence"],
-        pitcher_laserlikeness=pitcher.data["laserlikeness"],
-        pitcher_anticapitalism=pitcher.data["anticapitalism"],
-        pitcher_chasiness=pitcher.data["chasiness"],
-        pitcher_omniscience=pitcher.data["omniscience"],
-        pitcher_tenaciousness=pitcher.data["tenaciousness"],
-        pitcher_watchfulness=pitcher.data["watchfulness"],
-        pitcher_pressurization=pitcher.data["pressurization"],
-        pitcher_cinnamon=pitcher.data["cinnamon"],
-        pitcher_multiplier=pitcher_multiplier,
-        fielder_anticapitalism=fielder.data["anticapitalism"] if fielder is not None else 0,
-        fielder_chasiness=fielder.data["chasiness"] if fielder is not None else 0,
-        fielder_omniscience=fielder.data["omniscience"] if fielder is not None else 0,
-        fielder_tenaciousness=fielder.data["tenaciousness"] if fielder is not None else 0,
-        fielder_watchfulness=fielder.data["watchfulness"] if fielder is not None else 0,
-        fielder_vibes=calculate_vibes(fielder.data, update["day"], 1) if fielder is not None else 0,
-        ballpark_grandiosity=stadium.data["grandiosity"],
-        ballpark_fortification=stadium.data["fortification"],
-        ballpark_obtuseness=stadium.data["obtuseness"],
-        ballpark_ominousness=stadium.data["ominousness"],
-        ballpark_inconvenience=stadium.data["inconvenience"],
-        ballpark_viscosity=stadium.data["viscosity"],
-        ballpark_forwardness=stadium.data["forwardness"],
-        ballpark_mysticism=stadium.data["mysticism"],
-        ballpark_elongation=stadium.data["elongation"],
-        ballpark_filthiness=stadium.data["filthiness"],
-        batting_team_hype=stadium.data["hype"] if not update["topOfInning"] else 0,
-        pitching_team_hype=stadium.data["hype"] if update["topOfInning"] else 0,
-        batter_vibes=calculate_vibes(batter.data, update["day"], 1),
-        batter_vibes_multiplied=calculate_vibes(batter.data, update["day"], batter_multiplier),
-        pitcher_vibes=calculate_vibes(pitcher.data, update["day"], 1),
-        pitcher_vibes_multiplied=calculate_vibes(pitcher.data, update["day"], pitcher_multiplier),
-        batter_mods=";".join(batter.mods),
-        batting_team_mods=";".join(batting_team.mods),
-        pitcher_mods=";".join(pitcher.mods),
-        pitching_team_mods=";".join(pitching_team.mods),
-        fielder_mods=";".join(fielder.mods) if fielder is not None else "",
-        game_id=update["id"],
-        stadium_id=update["stadiumId"],
-        play_count=update["playCount"],
-        weather=update["weather"],
-        ball_count=update["atBatBalls"],
-        strike_count=update["atBatStrikes"],
-        out_count=update["halfInningOuts"],
-        baserunner_count=update["baseRunners"],
-        season=update["season"],
-        day=update["day"],
-        top_of_inning=update["topOfInning"],
-        home_score=update["homeScore"],
-        away_score=update["awayScore"],
-        inning=update["inning"],
-        what1=what1,
-        what2=what2,
-        batting_team_roster_size=len(batting_team.data["lineup"]) + len(batting_team.data["rotation"]),
-        pitching_team_roster_size=len(pitching_team.data["lineup"]) + len(pitching_team.data["rotation"]),
-        is_strike=is_strike,
-        strike_roll=strike_roll,
-        strike_threshold=strike_threshold,
-        fielder_roll=fielder_roll,
-    )
+        os.rename(self.partial_filename, self.final_filename)
