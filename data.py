@@ -8,19 +8,11 @@ from datetime import datetime, timedelta
 from enum import IntEnum, unique
 
 
-def parse_timestamp(timestamp):
-    timestamp = timestamp.replace("Z", "+00:00")
-    return datetime.fromisoformat(timestamp)
-
-
-def format_timestamp(dt: datetime):
-    return dt.isoformat()
-
-
 def offset_timestamp(timestamp: str, delta_secs: float) -> str:
-    dt = parse_timestamp(timestamp)
+    timestamp = timestamp.replace("Z", "+00:00")
+    dt = datetime.fromisoformat(timestamp)
     dt = dt + timedelta(seconds=delta_secs)
-    timestamp = format_timestamp(dt)
+    timestamp = dt.isoformat()
     return timestamp.replace("+00:00", "Z")
 
 
@@ -343,14 +335,15 @@ class PlayerData:
         return False
 
     def vibes(self, day):
+        if self.has_mod("SCATTERED"):
+            return 0
         frequency = 6 + round(10 * self.data["buoyancy"])
         phase = math.pi * ((2 / frequency) * day + 0.5)
 
         pressurization = self.data["pressurization"]
-        cinnamon = self.data["cinnamon"] if self.data["cinnamon"] is not None else 0
+        cinnamon = self.data["cinnamon"] or 0
         viberange = 0.5 * (pressurization + cinnamon)
-        vibes = (viberange * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
-        return vibes if not self.has_mod("SCATTERED") else 0
+        return (viberange * math.sin(phase)) - (0.5 * pressurization) + (0.5 * cinnamon)
 
 
 class GameData:
