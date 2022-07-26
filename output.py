@@ -151,6 +151,7 @@ class SaveCsv:
             "strike_roll",
             "strike_threshold",
             "fielder_roll",
+            "batter_consecutive_hits",
         ]
         self.num_columns = len(columns)
         self.csv.writerow(columns)
@@ -318,6 +319,7 @@ class SaveCsv:
             strike_roll,
             strike_threshold,
             fielder_roll,
+            batter.data["consecutiveHits"],
         ]
         assert len(row) == self.num_columns
         self.csv.writerow(row)
