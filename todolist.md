@@ -1,7 +1,6 @@
 ## Short-term to do
 - Update known ??? roll names (steal fielder, out fielder, bases fielder, doubles, triples, etc.)
-- Update resim to identify a fielder/pull their attrs for steal attempts and successes
-- Update resim to identify a fielder/pull their attrs for doubles and triples
+    - might be mostly done for now? always good to check
 
 ## To do
 - Investigate fielder's choices
@@ -15,6 +14,7 @@
 - Investigate weird EE mechanics
 - Clean up formulas in general
 - Figure out how Spicy/On Fire works (consecutive hits?)
+  - track actual consecutive hits in resim
 - Figure out how to go "backwards in time" through the rng stream
 
 ## In progress
@@ -31,3 +31,4 @@
 - Strike zone formula
 - Flyout vs groundout formula
 - Attractor star generation
+- Foul ball formula
