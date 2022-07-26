@@ -898,7 +898,8 @@ class Resim:
                 self.print(f"!!! too high foul roll ({foul_roll} > {foul_threshold})")
             elif not known_outcome and foul_roll < foul_threshold:
                 self.print(f"!!! too low foul roll ({foul_roll} < {foul_threshold})")
-        self.log_roll(self.csvs["fouls"], "uhhhhh", foul_roll, known_outcome)
+        outcomestr = "Foul" if known_outcome else "Fair"
+        self.log_roll(self.csvs["fouls"], outcomestr, foul_roll, known_outcome)
 
     def handle_foul(self):
         self.throw_pitch()
