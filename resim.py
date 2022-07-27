@@ -34,6 +34,7 @@ class Resim:
                 "strikes",
                 "fouls",
                 "triples",
+                "doubles",
                 "swing-on-ball",
                 "swing-on-strike",
                 "contact",
@@ -860,9 +861,10 @@ class Resim:
         hr_roll = self.roll("home run")
         self.log_roll(self.csvs["hr"], "BaseHit", hr_roll, False)
 
-        self.roll("hit fielder?")
-        self.roll("double?")
-        triple_roll = self.roll("triple?")
+        defender_roll = self.roll("hit fielder")
+
+        double_roll = self.roll("double")
+        triple_roll = self.roll("triple")
 
         hit_bases = 0
         if "hits a Single!" in self.desc:
@@ -872,7 +874,24 @@ class Resim:
         elif "hits a Triple!" in self.desc:
             hit_bases = 3
 
-        self.log_roll(self.csvs["triples"], f"Hit{hit_bases}", triple_roll, hit_bases == 3)
+        if hit_bases < 3:
+            self.log_roll(
+                self.csvs["doubles"],
+                f"Hit{hit_bases}",
+                double_roll,
+                hit_bases == 2,
+                fielder_roll=fielder_roll,
+                fielder=self.get_fielder_for_roll(defender_roll),
+            )
+
+        self.log_roll(
+            self.csvs["triples"],
+            f"Hit{hit_bases}",
+            triple_roll,
+            hit_bases == 3,
+            fielder_roll=fielder_roll,
+            fielder=self.get_fielder_for_roll(defender_roll),
+        )
 
         self.handle_hit_advances(hit_bases)
 
