@@ -1565,7 +1565,7 @@ class Resim:
             self.strike_threshold,
             fielder_roll,
             fielder,
-            self.get_batter_multiplier(fielder),  # uhhhhhhhhh
+            self.get_fielder_multiplier(fielder),  # uhhhhhhhhh
             runner_on_first,
             runner_on_first_multiplier,
         )
@@ -1872,6 +1872,56 @@ class Resim:
                 if self.weather == Weather.FLOODING and len(self.update["baseRunners"]) > 0:
                     pitcher_multiplier += 0.25
         return pitcher_multiplier
+
+    def get_fielder_multiplier(self, relevant_fielder=None, relevant_attr=None):
+        fielder = relevant_fielder or self.fielder
+        # attr = relevant_attr
+
+        fielder_multiplier = 1
+        for mod in itertools.chain(fielder.mods, self.pitching_team.mods):
+            if mod == "OVERPERFORMING":
+                fielder_multiplier += 0.2
+            elif mod == "UNDERPERFORMING":
+                fielder_multiplier -= 0.2
+            elif mod == "GROWTH":
+                fielder_multiplier += min(0.05, 0.05 * (self.day / 99))
+            elif mod == "HIGH_PRESSURE":
+                # checks for flooding weather and baserunners
+                if self.weather == Weather.FLOODING and len(self.update["baseRunners"]) > 0:
+                    # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
+                    fielder_multiplier += 0.25
+            elif mod == "TRAVELING":
+                if self.update["topOfInning"]:
+                    fielder_multiplier += 0.05
+            elif mod == "SINKING_SHIP":
+                roster_size = len(self.pitching_team.data["lineup"]) + len(self.pitching_team.data["rotation"])
+                fielder_multiplier += (14 - roster_size) * 0.01
+            elif mod == "AFFINITY_FOR_CROWS" and self.weather == Weather.BIRDS:
+                fielder_multiplier += 0.5
+            elif mod == "SHELLED":
+                # lol, lmao
+                # is it this, or is it "mul = 0", I wonder
+                fielder_multiplier -= 1.0
+            # Chunky and Smooth should be irrelevant here. also hopefully On Fire
+            # elif mod == "CHUNKY" and self.weather == Weather.PEANUTS:
+            #     # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
+            #     #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
+            #     if relevant_attr in ["musclitude", "divinity", "ground_friction"]:
+            #         fielder_multiplier += 1.0
+            # elif mod == "SMOOTH" and self.weather == Weather.PEANUTS:
+            #     # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted stuff in
+            #     #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
+            #     if relevant_attr in [
+            #         "musclitude",
+            #         "continuation",
+            #         "ground_friction",
+            #         "laserlikeness",
+            #     ]:
+            #         fielder_multiplier += 1.0
+            # elif mod == "ON_FIRE":
+            #     # todo: figure out how the heck "on fire" works
+            #     pass
+        return fielder_multiplier
 
     def save_data(self):
         print("Saving data...")
