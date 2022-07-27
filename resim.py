@@ -1565,7 +1565,7 @@ class Resim:
             self.strike_threshold,
             fielder_roll,
             fielder,
-            self.get_fielder_multiplier(fielder),  # uhhhhhhhhh
+            self.get_batter_multiplier(fielder),  # uhhhhhhhhh
             runner_on_first,
             runner_on_first_multiplier,
         )
