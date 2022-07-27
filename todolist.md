@@ -3,7 +3,6 @@
     - might be mostly done for now? always good to check
 
 ## To do
-- Investigate fielder's choices
 - Investigate double plays
 - Investigate sacrifices
 - Investigate runner advancement
@@ -20,6 +19,9 @@
 ## In progress
 - Swing-in-zone formula
 - Swing-out-of-zone formula (parabolas 😡)
+- Contact-in-zone formula
+- Contact-out-of-zone formula
+- Fielder's choice formula
 - Steal attempts formula
 - Steal success formula
 - Doubles formula
