@@ -46,6 +46,8 @@ class Resim:
                 "party",
                 "fc-dp",
                 "dp",
+                "dp-tworunners",
+                "dp-basesloaded",
             ]
         }
 
@@ -697,36 +699,38 @@ class Resim:
 
         elif self.ty == EventType.GROUND_OUT:
             # All groundout baserunner situations and the number of extra rolls used
-            # "!" means this roll is solved
+            # "!" means this roll is solved, "?" means good hunch and we should confirm
             # DP can end the inning!
+            # DP always has an out at 1st
+            # Successful DP always have 2 rolls (DP check + where check)
             extras = {
                 (tuple(), tuple()): 0,
-                ((0,), tuple()): 2,  # !DP roll (pass) + ???
-                ((0,), (0,)): 2,  # !DP roll (fail) + martyr roll (fail)
-                ((0,), (1,)): 3,  # !DP roll (fail) + martyr roll (pass) + ???
+                ((0,), tuple()): 2,  # !DP roll (pass), roll where (unused)
+                ((0,), (0,)): 2,  # !DP roll (fail), martyr roll (fail)
+                ((0,), (1,)): 3,  # !DP roll (fail), martyr roll (pass) + ??? aka martyr2
                 ((1,), (1,)): 2,  # Out at 1st, no advancement
                 ((1,), (2,)): 2,  # Out at 1st, one runner advances
                 ((2,), tuple()): 2,  # Sacrifice Out at 1st, scoring from 3rd
                 ((2,), (2,)): 2,  # Out at 1st, no advancement
                 ((1, 0), tuple()): 2,  # Inning-ending DP
-                ((1, 0), (1,)): 2,  # DP at 3rd then 1st, 1st advances to 2nd
-                ((1, 0), (2,)): 2,  # DP at 2nd then 1st, 2nd advances to 3rd
-                ((1, 0), (1, 0)): 2,  # Out at 3rd (Out at 1st with no advancement maybe possible?, but not likely with only 2 rolls)
-                ((1, 0), (2, 1)): 4,  # Out at 1st, both runners advance
-                ((2, 0), tuple()): 2,  # DP, 1 run scores OR inning-ending DP
-                ((2, 0), (0,)): 4,  # FC, but scoring a 3rd runner.
-                ((2, 0), (1,)): 4,  # Sacrifice Out at 1st
-                ((2, 0), (2, 1)): 4,  # Out at 1st, one runner advances, one stays
-                ((2, 1), (1,)): 3,  # guessing rolls -- Out at first, one run scores, other doesn't advance
+                ((1, 0), (1,)): 2,  # !DP roll (pass), !roll<0.50 out at 3rd;DP at 3rd and 1st, 1st advances to 2nd
+                ((1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.50 out at 2nd;DP at 2nd and 1st, 2nd advances to 3rd
+                ((1, 0), (1, 0)): 2,  # ?DP roll (fail), ?martyr roll (fail);Out at 3rd
+                ((1, 0), (2, 1)): 4,  # ?DP roll (fail), ?martyr roll (pass), ???, ???;Out at 1st, both runners advance
+                ((2, 0), tuple()): 2,  # ?DP roll (pass), ?roll where;DP, 1 run scores OR inning-ending DP
+                ((2, 0), (0,)): 4,  # ?DP roll (fail), ?martyr roll (fail), ???, ???;FC, but scoring a 3rd runner. Sometimes 2 rolls!
+                ((2, 0), (1,)): 4,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???;Sacrifice Out at 1st, both runners advance
+                ((2, 0), (2, 1)): 4,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???;Out at 1st, one runner advances, one stays
+                ((2, 1), (1,)): 3,  # Out at first, one run scores, other doesn't advance
                 ((2, 1), (2,)): 3,  # Sacrifice Out at 1st, both runners advance, +1 run
                 ((2, 1), (2, 1)): 3,  # Out at 1st, no advancement
                 ((2, 1), (2, 2)): 3,  # Out at 1st into holding hands on 3rd
                 ((2, 2), tuple()): 3,  # Sacrifice Out at 1st, both holding hands on 3rd scoring
-                ((2, 1, 0), tuple()): 2,  # Inning-ending DP
-                ((2, 1, 0), (1,)): 2,  # guessing rolls -- DP at 3rd and 1st, 1st and 3rd advance
-                ((2, 1, 0), (2,)): 2,  # DP, 1 run scores, 2nd advances to 3rd
-                ((2, 1, 0), (2, 1)): 5,  # guessing  --  Out at 1st, all advance
-                ((2, 1, 0), (2, 1, 0)): 2,  # Out at home
+                ((2, 1, 0), tuple()): 2,  # ?DP roll (pass), ?roll where (unused);# Inning-ending DP
+                ((2, 1, 0), (1,)): 2,  # !DP roll (pass), !0.33<roll<0.67 out at 3rd; DP at 3rd and 1st, 1st and 3rd advance
+                ((2, 1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.67 out at 2nd; DP, 1 run scores, 2nd advances to 3rd
+                ((2, 1, 0), (2, 1)): 5,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???, ???;NOT DP! Out at 1st, all advance. 
+                ((2, 1, 0), (2, 1, 0)): 2,  # ?DP roll (fail), ?martyr roll (fail);Out at home
             }
 
             fc_dp_event_type = "Out"
@@ -735,7 +739,7 @@ class Resim:
                 fc_dp_event_type = "FC"
 
             if "into a double play!" in self.desc:
-                # not [2, 1, 0], 2 scores, everyone advances, but instead just a dp, which is 3 shorter...?
+                # !DP roll (pass), !roll<0.33 out at home
                 extras[((2, 1, 0), (2, 1))] = 2
                 fc_dp_event_type = "DP"
 
@@ -766,6 +770,23 @@ class Resim:
                     fc_dp_event_type,
                     extra_rolls,  # In this case it's a LIST, not one roll!
                     fc_dp_event_type == "DP",
+                    fielder=fielder,
+                )
+
+            if self.update["basesOccupied"] == [1,0] and self.next_update["basesOccupied"] in [[1],[2]]:
+                self.log_roll(
+                    self.csvs["dp-tworunners"],
+                    fc_dp_event_type,
+                    extra_rolls,  # In this case it's a LIST, not one roll!
+                    self.next_update["basesOccupied"] == [2],
+                    fielder=fielder,
+                )
+            if fc_dp_event_type == "DP" and self.update["basesOccupied"] == [2,1,0] and self.next_update["basesOccupied"] in [[2,1],[1],[2]]:
+                self.log_roll(
+                    self.csvs["dp-basesloaded"],
+                    fc_dp_event_type,
+                    extra_rolls,  # In this case it's a LIST, not one roll!
+                    self.next_update["basesOccupied"] == [1], # Out at 3rd
                     fielder=fielder,
                 )
 
