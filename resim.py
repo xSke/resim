@@ -723,7 +723,7 @@ class Resim:
                 ((2, 1), (2, 2)): 3,  # Out at 1st into holding hands on 3rd
                 ((2, 2), tuple()): 3,  # Sacrifice Out at 1st, both holding hands on 3rd scoring
                 ((2, 1, 0), tuple()): 2,  # Inning-ending DP
-                ((2, 1, 0), (1,)): 2,  # guessing rolls -- Out at 1st, 2 runs score, 1st advances to 2nd
+                ((2, 1, 0), (1,)): 2,  # guessing rolls -- DP at 3rd and 1st, 1st and 3rd advance
                 ((2, 1, 0), (2,)): 2,  # DP, 1 run scores, 2nd advances to 3rd
                 ((2, 1, 0), (2, 1)): 5,  # guessing  --  Out at 1st, all advance
                 ((2, 1, 0), (2, 1, 0)): 2,  # Out at home
