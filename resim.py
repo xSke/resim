@@ -45,6 +45,7 @@ class Resim:
                 "fly",
                 "party",
                 "fc-dp",
+                "dp",
             ]
         }
 
@@ -695,35 +696,37 @@ class Resim:
                     self.roll("holding hands")
 
         elif self.ty == EventType.GROUND_OUT:
-            # ground out
+            # All groundout baserunner situations and the number of extra rolls used
+            # "!" means this roll is solved
+            # DP can end the inning!
             extras = {
                 (tuple(), tuple()): 0,
-                ((0,), (0,)): 2,  # fielder's choice (successful)
-                ((0,), (1,)): 3,
-                ((1,), (1,)): 2,
-                ((2, 0), (2, 1)): 4,
-                ((1,), (2,)): 2,
-                ((2, 1), (2,)): 3,
-                ((0,), tuple()): 2,  # double play (successful)
-                ((2,), tuple()): 2,  # sac
-                ((1, 0), (2, 1)): 4,
-                ((1, 0), (1, 0)): 2,
-                ((2, 0), (0,)): 4,
-                ((2,), (2,)): 2,
-                ((1, 0), tuple()): 2,  # double play + second, 2 or 3 rolls?
-                ((2, 1, 0), (2, 1, 0)): 2,
-                ((2, 1, 0), (2, 1)): 5,  # guessing
-                ((2, 1, 0), (2,)): 2,
-                ((2, 1, 0), (1,)): 2,  # guessing
-                ((2, 1, 0), tuple()): 2,  # dp
-                ((2, 1), (1,)): 3,  # guessing
-                ((2, 0), tuple()): 2,  # double play + sac?
-                ((1, 0), (1,)): 2,  # double play but they stay?
-                ((2, 0), (1,)): 4,
-                ((2, 1), (2, 1)): 3,
-                ((1, 0), (2,)): 2,  # dp
-                ((2, 1), (2, 2)): 3,  # holding hands
-                ((2, 2), tuple()): 3,  # two players holding hands, both sac scoring???
+                ((0,), tuple()): 2,  # !DP roll (pass) + ???
+                ((0,), (0,)): 2,  # !DP roll (fail) + martyr roll (fail)
+                ((0,), (1,)): 3,  # !DP roll (fail) + martyr roll (pass) + ???
+                ((1,), (1,)): 2,  # Out at 1st, no advancement
+                ((1,), (2,)): 2,  # Out at 1st, one runner advances
+                ((2,), tuple()): 2,  # Sacrifice Out at 1st, scoring from 3rd
+                ((2,), (2,)): 2,  # Out at 1st, no advancement
+                ((1, 0), tuple()): 2,  # Inning-ending DP
+                ((1, 0), (1,)): 2,  # DP at 3rd then 1st, 1st advances to 2nd
+                ((1, 0), (2,)): 2,  # DP at 2nd then 1st, 2nd advances to 3rd
+                ((1, 0), (1, 0)): 2,  # Out at 3rd (Out at 1st with no advancement maybe possible?, but not likely with only 2 rolls)
+                ((1, 0), (2, 1)): 4,  # Out at 1st, both runners advance
+                ((2, 0), tuple()): 2,  # DP, 1 run scores OR inning-ending DP
+                ((2, 0), (0,)): 4,  # FC, but scoring a 3rd runner.
+                ((2, 0), (1,)): 4,  # Sacrifice Out at 1st
+                ((2, 0), (2, 1)): 4,  # Out at 1st, one runner advances, one stays
+                ((2, 1), (1,)): 3,  # guessing rolls -- Out at first, one run scores, other doesn't advance
+                ((2, 1), (2,)): 3,  # Sacrifice Out at 1st, both runners advance, +1 run
+                ((2, 1), (2, 1)): 3,  # Out at 1st, no advancement
+                ((2, 1), (2, 2)): 3,  # Out at 1st into holding hands on 3rd
+                ((2, 2), tuple()): 3,  # Sacrifice Out at 1st, both holding hands on 3rd scoring
+                ((2, 1, 0), tuple()): 2,  # Inning-ending DP
+                ((2, 1, 0), (1,)): 2,  # guessing rolls -- DP at 3rd and 1st, 1st and 3rd advance
+                ((2, 1, 0), (2,)): 2,  # DP, 1 run scores, 2nd advances to 3rd
+                ((2, 1, 0), (2, 1)): 5,  # guessing  --  Out at 1st, all advance
+                ((2, 1, 0), (2, 1, 0)): 2,  # Out at home
             }
 
             fc_dp_event_type = "Out"
@@ -754,7 +757,20 @@ class Resim:
                     fielder=fielder,
                 )
 
+            if self.update["basesOccupied"] == [0]: # Runner on 1st
+                # Pad rolls to always have 3
+                if len(extra_rolls) == 2:
+                    extra_rolls.append(None)
+                self.log_roll(
+                    self.csvs["dp"],
+                    fc_dp_event_type,
+                    extra_rolls,  # In this case it's a LIST, not one roll!
+                    fc_dp_event_type == "DP",
+                    fielder=fielder,
+                )
+
             # todo: make this not use a lookup table
+            # Requires a LOT more knowledge about each situation
             # adv_eligible_runners = dict(bases_before)
             # if 0 in bases_before:
             #     # do force play
