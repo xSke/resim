@@ -696,7 +696,9 @@ class Resim:
                     self.roll("holding hands")
 
         elif self.ty == EventType.GROUND_OUT:
-            # ground out
+            # All groundout baserunner situations and the number of extra rolls used
+            # "!" means this roll is solved
+            # DP can end the inning!
             extras = {
                 (tuple(), tuple()): 0,
                 ((0,), tuple()): 2,  # !DP roll (pass) + ???
@@ -706,23 +708,23 @@ class Resim:
                 ((1,), (2,)): 2,  # Out at 1st, one runner advances
                 ((2,), tuple()): 2,  # Sacrifice Out at 1st, scoring from 3rd
                 ((2,), (2,)): 2,  # Out at 1st, no advancement
-                ((1, 0), tuple()): 2,  # DP + score from 2nd, 2 or 3 rolls?
-                ((1, 0), (1,)): 2,  # DP at 3rd then 1st
+                ((1, 0), tuple()): 2,  # Inning-ending DP
+                ((1, 0), (1,)): 2,  # DP at 3rd then 1st, 1st advances to 2nd
                 ((1, 0), (2,)): 2,  # DP at 2nd then 1st, 2nd advances to 3rd
                 ((1, 0), (1, 0)): 2,  # Out at 3rd (Out at 1st with no advancement maybe possible?, but not likely with only 2 rolls)
                 ((1, 0), (2, 1)): 4,  # Out at 1st, both runners advance
-                ((2, 0), tuple()): 2,  # DP, 1 run scores (don't think it's possible runner scores from first)
+                ((2, 0), tuple()): 2,  # DP, 1 run scores OR inning-ending DP
                 ((2, 0), (0,)): 4,  # FC, but scoring a 3rd runner.
                 ((2, 0), (1,)): 4,  # Sacrifice Out at 1st
                 ((2, 0), (2, 1)): 4,  # Out at 1st, one runner advances, one stays
                 ((2, 1), (1,)): 3,  # guessing rolls -- Out at first, one run scores, other doesn't advance
                 ((2, 1), (2,)): 3,  # Sacrifice Out at 1st, both runners advance, +1 run
-                ((2, 1), (2, 1)): 3,  # Out at 1st, 
+                ((2, 1), (2, 1)): 3,  # Out at 1st, no advancement
                 ((2, 1), (2, 2)): 3,  # Out at 1st into holding hands on 3rd
                 ((2, 2), tuple()): 3,  # Sacrifice Out at 1st, both holding hands on 3rd scoring
-                ((2, 1, 0), tuple()): 2,  # DP, 2 runs score
+                ((2, 1, 0), tuple()): 2,  # Inning-ending DP
                 ((2, 1, 0), (1,)): 2,  # guessing rolls -- Out at 1st, 2 runs score, 1st advances to 2nd
-                ((2, 1, 0), (2,)): 2,  # DP, 1 run scores OR Out at 1st, 2 runs score, 1st advances to 3rd?
+                ((2, 1, 0), (2,)): 2,  # DP, 1 run scores, 2nd advances to 3rd
                 ((2, 1, 0), (2, 1)): 5,  # guessing  --  Out at 1st, all advance
                 ((2, 1, 0), (2, 1, 0)): 2,  # Out at home
             }
@@ -768,6 +770,7 @@ class Resim:
                 )
 
             # todo: make this not use a lookup table
+            # Requires a LOT more knowledge about each situation
             # adv_eligible_runners = dict(bases_before)
             # if 0 in bases_before:
             #     # do force play
