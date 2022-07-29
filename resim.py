@@ -55,6 +55,7 @@ class Resim:
                     "dp-tworunners",
                     "dp-basesloaded",
                     "advancement",
+                    "bird-message",
                 ]
             }
         else:
@@ -443,6 +444,14 @@ class Resim:
             ):
                 self.print("away team mods:", self.away_team.data["permAttr"])
                 self.roll("echo team mod")
+            return True
+        if self.ty in [EventType.FLAG_PLANTED]:
+            for _ in range(11):
+                self.roll("flag planted")
+            return True
+        if self.ty in [EventType.RENOVATION_BUILT]:
+            if "builds a" not in self.desc:
+                self.roll("stat change")
             return True
 
     def handle_bird_ambush(self):
@@ -1109,6 +1118,13 @@ class Resim:
                     self.roll("siphon proc 2?")
                 return True
 
+            if self.ty == EventType.BLOODDRAIN:
+                self.roll("blooddrain proc")
+                self.roll("blooddrain proc")
+                self.roll("blooddrain proc")
+                self.roll("blooddrain proc")
+                return True
+
         elif self.weather == Weather.PEANUTS:
             self.roll("peanuts")
 
@@ -1152,15 +1168,15 @@ class Resim:
 
             if self.ty == EventType.BIRDS_CIRCLE:
                 # the birds circle...
+                self.log_roll("bird-message", "Circle", bird_roll, True)
                 return True
+            elif not has_shelled_player:
+                self.log_roll("bird-message", "NoCircle", bird_roll, False)
 
-            # wild guess at how this maybe kinda works. might just be myst idk
-            bird_threshold = 0.015 if self.batting_team.has_mod("BIRD_SEED") else 0.012
-            if self.season == 12:
-                bird_threshold = 0.015  # or not? idk?
+            # threshold is at 0.0125 at 0.5 fort
+            bird_threshold = 0.0225 - self.stadium.data["fortification"] * 0.02
 
             if has_shelled_player and bird_roll < bird_threshold:
-                # potentially roll for player to unshell?
                 self.roll("extra bird roll")
                 pass
 
@@ -1346,7 +1362,7 @@ class Resim:
                 if self.season == 14:
                     threshold = 0.0004
                 if self.season == 12:
-                    threshold = 0.0006
+                    threshold = 0.00061
 
                 if unscatter_roll < threshold:
                     self.roll(f"unscatter letter ({player.raw_name})")
