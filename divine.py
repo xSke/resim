@@ -2,6 +2,7 @@ from resim import Resim
 from io import StringIO
 import closed_form_solver_faster_no_numpy
 from multiprocessing import Pool
+from rng import Rng, xs128p
 
 
 def flip_blocks(input, offset):
@@ -18,7 +19,7 @@ def flip_blocks(input, offset):
 
 def block_permutations(input):
     for i in range(64):
-        yield i, flip_blocks(input, 64 - i)
+        yield i, flip_blocks(input, i)
 
 
 class StubRng:
@@ -47,14 +48,20 @@ def inner(window):
 
     print(f"trying window {start_time} - {end_time}")
 
-    found = False
     for i, knowns_block in block_permutations(knowns):
         res = closed_form_solver_faster_no_numpy.solve(knowns_block)
         if res:
-            # since we're adding block padding the offset for the roll it finds is always gonna be zero
-            # and said roll is probably gonna be one of the padding rolls but that's okay, we just need something in the general area
-            print(f"- found! {res[0]}+0")
-            found = True
+            # step through the block-corrected rolls for the first roll of an event and print that
+            window_flipped = flip_blocks(window, i)
+            state = res[0]
+            for i, k in enumerate(window_flipped):
+                if k and k.index == 0:
+                    r = Rng(state, i % 64)
+                    r.step(-1)  # account for our indexing being the coords *before* consuming the roll
+                    print(f"found event at {k.timestamp}: {r.get_state_str()}, first roll {r.next()}")
+                    break
+
+                state = xs128p(state)
 
 
 def main():

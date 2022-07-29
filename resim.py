@@ -432,10 +432,14 @@ class Resim:
                 timestamp = self.event["created"]
                 self.data.fetch_league_data(timestamp, 20)
 
-            if self.weather in [
-                Weather.FEEDBACK,
-                Weather.REVERB,
-            ] and self.stadium.has_mod("PSYCHOACOUSTICS"):
+            if (
+                self.weather
+                in [
+                    Weather.FEEDBACK,
+                    Weather.REVERB,
+                ]
+                and self.stadium.has_mod("PSYCHOACOUSTICS")
+            ):
                 self.print("away team mods:", self.away_team.data["permAttr"])
                 self.roll("echo team mod")
             return True
@@ -1953,7 +1957,13 @@ class Resim:
         value = self.rng.next()
         self.print(f"{label}: {value}")
 
-        log_obj = LoggedRoll(self.event["id"], self.event["created"], label, lower, upper)
+        # hacky way to figure out what index this roll is in the overall list
+        idx = 0
+        if self.roll_log:
+            if self.roll_log[-1].event_id == self.event["id"]:
+                idx = self.roll_log[-1].index + 1
+
+        log_obj = LoggedRoll(self.event["id"], idx, self.event["created"], label, lower, upper)
         self.roll_log.append(log_obj)
         return value
 
@@ -2140,6 +2150,7 @@ def calculate_advances(bases_before, bases_after, bases_hit):
 @dataclass
 class LoggedRoll:
     event_id: str
+    index: int
     timestamp: str
     roll_name: str
     lower_bound: float
