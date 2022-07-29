@@ -34,6 +34,7 @@ class Resim:
                 "strikes",
                 "fouls",
                 "triples",
+                "doubles",
                 "swing-on-ball",
                 "swing-on-strike",
                 "contact",
@@ -44,6 +45,9 @@ class Resim:
                 "fly",
                 "party",
                 "fc-dp",
+                "dp",
+                "dp-tworunners",
+                "dp-basesloaded",
             ]
         }
 
@@ -694,35 +698,39 @@ class Resim:
                     self.roll("holding hands")
 
         elif self.ty == EventType.GROUND_OUT:
-            # ground out
+            # All groundout baserunner situations and the number of extra rolls used
+            # "!" means this roll is solved, "?" means good hunch and we should confirm
+            # DP can end the inning!
+            # DP always has an out at 1st
+            # Successful DP always have 2 rolls (DP check + where check)
             extras = {
                 (tuple(), tuple()): 0,
-                ((0,), (0,)): 2,  # fielder's choice (successful)
-                ((0,), (1,)): 3,
-                ((1,), (1,)): 2,
-                ((2, 0), (2, 1)): 4,
-                ((1,), (2,)): 2,
-                ((2, 1), (2,)): 3,
-                ((0,), tuple()): 2,  # double play (successful)
-                ((2,), tuple()): 2,  # sac
-                ((1, 0), (2, 1)): 4,
-                ((1, 0), (1, 0)): 2,
-                ((2, 0), (0,)): 4,
-                ((2,), (2,)): 2,
-                ((1, 0), tuple()): 2,  # double play + second, 2 or 3 rolls?
-                ((2, 1, 0), (2, 1, 0)): 2,
-                ((2, 1, 0), (2, 1)): 5,  # guessing
-                ((2, 1, 0), (2,)): 2,
-                ((2, 1, 0), (1,)): 2,  # guessing
-                ((2, 1, 0), tuple()): 2,  # dp
-                ((2, 1), (1,)): 3,  # guessing
-                ((2, 0), tuple()): 2,  # double play + sac?
-                ((1, 0), (1,)): 2,  # double play but they stay?
-                ((2, 0), (1,)): 4,
-                ((2, 1), (2, 1)): 3,
-                ((1, 0), (2,)): 2,  # dp
-                ((2, 1), (2, 2)): 3,  # holding hands
-                ((2, 2), tuple()): 3,  # two players holding hands, both sac scoring???
+                ((0,), tuple()): 2,  # !DP roll (pass), roll where (unused)
+                ((0,), (0,)): 2,  # !DP roll (fail), martyr roll (fail)
+                ((0,), (1,)): 3,  # !DP roll (fail), martyr roll (pass) + ??? aka martyr2
+                ((1,), (1,)): 2,  # Out at 1st, no advancement
+                ((1,), (2,)): 2,  # Out at 1st, one runner advances
+                ((2,), tuple()): 2,  # Sacrifice Out at 1st, scoring from 3rd
+                ((2,), (2,)): 2,  # Out at 1st, no advancement
+                ((1, 0), tuple()): 2,  # Inning-ending DP
+                ((1, 0), (1,)): 2,  # !DP roll (pass), !roll<0.50 out at 3rd;DP at 3rd and 1st, 1st advances to 2nd
+                ((1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.50 out at 2nd;DP at 2nd and 1st, 2nd advances to 3rd
+                ((1, 0), (1, 0)): 2,  # ?DP roll (fail), ?martyr roll (fail);Out at 3rd
+                ((1, 0), (2, 1)): 4,  # ?DP roll (fail), ?martyr roll (pass), ???, ???;Out at 1st, both runners advance
+                ((2, 0), tuple()): 2,  # ?DP roll (pass), ?roll where;DP, 1 run scores OR inning-ending DP
+                ((2, 0), (0,)): 4,  # ?DP roll (fail), ?martyr roll (fail), ???, ???;FC, but scoring a 3rd runner. Sometimes 2 rolls!
+                ((2, 0), (1,)): 4,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???;Sacrifice Out at 1st, both runners advance
+                ((2, 0), (2, 1)): 4,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???;Out at 1st, one runner advances, one stays
+                ((2, 1), (1,)): 3,  # Out at first, one run scores, other doesn't advance
+                ((2, 1), (2,)): 3,  # Sacrifice Out at 1st, both runners advance, +1 run
+                ((2, 1), (2, 1)): 3,  # Out at 1st, no advancement
+                ((2, 1), (2, 2)): 3,  # Out at 1st into holding hands on 3rd
+                ((2, 2), tuple()): 3,  # Sacrifice Out at 1st, both holding hands on 3rd scoring
+                ((2, 1, 0), tuple()): 2,  # ?DP roll (pass), ?roll where (unused);# Inning-ending DP
+                ((2, 1, 0), (1,)): 2,  # !DP roll (pass), !0.33<roll<0.67 out at 3rd; DP at 3rd and 1st, 1st and 3rd advance
+                ((2, 1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.67 out at 2nd; DP, 1 run scores, 2nd advances to 3rd
+                ((2, 1, 0), (2, 1)): 5,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???, ???;NOT DP! Out at 1st, all advance. 
+                ((2, 1, 0), (2, 1, 0)): 2,  # ?DP roll (fail), ?martyr roll (fail);Out at home
             }
 
             fc_dp_event_type = "Out"
@@ -731,7 +739,7 @@ class Resim:
                 fc_dp_event_type = "FC"
 
             if "into a double play!" in self.desc:
-                # not [2, 1, 0], 2 scores, everyone advances, but instead just a dp, which is 3 shorter...?
+                # !DP roll (pass), !roll<0.33 out at home
                 extras[((2, 1, 0), (2, 1))] = 2
                 fc_dp_event_type = "DP"
 
@@ -753,7 +761,37 @@ class Resim:
                     fielder=fielder,
                 )
 
+            if self.update["basesOccupied"] == [0]: # Runner on 1st
+                # Pad rolls to always have 3
+                if len(extra_rolls) == 2:
+                    extra_rolls.append(None)
+                self.log_roll(
+                    self.csvs["dp"],
+                    fc_dp_event_type,
+                    extra_rolls,  # In this case it's a LIST, not one roll!
+                    fc_dp_event_type == "DP",
+                    fielder=fielder,
+                )
+
+            if self.update["basesOccupied"] == [1,0] and self.next_update["basesOccupied"] in [[1],[2]]:
+                self.log_roll(
+                    self.csvs["dp-tworunners"],
+                    fc_dp_event_type,
+                    extra_rolls,  # In this case it's a LIST, not one roll!
+                    self.next_update["basesOccupied"] == [2],
+                    fielder=fielder,
+                )
+            if fc_dp_event_type == "DP" and self.update["basesOccupied"] == [2,1,0] and self.next_update["basesOccupied"] in [[2,1],[1],[2]]:
+                self.log_roll(
+                    self.csvs["dp-basesloaded"],
+                    fc_dp_event_type,
+                    extra_rolls,  # In this case it's a LIST, not one roll!
+                    self.next_update["basesOccupied"] == [1], # Out at 3rd
+                    fielder=fielder,
+                )
+
             # todo: make this not use a lookup table
+            # Requires a LOT more knowledge about each situation
             # adv_eligible_runners = dict(bases_before)
             # if 0 in bases_before:
             #     # do force play
@@ -860,9 +898,10 @@ class Resim:
         hr_roll = self.roll("home run")
         self.log_roll(self.csvs["hr"], "BaseHit", hr_roll, False)
 
-        self.roll("hit fielder?")
-        self.roll("double?")
-        triple_roll = self.roll("triple?")
+        defender_roll = self.roll("hit fielder")
+
+        double_roll = self.roll("double")
+        triple_roll = self.roll("triple")
 
         hit_bases = 0
         if "hits a Single!" in self.desc:
@@ -872,7 +911,24 @@ class Resim:
         elif "hits a Triple!" in self.desc:
             hit_bases = 3
 
-        self.log_roll(self.csvs["triples"], f"Hit{hit_bases}", triple_roll, hit_bases == 3)
+        if hit_bases < 3:
+            self.log_roll(
+                self.csvs["doubles"],
+                f"Hit{hit_bases}",
+                double_roll,
+                hit_bases == 2,
+                fielder_roll=fielder_roll,
+                fielder=self.get_fielder_for_roll(defender_roll),
+            )
+
+        self.log_roll(
+            self.csvs["triples"],
+            f"Hit{hit_bases}",
+            triple_roll,
+            hit_bases == 3,
+            fielder_roll=fielder_roll,
+            fielder=self.get_fielder_for_roll(defender_roll),
+        )
 
         self.handle_hit_advances(hit_bases)
 
@@ -1853,6 +1909,56 @@ class Resim:
                 if self.weather == Weather.FLOODING and len(self.update["baseRunners"]) > 0:
                     pitcher_multiplier += 0.25
         return pitcher_multiplier
+
+    def get_fielder_multiplier(self, relevant_fielder=None, relevant_attr=None):
+        fielder = relevant_fielder or self.fielder
+        # attr = relevant_attr
+
+        fielder_multiplier = 1
+        for mod in itertools.chain(fielder.mods, self.pitching_team.mods):
+            if mod == "OVERPERFORMING":
+                fielder_multiplier += 0.2
+            elif mod == "UNDERPERFORMING":
+                fielder_multiplier -= 0.2
+            elif mod == "GROWTH":
+                fielder_multiplier += min(0.05, 0.05 * (self.day / 99))
+            elif mod == "HIGH_PRESSURE":
+                # checks for flooding weather and baserunners
+                if self.weather == Weather.FLOODING and len(self.update["baseRunners"]) > 0:
+                    # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
+                    fielder_multiplier += 0.25
+            elif mod == "TRAVELING":
+                if self.update["topOfInning"]:
+                    fielder_multiplier += 0.05
+            elif mod == "SINKING_SHIP":
+                roster_size = len(self.pitching_team.data["lineup"]) + len(self.pitching_team.data["rotation"])
+                fielder_multiplier += (14 - roster_size) * 0.01
+            elif mod == "AFFINITY_FOR_CROWS" and self.weather == Weather.BIRDS:
+                fielder_multiplier += 0.5
+            elif mod == "SHELLED":
+                # lol, lmao
+                # is it this, or is it "mul = 0", I wonder
+                fielder_multiplier -= 1.0
+            # Chunky and Smooth should be irrelevant here. also hopefully On Fire
+            # elif mod == "CHUNKY" and self.weather == Weather.PEANUTS:
+            #     # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
+            #     #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
+            #     if relevant_attr in ["musclitude", "divinity", "ground_friction"]:
+            #         fielder_multiplier += 1.0
+            # elif mod == "SMOOTH" and self.weather == Weather.PEANUTS:
+            #     # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted stuff in
+            #     #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
+            #     if relevant_attr in [
+            #         "musclitude",
+            #         "continuation",
+            #         "ground_friction",
+            #         "laserlikeness",
+            #     ]:
+            #         fielder_multiplier += 1.0
+            # elif mod == "ON_FIRE":
+            #     # todo: figure out how the heck "on fire" works
+            #     pass
+        return fielder_multiplier
 
     def save_data(self):
         print("Saving data...")
