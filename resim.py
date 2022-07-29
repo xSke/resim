@@ -406,6 +406,7 @@ class Resim:
                 "196f195c-f8b2-44e9-b117-a7a46de390cd": 1,
                 "c7a63a95-53bc-44a7-a5e3-c3d9d1bf8779": 1,
                 "d022b5e3-3ab2-48e9-baae-85cc48e3d01a": 1,
+                "502d6a06-1975-4c70-94d6-bdf9e31aaec6": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -420,14 +421,10 @@ class Resim:
                 timestamp = self.event["created"]
                 self.data.fetch_league_data(timestamp, 20)
 
-            if (
-                self.weather
-                in [
-                    Weather.FEEDBACK,
-                    Weather.REVERB,
-                ]
-                and self.stadium.has_mod("PSYCHOACOUSTICS")
-            ):
+            if self.weather in [
+                Weather.FEEDBACK,
+                Weather.REVERB,
+            ] and self.stadium.has_mod("PSYCHOACOUSTICS"):
                 self.print("away team mods:", self.away_team.data["permAttr"])
                 self.roll("echo team mod")
             return True
