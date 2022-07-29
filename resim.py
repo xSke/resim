@@ -80,6 +80,13 @@ class Resim:
     def handle(self, event):
         self.setup_data(event)
 
+        # hardcoding a fix for a data error - jands don't get the overperforming mod from earlbirds
+        # in chron until after the game ends, but we need it earlier
+        if self.game_id == "8577919c-4288-4404-bde2-694f5e7a38d1":
+            jands = self.data.get_team("a37f9158-7f82-46bc-908c-c9e2dda7c33b")
+            if not jands.has_mod("OVERPERFORMING"):
+                jands.data["permAttr"].append("OVERPERFORMING")
+
         self.print()
         if self.update:
             self.print(
@@ -407,6 +414,10 @@ class Resim:
                 "c7a63a95-53bc-44a7-a5e3-c3d9d1bf8779": 1,
                 "d022b5e3-3ab2-48e9-baae-85cc48e3d01a": 1,
                 "502d6a06-1975-4c70-94d6-bdf9e31aaec6": 1,
+                "d41babda-81bd-4992-a0e6-b389db1b080d": 1,
+                "bf7d15e6-62b2-4e03-a752-dd51beffd519": 1,
+                "c9c94bc2-7c34-4803-9df2-0c3c3bfe183c": 1,
+                "6a00cc1f-9f26-4528-9a84-e6f253a28635": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -447,13 +458,9 @@ class Resim:
         # before season 16, love blood only proc'd when the player also had love blood
         if self.event["season"] < 15:
             if self.batter.data["blood"] != 9:
-                if batter_charm_eligible:
-                    self.print("!!! warn: batter does not have love blood, skipping")
                 batter_charm_eligible = False
 
             if self.pitcher.data["blood"] != 9:
-                if pitcher_charm_eligible:
-                    self.print("!!! warn: pitcher does not have love blood, skipping")
                 pitcher_charm_eligible = False
 
         # todo: figure out logic order when both teams have charm
@@ -476,8 +483,6 @@ class Resim:
         # only case here would be baldwin breadwinner in s14 but it seems to work okay?
         if self.batting_team.has_mod("ELECTRIC") and self.update["atBatStrikes"] > 0:
             self.roll("electric")
-            if self.batter.data["blood"] != 8:
-                self.print("!!! warn: batter does not have electric blood")
 
             if self.ty == EventType.STRIKE_ZAPPED:
                 # successful zap!
@@ -499,7 +504,7 @@ class Resim:
                 EventType.HOME_RUN,
                 EventType.HIT,
             ]:
-                self.print("!!! warn: no reverb on hit?")
+                # self.print("!!! warn: no reverb on hit?")
                 is_at_bat_end = False
 
             if is_at_bat_end:
@@ -520,8 +525,6 @@ class Resim:
             if swing_roll < 0.05:
                 self.print("!!! very low swing roll on ball")
             self.log_roll("swing-on-ball", "Ball", swing_roll, False)
-        else:
-            self.print("!!! warn: flinching ball")
 
         if self.ty == EventType.WALK and self.batting_team.has_mod("BASE_INSTINCTS"):
             self.roll("base instincts")
@@ -1001,8 +1004,7 @@ class Resim:
 
     def roll_foul(self, known_outcome: bool):
         is_0_no_eligible = self.batting_team.has_mod("O_NO") and self.strikes == 2 and self.balls == 0
-        excluded_mods = ["ON_FIRE", "SPICY", "CHUNKY", "SMOOTH"]
-        if is_0_no_eligible or self.batter.has_any(excluded_mods):
+        if is_0_no_eligible or self.batter.has_any("ON_FIRE", "SPICY", "CHUNKY", "SMOOTH"):
             known_outcome = None
 
         threshold = self.get_foul_threshold()
@@ -1380,7 +1382,7 @@ class Resim:
             teams = [self.home_team, self.away_team]
 
         for team in teams:
-            level = team.data.get("level", 0)
+            level = team.data.get("level") or 0
             if level >= 5:
                 self.roll(f"consumers ({team.data['nickname']})")
                 if self.ty == EventType.CONSUMERS_ATTACK:
