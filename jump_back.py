@@ -10,7 +10,7 @@ from data import get_feed_between
 from resim import Resim
 from rng import Rng
 
-# (season0indexed, day0indexed): (s0, s1), rng offset, event offset, start timestamp, end timestamp
+# (season1indexed, day1indexed): (s0, s1), rng offset, event offset, start timestamp, end timestamp
 FRAGMENTS = {
 
     (12, 74): (
