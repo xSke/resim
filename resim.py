@@ -8,6 +8,8 @@ from tqdm import tqdm
 from data import EventType, GameData, Weather, get_feed_between, null_stadium
 from output import SaveCsv
 from rng import Rng
+from dataclasses import dataclass
+from typing import List
 
 
 class Resim:
@@ -28,32 +30,36 @@ class Resim:
         self.strike_roll = None
         self.strike_threshold = None
 
-        os.makedirs("roll_data", exist_ok=True)
-        run_name = run_name.replace(":", "_")
+        if run_name:
+            os.makedirs("roll_data", exist_ok=True)
+            run_name = run_name.replace(":", "_")
 
-        self.csvs = {
-            csv_name: SaveCsv(run_name, csv_name)
-            for csv_name in [
-                "strikes",
-                "fouls",
-                "triples",
-                "doubles",
-                "swing-on-ball",
-                "swing-on-strike",
-                "contact",
-                "hr",
-                "steal_attempt",
-                "steal_success",
-                "out",
-                "fly",
-                "party",
-                "fc-dp",
-                "dp",
-                "dp-tworunners",
-                "dp-basesloaded",
-                "advancement",
-            ]
-        }
+            self.csvs = {
+                csv_name: SaveCsv(run_name, csv_name)
+                for csv_name in [
+                    "strikes",
+                    "fouls",
+                    "triples",
+                    "doubles",
+                    "swing-on-ball",
+                    "swing-on-strike",
+                    "contact",
+                    "hr",
+                    "steal_attempt",
+                    "steal_success",
+                    "out",
+                    "fly",
+                    "party",
+                    "fc-dp",
+                    "dp",
+                    "dp-tworunners",
+                    "dp-basesloaded",
+                    "advancement",
+                ]
+            }
+        else:
+            self.csvs = {}
+        self.roll_log: List[LoggedRoll] = []
 
         self.what1 = None
         self.what2 = None
@@ -414,10 +420,14 @@ class Resim:
                 timestamp = self.event["created"]
                 self.data.fetch_league_data(timestamp, 20)
 
-            if self.weather in [
-                Weather.FEEDBACK,
-                Weather.REVERB,
-            ] and self.stadium.has_mod("PSYCHOACOUSTICS"):
+            if (
+                self.weather
+                in [
+                    Weather.FEEDBACK,
+                    Weather.REVERB,
+                ]
+                and self.stadium.has_mod("PSYCHOACOUSTICS")
+            ):
                 self.print("away team mods:", self.away_team.data["permAttr"])
                 self.roll("echo team mod")
             return True
@@ -506,13 +516,13 @@ class Resim:
 
     def handle_ball(self):
         value = self.throw_pitch("ball")
-        self.log_roll(self.csvs["strikes"], "Ball", value, False)
+        self.log_roll("strikes", "Ball", value, False)
 
         if not self.is_flinching():
             swing_roll = self.roll("swing")
             if swing_roll < 0.05:
                 self.print("!!! very low swing roll on ball")
-            self.log_roll(self.csvs["swing-on-ball"], "Ball", swing_roll, False)
+            self.log_roll("swing-on-ball", "Ball", swing_roll, False)
         else:
             self.print("!!! warn: flinching ball")
 
@@ -528,24 +538,24 @@ class Resim:
             self.throw_pitch()
             swing_roll = self.roll("swing")
             self.log_roll(
-                self.csvs["swing-on-strike" if self.is_strike else "swing-on-ball"],
+                "swing-on-strike" if self.is_strike else "swing-on-ball",
                 "StrikeSwinging",
                 swing_roll,
                 True,
             )
 
             contact_roll = self.roll("contact")
-            self.log_roll(self.csvs["contact"], "StrikeSwinging", contact_roll, False)
+            self.log_roll("contact", "StrikeSwinging", contact_roll, False)
         elif ", looking" in self.desc or "strikes out looking." in self.desc:
             value = self.throw_pitch("strike")
-            self.log_roll(self.csvs["strikes"], "StrikeLooking", value, True)
+            self.log_roll("strikes", "StrikeLooking", value, True)
 
             if not self.is_flinching():
                 swing_roll = self.roll("swing")
-                self.log_roll(self.csvs["swing-on-strike"], "StrikeLooking", swing_roll, False)
+                self.log_roll("swing-on-strike", "StrikeLooking", swing_roll, False)
         elif ", flinching" in self.desc:
             value = self.throw_pitch("strike")
-            self.log_roll(self.csvs["strikes"], "StrikeFlinching", value, True)
+            self.log_roll("strikes", "StrikeFlinching", value, True)
         pass
 
     def try_roll_salmon(self):
@@ -588,13 +598,13 @@ class Resim:
         self.throw_pitch()
         swing_roll = self.roll("swing")
         self.log_roll(
-            self.csvs["swing-on-strike" if self.is_strike else "swing-on-ball"],
+            "swing-on-strike" if self.is_strike else "swing-on-ball",
             "Out",
             swing_roll,
             True,
         )
         contact_roll = self.roll("contact")
-        self.log_roll(self.csvs["contact"], "Out", contact_roll, True)
+        self.log_roll("contact", "Out", contact_roll, True)
         self.roll_foul(False)
 
         fielder = None
@@ -604,7 +614,7 @@ class Resim:
             fly_fielder_roll, fly_fielder = self.roll_fielder()
             fly_roll = self.roll("fly")
             self.log_roll(
-                self.csvs["fly"],
+                "fly",
                 "Flyout",
                 fly_roll,
                 True,
@@ -612,7 +622,7 @@ class Resim:
                 fielder=self.get_fielder_for_roll(out_fielder_roll),
             )
             self.log_roll(
-                self.csvs["out"],
+                "out",
                 "Flyout",
                 out_roll,
                 False,
@@ -627,7 +637,7 @@ class Resim:
             fly_roll = self.roll("fly")
             ground_fielder_roll, ground_fielder = self.roll_fielder()
             self.log_roll(
-                self.csvs["fly"],
+                "fly",
                 "GroundOut",
                 fly_roll,
                 False,
@@ -635,7 +645,7 @@ class Resim:
                 fielder=self.get_fielder_for_roll(out_fielder_roll),
             )
             self.log_roll(
-                self.csvs["out"],
+                "out",
                 "GroundOut",
                 out_roll,
                 False,
@@ -652,8 +662,6 @@ class Resim:
             self.roll("debt")
 
     def roll_fielder(self, check_name=True):
-        roll_value = self.roll("fielder")
-
         eligible_fielders = []
         fielder_idx = None
         for fielder_id in self.pitching_team.data["lineup"]:
@@ -665,13 +673,18 @@ class Resim:
                 fielder_idx = len(eligible_fielders)
             eligible_fielders.append(fielder)
 
+        if check_name and fielder_idx is not None:
+            expected_min = fielder_idx / len(eligible_fielders)
+            expected_max = (fielder_idx + 1) / len(eligible_fielders)
+        else:
+            expected_min = 0
+            expected_max = 1
+        roll_value = self.roll("fielder", lower=expected_min, upper=expected_max)
+
         rolled_idx = int(roll_value * len(eligible_fielders))
 
         if fielder_idx is not None:
-
             if rolled_idx != fielder_idx:
-                expected_min = fielder_idx / len(eligible_fielders)
-                expected_max = (fielder_idx + 1) / len(eligible_fielders)
                 self.error(
                     "incorrect fielder! expected {}, got {}, needs to be {:.3f}-{:.3f}\n{}".format(
                         fielder_idx, rolled_idx, expected_min, expected_max, self.rng.get_state_str()
@@ -795,7 +808,7 @@ class Resim:
             if 0 in self.update["basesOccupied"]:
                 # fielder = self.get_fielder_for_roll(extra_rolls[0])
                 self.log_roll(
-                    self.csvs["fc-dp"],
+                    "fc-dp",
                     fc_dp_event_type,
                     extra_rolls[1],  # it seems like there's never exactly 1 extra roll
                     fc_dp_event_type == "Out",
@@ -807,7 +820,7 @@ class Resim:
                 if len(extra_rolls) == 2:
                     extra_rolls.append(None)
                 self.log_roll(
-                    self.csvs["dp"],
+                    "dp",
                     fc_dp_event_type,
                     extra_rolls,  # In this case it's a LIST, not one roll!
                     fc_dp_event_type == "DP",
@@ -816,7 +829,7 @@ class Resim:
 
             if self.update["basesOccupied"] == [1, 0] and self.next_update["basesOccupied"] in [[1], [2]]:
                 self.log_roll(
-                    self.csvs["dp-tworunners"],
+                    "dp-tworunners",
                     fc_dp_event_type,
                     extra_rolls,  # In this case it's a LIST, not one roll!
                     self.next_update["basesOccupied"] == [2],
@@ -828,7 +841,7 @@ class Resim:
                 and self.next_update["basesOccupied"] in [[2, 1], [1], [2]]
             ):
                 self.log_roll(
-                    self.csvs["dp-basesloaded"],
+                    "dp-basesloaded",
                     fc_dp_event_type,
                     extra_rolls,  # In this case it's a LIST, not one roll!
                     self.next_update["basesOccupied"] == [1],  # Out at 3rd
@@ -840,7 +853,7 @@ class Resim:
                 if self.next_update["basesOccupied"] == [2]:
                     advance_eventType = "Advance"
                 self.log_roll(
-                    self.csvs["advancement"],
+                    "advancement",
                     advance_eventType,
                     extra_rolls,
                     advance_eventType == "Advance",
@@ -894,21 +907,21 @@ class Resim:
             self.throw_pitch()
             swing_roll = self.roll("swing")
             self.log_roll(
-                self.csvs["swing-on-strike" if self.is_strike else "swing-on-ball"],
+                "swing-on-strike" if self.is_strike else "swing-on-ball",
                 "HR",
                 swing_roll,
                 True,
             )
 
             contact_roll = self.roll("contact")
-            self.log_roll(self.csvs["contact"], "HomeRun", contact_roll, True)
+            self.log_roll("contact", "HomeRun", contact_roll, True)
 
             self.roll_foul(False)
             fielder_roll = self.roll("out fielder")
             out_roll = self.roll("out")
 
             self.log_roll(
-                self.csvs["out"],
+                "out",
                 "HR",
                 out_roll,
                 True,
@@ -917,7 +930,7 @@ class Resim:
             )
 
             hr_roll = self.roll("home run")
-            self.log_roll(self.csvs["hr"], "HomeRun", hr_roll, True)
+            self.log_roll("hr", "HomeRun", hr_roll, True)
         else:
             # not sure why we need this
             self.roll("magmatic")
@@ -929,14 +942,14 @@ class Resim:
         self.throw_pitch()
         swing_roll = self.roll("swing")
         self.log_roll(
-            self.csvs["swing-on-strike" if self.is_strike else "swing-on-ball"],
+            "swing-on-strike" if self.is_strike else "swing-on-ball",
             "BaseHit",
             swing_roll,
             True,
         )
 
         contact_roll = self.roll("contact")
-        self.log_roll(self.csvs["contact"], "BaseHit", contact_roll, True)
+        self.log_roll("contact", "BaseHit", contact_roll, True)
 
         self.roll_foul(False)
 
@@ -944,7 +957,7 @@ class Resim:
         out_roll = self.roll("out")
 
         self.log_roll(
-            self.csvs["out"],
+            "out",
             "BaseHit",
             out_roll,
             True,
@@ -953,7 +966,7 @@ class Resim:
         )
 
         hr_roll = self.roll("home run")
-        self.log_roll(self.csvs["hr"], "BaseHit", hr_roll, False)
+        self.log_roll("hr", "BaseHit", hr_roll, False)
 
         defender_roll = self.roll("hit fielder")
 
@@ -970,7 +983,7 @@ class Resim:
 
         if hit_bases < 3:
             self.log_roll(
-                self.csvs["doubles"],
+                "doubles",
                 f"Hit{hit_bases}",
                 double_roll,
                 hit_bases == 2,
@@ -979,7 +992,7 @@ class Resim:
             )
 
         self.log_roll(
-            self.csvs["triples"],
+            "triples",
             f"Hit{hit_bases}",
             triple_roll,
             hit_bases == 3,
@@ -990,43 +1003,37 @@ class Resim:
         self.handle_hit_advances(hit_bases)
 
     def roll_foul(self, known_outcome: bool):
-        vibes = self.batter.vibes(self.day)
-        fwd = self.stadium.data["forwardness"]
-        obt = self.stadium.data["obtuseness"]
-        musc = (
-            self.batter.data["musclitude"] * self.get_batter_multiplier(relevant_attr="musclitude") * (1 + 0.2 * vibes)
-        )
-        thwack = (
-            self.batter.data["thwackability"]
-            * self.get_batter_multiplier(relevant_attr="thwackability")
-            * (1 + 0.2 * vibes)
-        )
-        div = self.batter.data["divinity"] * self.get_batter_multiplier(relevant_attr="divinity") * (1 + 0.2 * vibes)
-        foul_threshold = 0.25 + 0.1 * fwd - 0.1 * obt + (1 / 30) * musc + (1 / 30) * thwack + (1 / 30) * div
-
-        foul_roll = self.roll("foul")
         is_0_no_eligible = self.batting_team.has_mod("O_NO") and self.strikes == 2 and self.balls == 0
-        if not is_0_no_eligible:
-            if known_outcome and foul_roll > foul_threshold:
-                self.print(f"!!! too high foul roll ({foul_roll} > {foul_threshold})")
-            elif not known_outcome and foul_roll < foul_threshold:
-                self.print(f"!!! too low foul roll ({foul_roll} < {foul_threshold})")
+        excluded_mods = ["ON_FIRE", "SPICY", "CHUNKY", "SMOOTH"]
+        if is_0_no_eligible or self.batter.has_any(excluded_mods):
+            known_outcome = None
+
+        threshold = self.get_foul_threshold()
+        lower_bound = threshold if known_outcome == False else 0
+        upper_bound = threshold if known_outcome == True else 1
+
+        foul_roll = self.roll("foul", lower=lower_bound, upper=upper_bound)
+        if known_outcome is not None:
+            if known_outcome and foul_roll > threshold:
+                self.print(f"!!! too high foul roll ({foul_roll} > {threshold})")
+            elif not known_outcome and foul_roll < threshold:
+                self.print(f"!!! too low foul roll ({foul_roll} < {threshold})")
         outcomestr = "Foul" if known_outcome else "Fair"
-        self.log_roll(self.csvs["fouls"], outcomestr, foul_roll, known_outcome)
+        self.log_roll("fouls", outcomestr, foul_roll, known_outcome)
 
     def handle_foul(self):
         self.throw_pitch()
 
         swing_roll = self.roll("swing")
         self.log_roll(
-            self.csvs["swing-on-strike" if self.is_strike else "swing-on-ball"],
+            "swing-on-strike" if self.is_strike else "swing-on-ball",
             "Foul",
             swing_roll,
             True,
         )
 
         contact_roll = self.roll("contact")
-        self.log_roll(self.csvs["contact"], "Foul", contact_roll, True)
+        self.log_roll("contact", "Foul", contact_roll, True)
 
         self.roll_foul(True)
 
@@ -1403,7 +1410,7 @@ class Resim:
         # lol. turns out it just rolls party all the time and throws out the roll if the team isn't partying
         party_roll = self.roll("party time")
         if self.ty == EventType.PARTY:
-            self.log_roll(self.csvs["party"], "Party", party_roll, True)
+            self.log_roll("party", "Party", party_roll, True)
             team_roll = self.roll("target team")  # <0.5 for home, >0.5 for away
             self.roll("target player")
             for _ in range(25):
@@ -1568,7 +1575,7 @@ class Resim:
 
                 was_success = self.ty == EventType.STOLEN_BASE and base + 1 == base_stolen
                 self.log_roll(
-                    self.csvs["steal_attempt"],
+                    "steal_attempt",
                     f"StealAttempt{base}",
                     steal_roll,
                     was_success,
@@ -1582,7 +1589,7 @@ class Resim:
                     was_caught = "caught stealing" in self.desc
 
                     self.log_roll(
-                        self.csvs["steal_success"],
+                        "steal_success",
                         f"StealSuccess{base}",
                         success_roll,
                         not was_caught,
@@ -1596,20 +1603,47 @@ class Resim:
                 # don't roll twice when holding hands
                 break
 
-    def throw_pitch(self, known_result=None):
-        roll = self.roll("strike")
-        if self.pitching_team.has_mod("ACIDIC"):
-            self.roll("acidic")
-
+    def get_strike_threshold(self):
         vibes = self.pitcher.vibes(self.day)
         ruth = self.pitcher.data["ruthlessness"] * self.get_pitcher_multiplier(relevant_attr="ruthlessness")
         musc = self.batter.data["musclitude"] * self.get_batter_multiplier(relevant_attr="musclitude")
         fwd = self.stadium.data["forwardness"]
 
         constant = 0.2 if not self.is_flinching() else 0.4
-        ruth_factor = 0.3 if self.season == 13 else 0.285  # 0.3 in s14, 0.285 in s15
+
+        ruth_factor, roll_cap = {11: (0.35, 0.9), 12: (0.3, 0.85), 13: (0.3, 0.85), 14: (0.285, 0.86)}[self.season]
+
         threshold = constant + ruth_factor * (ruth * (1 + 0.2 * vibes)) + 0.2 * fwd + 0.1 * musc
-        threshold = min(threshold, 0.85)
+        threshold = min(threshold, roll_cap)
+        return threshold
+
+    def get_foul_threshold(self):
+        vibes = self.batter.vibes(self.day)
+        fwd = self.stadium.data["forwardness"]
+        obt = self.stadium.data["obtuseness"]
+        musc = (
+            self.batter.data["musclitude"] * self.get_batter_multiplier(relevant_attr="musclitude") * (1 + 0.2 * vibes)
+        )
+        thwack = (
+            self.batter.data["thwackability"]
+            * self.get_batter_multiplier(relevant_attr="thwackability")
+            * (1 + 0.2 * vibes)
+        )
+        div = self.batter.data["divinity"] * self.get_batter_multiplier(relevant_attr="divinity") * (1 + 0.2 * vibes)
+        batter_sum = (musc + thwack + div) / 3
+
+        threshold = 0.25 + 0.1 * fwd - 0.1 * obt + 0.1 * batter_sum
+        return threshold
+
+    def throw_pitch(self, known_result=None):
+        threshold = self.get_strike_threshold()
+
+        lower_bound = threshold if known_result == "ball" else 0
+        upper_bound = threshold if known_result == "strike" else 1
+
+        roll = self.roll("strike", lower=lower_bound, upper=upper_bound)
+        if self.pitching_team.has_mod("ACIDIC"):
+            self.roll("acidic")
 
         self.is_strike = roll < threshold
         self.strike_roll = roll
@@ -1626,7 +1660,7 @@ class Resim:
 
     def log_roll(
         self,
-        roll_csv: SaveCsv,
+        csv_name: str,
         event_type: str,
         roll: float,
         passed: bool,
@@ -1634,6 +1668,9 @@ class Resim:
         fielder_roll=None,
         fielder=None,
     ):
+        if not self.csvs:
+            return
+        roll_csv = self.csvs[csv_name]
         runner_1st = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 0]
         runner_2nd = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 1]
         runner_3rd = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 2]
@@ -1913,9 +1950,12 @@ class Resim:
 
         self.save_data()
 
-    def roll(self, label) -> float:
+    def roll(self, label, lower: float = 0, upper: float = 1) -> float:
         value = self.rng.next()
         self.print(f"{label}: {value}")
+
+        log_obj = LoggedRoll(self.event["id"], self.event["created"], label, lower, upper)
+        self.roll_log.append(log_obj)
         return value
 
     def get_batter_multiplier(self, relevant_batter=None, relevant_attr=None):
@@ -2096,3 +2136,12 @@ def calculate_advances(bases_before, bases_after, bases_hit):
                 del bases[runner]
 
     return rolls
+
+
+@dataclass
+class LoggedRoll:
+    event_id: str
+    timestamp: str
+    roll_name: str
+    lower_bound: float
+    upper_bound: float
