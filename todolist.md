@@ -14,9 +14,16 @@
 - Clean up formulas in general
 - Figure out how Spicy/On Fire works (consecutive hits?)
   - track actual consecutive hits in resim
+- Figure out what's up with the modifiers that often throw us off
+  - GROWTH
+  - TRAVELING
+  - ON_FIRE
+  - Night Vision Goggles
+  - CHUNKY
+  - SMOOTH
+
 
 ## In progress
-- Swing-in-zone formula
 - Swing-out-of-zone formula (parabolas 😡)
 - Contact-in-zone formula
 - Contact-out-of-zone formula
@@ -34,9 +41,10 @@
   - first and third (run scores?)
   - "which runner to get out" roll: DONE
 - Figure out how to go "backwards in time" through the rng stream
-- Strike zone formula (finalize S12 and S13)
 
-## Done (for now)
+## Done (for now) (ignoring weird modifiers)
+- Strike zone formula
+- Swing-in-zone formula
 - Flyout vs groundout formula
 - Attractor star generation
 - Foul ball formula
