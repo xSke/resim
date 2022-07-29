@@ -7,7 +7,7 @@ class SaveCsv:
     def __init__(self, run_name: str, category_name: str):
         self.final_filename = f"roll_data/{run_name}-{category_name}.csv"
         self.partial_filename = f"{self.final_filename}.partial"
-        self.file = open(self.partial_filename, "w", newline="")
+        self.file = open(self.partial_filename, "w", newline="", encoding="utf-8")
 
         self.csv = csv.writer(self.file)
 
@@ -329,4 +329,4 @@ class SaveCsv:
         self.file = None
         self.csv = None
 
-        os.rename(self.partial_filename, self.final_filename)
+        os.replace(self.partial_filename, self.final_filename)
