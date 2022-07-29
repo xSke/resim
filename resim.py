@@ -222,6 +222,7 @@ class Resim:
             EventType.SHAME_DONOR,
             EventType.PSYCHO_ACOUSTICS,
             EventType.AMBITIOUS,
+            EventType.LATE_TO_THE_PARTY,
         ]:
             # skipping pregame messages
             return True
@@ -1155,6 +1156,9 @@ class Resim:
 
             # wild guess at how this maybe kinda works. might just be myst idk
             bird_threshold = 0.015 if self.batting_team.has_mod("BIRD_SEED") else 0.012
+            if self.season == 12:
+                bird_threshold = 0.015  # or not? idk?
+
             if has_shelled_player and bird_roll < bird_threshold:
                 # potentially roll for player to unshell?
                 self.roll("extra bird roll")
@@ -1232,6 +1236,11 @@ class Resim:
                     self.roll("reverb shuffle?")
                 for _ in range(len(self.pitching_team.data["rotation"])):
                     self.roll("reverb shuffle?")
+                return True
+
+            if self.ty == EventType.REVERB_BESTOWS_REVERBERATING:
+                # todo: how many rolls?
+                self.roll("more reverb?")
                 return True
 
         elif self.weather == Weather.BLACK_HOLE:
@@ -1334,8 +1343,11 @@ class Resim:
 
                 # todo: find actual threshold
                 threshold = 0.0005
-                if self.season == 14:  # seems to be lower in s15?
+                if self.season == 14:
                     threshold = 0.0004
+                if self.season == 12:
+                    threshold = 0.0006
+
                 if unscatter_roll < threshold:
                     self.roll(f"unscatter letter ({player.raw_name})")
 
