@@ -51,6 +51,7 @@ class Resim:
                 "dp",
                 "dp-tworunners",
                 "dp-basesloaded",
+                "advancement",
             ]
         }
 
@@ -809,6 +810,18 @@ class Resim:
                     fc_dp_event_type,
                     extra_rolls,  # In this case it's a LIST, not one roll!
                     self.next_update["basesOccupied"] == [1], # Out at 3rd
+                    fielder=fielder,
+                )
+
+            if self.update["basesOccupied"] == [1]:
+                advance_eventType = "Stay"
+                if self.next_update["basesOccupied"] == [2]:
+                    advance_eventType = "Advance"
+                self.log_roll(
+                    self.csvs["advancement"],
+                    advance_eventType,
+                    extra_rolls,
+                    advance_eventType == "Advance",
                     fielder=fielder,
                 )
 
@@ -1599,12 +1612,24 @@ class Resim:
         fielder_roll=None,
         fielder=None,
     ):
-        runners = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 0]
-        if runners:
-            runner_on_first = self.data.get_player(runners[0])
+        runner_1st = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 0]
+        runner_2nd = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 1]
+        runner_3rd = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 2]
+        if runner_1st:
+            runner_on_first = self.data.get_player(runner_1st[0])
             runner_on_first_multiplier = self.get_batter_multiplier(runner_on_first)
         else:
-            runner_on_first, runner_on_first_multiplier = None, 0
+            runner_on_first, runner_on_first_multiplier = None, 1
+        if runner_2nd:
+            runner_on_second = self.data.get_player(runner_2nd[0])
+            runner_on_second_multiplier = self.get_batter_multiplier(runner_on_second)
+        else:
+            runner_on_second, runner_on_second_multiplier = None, 1
+        if runner_3rd:
+            runner_on_third = self.data.get_player(runner_3rd[0])
+            runner_on_third_multiplier = self.get_batter_multiplier(runner_on_third)
+        else:
+            runner_on_third, runner_on_third_multiplier = None, 1
         roll_csv.write(
             event_type,
             roll,
@@ -1627,6 +1652,10 @@ class Resim:
             self.get_batter_multiplier(fielder),  # uhhhhhhhhh
             runner_on_first,
             runner_on_first_multiplier,
+            runner_on_second,
+            runner_on_second_multiplier,
+            runner_on_third,
+            runner_on_third_multiplier,
         )
 
     def setup_data(self, event):
