@@ -1,5 +1,6 @@
 import math
 import os
+import sys
 import itertools
 
 from tqdm import tqdm
@@ -10,7 +11,7 @@ from rng import Rng
 
 
 class Resim:
-    def __init__(self, rng, out_file, run_name):
+    def __init__(self, rng, out_file, run_name, raise_on_errors = True):
         self.rng = rng
         self.out_file = out_file
         if out_file is None:
@@ -18,6 +19,8 @@ class Resim:
             self.print = lambda *a, **k: None
         self.data = GameData()
         self.fetched_days = set()
+        self.raise_on_errors = raise_on_errors
+        self.update = None
 
         self.score_at_inning_start = {}
 
@@ -57,18 +60,29 @@ class Resim:
     def print(self, *args, **kwargs):
         print(*args, **kwargs, file=self.out_file)
 
+    def error(self, *args, **kwargs):
+        if not self.out_file:
+            return
+        if self.out_file != sys.stdout:
+            print("Error: ", *args, **kwargs, file=self.out_file)
+        print("Error: ", *args, **kwargs, file=sys.stderr)
+        if self.raise_on_errors:
+            error_string = ' '.join(args)
+            raise RuntimeError(error_string)
+
     def handle(self, event):
         self.setup_data(event)
 
         self.print()
-        self.print(
-            "===== {} {}/{} {}".format(
-                event["created"],
-                self.update["id"],
-                self.update["playCount"],
-                self.weather.name,
+        if self.update:
+            self.print(
+                "===== {} {}/{} {}".format(
+                    event["created"],
+                    self.update["id"],
+                    self.update["playCount"],
+                    self.weather.name,
+                )
             )
-        )
         self.print(f"===== {self.ty.value} {self.desc}")
         self.print(f"===== rng pos: {self.rng.get_state_str()}")
 
@@ -246,8 +260,16 @@ class Resim:
             EventType.REMOVED_MOD,
             EventType.PLAYER_MOVE,
             EventType.INVESTIGATION_PROGRESS,
+            EventType.ENTERING_CRIMESCENE,
         ]:
             # skip liquid/plasma plot nonsense
+            return True
+        if self.ty in [
+            EventType.PLAYER_ADDED_TO_TEAM,
+            EventType.POSTSEASON_SPOT,
+            EventType.BIG_DEAL,
+        ]:
+            #skip postseason
             return True
         if self.ty == EventType.REVERB_ROTATION_SHUFFLE:
             # skip reverb
@@ -649,13 +671,11 @@ class Resim:
             if rolled_idx != fielder_idx:
                 expected_min = fielder_idx / len(eligible_fielders)
                 expected_max = (fielder_idx + 1) / len(eligible_fielders)
-                self.print(
-                    "!!! incorrect fielder! expected {}, got {}, needs to be {:.3f}-{:.3f}".format(
-                        fielder_idx, rolled_idx, expected_min, expected_max
+                self.error(
+                    "incorrect fielder! expected {}, got {}, needs to be {:.3f}-{:.3f}\n{}".format(
+                        fielder_idx, rolled_idx, expected_min, expected_max, self.rng.get_state_str()
                     )
                 )
-                self.print(self.rng.get_state_str())
-                raise RuntimeError("Incorrect fielder")
 
             matching = []
             r2 = Rng(self.rng.state, self.rng.offset)
@@ -731,6 +751,8 @@ class Resim:
                 ((2, 1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.67 out at 2nd; DP, 1 run scores, 2nd advances to 3rd
                 ((2, 1, 0), (2, 1)): 5,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???, ???;NOT DP! Out at 1st, all advance. 
                 ((2, 1, 0), (2, 1, 0)): 2,  # ?DP roll (fail), ?martyr roll (fail);Out at home
+                ((2, 2), (2,)): 3, # two players holding hands, one sac scoring
+                ((2, 1, 2, 0), (2, 0)): 3 # holding hands, both scoring, runner on second advances, out at second, fielder's choice
             }
 
             fc_dp_event_type = "Out"
@@ -1428,7 +1450,7 @@ class Resim:
             attractor = self.was_attractor_placed_in_secret_base_async()
             if attractor:
                 # todo: some of these rolls seem to be done async
-                self.print("!!! attractor placed in secret base:", attractor.name)
+                self.print(f"!!! attractor placed in secret base:{attractor.name}")
                 return
 
         if secret_base_exit_eligible:
@@ -1447,7 +1469,7 @@ class Resim:
                 runner_idx = self.update["basesOccupied"].index(1)
                 runner_id = self.update["baseRunners"][runner_idx]
                 runner = self.data.get_player(runner_id)
-                self.print("!!! redacted baserunner:", runner.name)
+                self.print(f"!!! redacted baserunner: {runner.name}")
 
                 # remove baserunner from roster so fielder math works.
                 # should probably move this logic into a function somehow
