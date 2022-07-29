@@ -14,7 +14,6 @@
 - Clean up formulas in general
 - Figure out how Spicy/On Fire works (consecutive hits?)
   - track actual consecutive hits in resim
-- Figure out how to go "backwards in time" through the rng stream
 
 ## In progress
 - Swing-in-zone formula
@@ -34,9 +33,10 @@
   - bases loaded
   - first and third (run scores?)
   - "which runner to get out" roll: DONE
+- Figure out how to go "backwards in time" through the rng stream
+- Strike zone formula (finalize S12 and S13)
 
 ## Done (for now)
-- Strike zone formula
 - Flyout vs groundout formula
 - Attractor star generation
 - Foul ball formula

@@ -11,7 +11,7 @@ from rng import Rng
 
 
 class Resim:
-    def __init__(self, rng, out_file, run_name, raise_on_errors = True):
+    def __init__(self, rng, out_file, run_name, raise_on_errors=True):
         self.rng = rng
         self.out_file = out_file
         if out_file is None:
@@ -68,7 +68,7 @@ class Resim:
             print("Error: ", *args, **kwargs, file=self.out_file)
         print("Error: ", *args, **kwargs, file=sys.stderr)
         if self.raise_on_errors:
-            error_string = ' '.join(args)
+            error_string = " ".join(args)
             raise RuntimeError(error_string)
 
     def handle(self, event):
@@ -270,7 +270,7 @@ class Resim:
             EventType.POSTSEASON_SPOT,
             EventType.BIG_DEAL,
         ]:
-            #skip postseason
+            # skip postseason
             return True
         if self.ty == EventType.REVERB_ROTATION_SHUFFLE:
             # skip reverb
@@ -739,21 +739,39 @@ class Resim:
                 ((1, 0), (1, 0)): 2,  # ?DP roll (fail), ?martyr roll (fail);Out at 3rd
                 ((1, 0), (2, 1)): 4,  # ?DP roll (fail), ?martyr roll (pass), ???, ???;Out at 1st, both runners advance
                 ((2, 0), tuple()): 2,  # ?DP roll (pass), ?roll where;DP, 1 run scores OR inning-ending DP
-                ((2, 0), (0,)): 4,  # ?DP roll (fail), ?martyr roll (fail), ???, ???;FC, but scoring a 3rd runner. Sometimes 2 rolls!
-                ((2, 0), (1,)): 4,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???;Sacrifice Out at 1st, both runners advance
-                ((2, 0), (2, 1)): 4,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???;Out at 1st, one runner advances, one stays
+                (
+                    (2, 0),
+                    (0,),
+                ): 4,  # ?DP roll (fail), ?martyr roll (fail), ???, ???;FC, but scoring a 3rd runner. Sometimes 2 rolls!
+                (
+                    (2, 0),
+                    (1,),
+                ): 4,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???;Sac Out at 1st, both runners advance
+                (
+                    (2, 0),
+                    (2, 1),
+                ): 4,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???;Out at 1st, one runner advances, one stays
                 ((2, 1), (1,)): 3,  # Out at first, one run scores, other doesn't advance
                 ((2, 1), (2,)): 3,  # Sacrifice Out at 1st, both runners advance, +1 run
                 ((2, 1), (2, 1)): 3,  # Out at 1st, no advancement
                 ((2, 1), (2, 2)): 3,  # Out at 1st into holding hands on 3rd
                 ((2, 2), tuple()): 3,  # Sacrifice Out at 1st, both holding hands on 3rd scoring
                 ((2, 1, 0), tuple()): 2,  # ?DP roll (pass), ?roll where (unused);# Inning-ending DP
-                ((2, 1, 0), (1,)): 2,  # !DP roll (pass), !0.33<roll<0.67 out at 3rd; DP at 3rd and 1st, 1st and 3rd advance
+                (
+                    (2, 1, 0),
+                    (1,),
+                ): 2,  # !DP roll (pass), !0.33<roll<0.67 out at 3rd; DP at 3rd and 1st, 1st and 3rd advance
                 ((2, 1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.67 out at 2nd; DP, 1 run scores, 2nd advances to 3rd
-                ((2, 1, 0), (2, 1)): 5,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???, ???;NOT DP! Out at 1st, all advance. 
+                (
+                    (2, 1, 0),
+                    (2, 1),
+                ): 5,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???, ???;NOT DP! Out at 1st, all advance.
                 ((2, 1, 0), (2, 1, 0)): 2,  # ?DP roll (fail), ?martyr roll (fail);Out at home
-                ((2, 2), (2,)): 3, # two players holding hands, one sac scoring
-                ((2, 1, 2, 0), (2, 0)): 3 # holding hands, both scoring, runner on second advances, out at second, fielder's choice
+                ((2, 2), (2,)): 3,  # two players holding hands, one sac scoring
+                (
+                    (2, 1, 2, 0),
+                    (2, 0),
+                ): 3,  # holding hands, both scoring, runner on second advances, out at second, fielder's choice
             }
 
             fc_dp_event_type = "Out"
@@ -784,7 +802,7 @@ class Resim:
                     fielder=fielder,
                 )
 
-            if self.update["basesOccupied"] == [0]: # Runner on 1st
+            if self.update["basesOccupied"] == [0]:  # Runner on 1st
                 # Pad rolls to always have 3
                 if len(extra_rolls) == 2:
                     extra_rolls.append(None)
@@ -796,7 +814,7 @@ class Resim:
                     fielder=fielder,
                 )
 
-            if self.update["basesOccupied"] == [1,0] and self.next_update["basesOccupied"] in [[1],[2]]:
+            if self.update["basesOccupied"] == [1, 0] and self.next_update["basesOccupied"] in [[1], [2]]:
                 self.log_roll(
                     self.csvs["dp-tworunners"],
                     fc_dp_event_type,
@@ -804,12 +822,16 @@ class Resim:
                     self.next_update["basesOccupied"] == [2],
                     fielder=fielder,
                 )
-            if fc_dp_event_type == "DP" and self.update["basesOccupied"] == [2,1,0] and self.next_update["basesOccupied"] in [[2,1],[1],[2]]:
+            if (
+                fc_dp_event_type == "DP"
+                and self.update["basesOccupied"] == [2, 1, 0]
+                and self.next_update["basesOccupied"] in [[2, 1], [1], [2]]
+            ):
                 self.log_roll(
                     self.csvs["dp-basesloaded"],
                     fc_dp_event_type,
                     extra_rolls,  # In this case it's a LIST, not one roll!
-                    self.next_update["basesOccupied"] == [1], # Out at 3rd
+                    self.next_update["basesOccupied"] == [1],  # Out at 3rd
                     fielder=fielder,
                 )
 
