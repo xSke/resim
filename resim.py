@@ -1182,13 +1182,13 @@ class Resim:
 
         elif self.weather == Weather.FEEDBACK:
             self.roll("feedback")
-            self.roll("feedback")  # this is probably echo y/n? but ignored if the mod isn't there?
+            self.roll("feedback") # feedback event y/n
 
             if self.ty == EventType.FEEDBACK_SWAP:
                 # todo: how many rolls?
-                self.roll("feedback")
-                self.roll("feedback")
-                self.roll("feedback")
+                self.roll("target")
+                self.roll("player 1 fate")
+                self.roll("player 2 fate")
                 return True
 
             if self.weather.can_echo() and (self.batter.has_mod("ECHO") or self.pitcher.has_mod("ECHO")):
