@@ -41,7 +41,9 @@ def inner(window):
 
     knowns = []
     for roll in window:
-        if roll.lower_bound > 0 or roll.upper_bound < 1:
+        if roll.lower_bound == roll.upper_bound:
+            knowns.append(roll.lower_bound)
+        elif roll.lower_bound > 0 or roll.upper_bound < 1:
             knowns.append((roll.lower_bound, roll.upper_bound))
         else:
             knowns.append(None)
@@ -65,8 +67,8 @@ def inner(window):
 
 
 def main():
-    start_timestamp = "2021-03-17T20:05:00.000Z"
-    end_timestamp = "2021-03-17T20:50:00.000Z"
+    start_timestamp = "2021-04-06T01:01:00.249Z"
+    end_timestamp = "2021-04-06T01:30:00.000Z"
 
     out_file = StringIO()
 

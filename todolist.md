@@ -41,6 +41,7 @@
   - first and third (run scores?)
   - "which runner to get out" roll: DONE
 - Figure out how to go "backwards in time" through the rng stream
+- Echo/feedback activation
 
 ## Done (for now) (ignoring weird modifiers)
 - Strike zone formula
@@ -49,3 +50,4 @@
 - Attractor star generation
 - Foul ball formula
 - "Sacrifice bunt" vs FC roll
+- Bird message roll

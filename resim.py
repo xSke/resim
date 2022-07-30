@@ -88,6 +88,12 @@ class Resim:
             if not jands.has_mod("OVERPERFORMING"):
                 jands.data["permAttr"].append("OVERPERFORMING")
 
+        # another workaround for bad data
+        if self.game_id == "c608b5db-29ad-4216-a703-8f0627057523":
+            caleb_novak = self.data.get_player("0eddd056-9d72-4804-bd60-53144b785d5c")
+            if caleb_novak.has_mod("ELSEWHERE"):
+                caleb_novak.data["permAttr"].remove("ELSEWHERE")
+
         self.print()
         if self.update:
             self.print(
@@ -154,15 +160,15 @@ class Resim:
         if self.handle_electric():
             return
 
-        if self.handle_bird_ambush():
-            return
-
         # todo: don't know where this actually is - seems to be before mild at least
         if self.pitcher.has_mod("DEBT_THREE") and not self.batter.has_mod("COFFEE_PERIL"):
             self.roll("debt")
             if self.ty == EventType.HIT_BY_PITCH:
                 # debt success
                 return True
+
+        if self.handle_bird_ambush():
+            return
 
         if self.handle_mild():
             return
@@ -217,6 +223,7 @@ class Resim:
             EventType.HOME_FIELD_ADVANTAGE,
             EventType.BECOME_TRIPLE_THREAT,
             EventType.SOLAR_PANELS_AWAIT,
+            EventType.SOLAR_PANELS_ACTIVATION,
             EventType.HOMEBODY,
             EventType.SUPERYUMMY,
             EventType.PERK,
@@ -224,6 +231,8 @@ class Resim:
             EventType.PSYCHO_ACOUSTICS,
             EventType.AMBITIOUS,
             EventType.LATE_TO_THE_PARTY,
+            EventType.MIDDLING,
+            EventType.SHAMING_RUN,
         ]:
             # skipping pregame messages
             return True
@@ -279,6 +288,10 @@ class Resim:
             EventType.ENTERING_CRIMESCENE,
         ]:
             # skip liquid/plasma plot nonsense
+            if self.ty == EventType.ENTERING_CRIMESCENE:
+                for _ in range(25):
+                    self.roll("stat")
+
             return True
         if self.ty in [
             EventType.PLAYER_ADDED_TO_TEAM,
@@ -324,7 +337,7 @@ class Resim:
             self.roll("salmon")
 
             # special case for a weird starting point with missing data
-            if self.event["created"] == "2021-04-08T20:06:02.627Z":
+            if self.event["created"] in ["2021-04-08T20:06:02.627Z"]:
                 self.roll("salmon")
                 return True
 
@@ -420,6 +433,14 @@ class Resim:
                 "bf7d15e6-62b2-4e03-a752-dd51beffd519": 1,
                 "c9c94bc2-7c34-4803-9df2-0c3c3bfe183c": 1,
                 "6a00cc1f-9f26-4528-9a84-e6f253a28635": 1,
+                "2dff1e11-c2b9-4423-9930-6bb96d1a72d7": 1,
+                "c09fbaf1-c068-45a5-b644-e481f18be0bd": 217,  # ...earlsiesta reading???
+                "936a0ceb-5027-4a1a-a608-2c7e58bf387b": 1,
+                "2898a325-68c1-4521-a531-8437b86feb91": 1,
+                "3f5507e4-7058-4fc5-afa2-4be16e681c24": 1,
+                "f03707f1-8612-4b8c-bfcb-e84c5d9cc760": 1,
+                "24ff0b2e-ecb7-4f4c-aac2-18dac4911109": 1,
+                "f1925518-e056-46f6-be9a-fefd09c0c259": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -452,6 +473,8 @@ class Resim:
         if self.ty in [EventType.RENOVATION_BUILT]:
             if "builds a" not in self.desc:
                 self.roll("stat change")
+            return True
+        if self.ty == EventType.TAROT_READING:
             return True
 
     def handle_bird_ambush(self):
@@ -581,6 +604,8 @@ class Resim:
         if self.event["created"] in [
             "2021-04-08T20:05:02.637Z",
             "2021-04-08T20:08:33.340Z",
+            "2021-04-06T19:08:52.156Z",
+            "2021-04-06T01:07:16.590Z",
         ]:
             self.roll("salmon")
             return
@@ -621,11 +646,13 @@ class Resim:
         self.log_roll("contact", "Out", contact_roll, True)
         self.roll_foul(False)
 
+        is_fc_dp = "into a double play!" in self.desc or "reaches on fielder's choice" in self.desc
+
         fielder = None
         if self.ty == EventType.FLY_OUT:  # flyout
             out_fielder_roll = self.roll("out fielder")
             out_roll = self.roll("out")
-            fly_fielder_roll, fly_fielder = self.roll_fielder()
+            fly_fielder_roll, fly_fielder = self.roll_fielder(check_name=not is_fc_dp)
             fly_roll = self.roll("fly")
             self.log_roll(
                 "fly",
@@ -649,7 +676,7 @@ class Resim:
             out_roll = self.roll("out")
             fly_fielder_roll, fly_fielder = self.roll_fielder(check_name=False)
             fly_roll = self.roll("fly")
-            ground_fielder_roll, ground_fielder = self.roll_fielder()
+            ground_fielder_roll, ground_fielder = self.roll_fielder(check_name=not is_fc_dp)
             self.log_roll(
                 "fly",
                 "GroundOut",
@@ -671,7 +698,6 @@ class Resim:
         if self.outs < self.max_outs - 1:
             self.handle_out_advances(fielder)
 
-        is_fc_dp = "into a double play!" in self.desc or "reaches on fielder's choice" in self.desc
         if not is_fc_dp and self.batter.has_mod("DEBT_THREE") and fielder and not fielder.has_mod("COFFEE_PERIL"):
             self.roll("debt")
 
@@ -683,8 +709,15 @@ class Resim:
             if fielder.has_mod("ELSEWHERE"):
                 continue
 
-            if check_name and fielder.raw_name in self.desc:
-                fielder_idx = len(eligible_fielders)
+            # cut off extra parts with potential name collisions
+            if check_name:
+                # self.print(desc)
+                desc = self.desc
+                desc = desc.split("out to ")[1]
+                if "advances on the sacrifice" in desc:
+                    desc = desc.rsplit(". ", 1)[0]  # damn you kaj statter jr.
+                if fielder.raw_name in desc:
+                    fielder_idx = len(eligible_fielders)
             eligible_fielders.append(fielder)
 
         if check_name and fielder_idx is not None:
@@ -799,6 +832,7 @@ class Resim:
                     (2, 1, 2, 0),
                     (2, 0),
                 ): 3,  # holding hands, both scoring, runner on second advances, out at second, fielder's choice
+                ((2, 2), (2, 2)): 3,
             }
 
             fc_dp_event_type = "Out"
@@ -1139,7 +1173,7 @@ class Resim:
 
             if self.batter.has_mod("HONEY_ROASTED"):
                 self.roll("honey roasted")
-            if self.pitcher.has_mod("HONEY_ROASTED"):
+            elif self.pitcher.has_mod("HONEY_ROASTED"):
                 self.roll("honey roasted")
 
             if self.ty == EventType.TASTE_THE_INFINITE:
@@ -1181,8 +1215,8 @@ class Resim:
                 pass
 
         elif self.weather == Weather.FEEDBACK:
-            self.roll("feedback")
-            self.roll("feedback") # feedback event y/n
+            self.roll("feedback")  # apply to batter/pitcher? seems to be about 60/40 or 55/45 split
+            self.roll("feedback")  # feedback event y/n
 
             if self.ty == EventType.FEEDBACK_SWAP:
                 # todo: how many rolls?
@@ -1193,50 +1227,28 @@ class Resim:
 
             if self.weather.can_echo() and (self.batter.has_mod("ECHO") or self.pitcher.has_mod("ECHO")):
                 # echo vs static, or batter echo vs pitcher echo?
-                if self.ty == EventType.ECHO_MESSAGE:
-                    self.roll("echo target")
+                if self.ty in [EventType.ECHO_MESSAGE, EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
+                    eligible_players = []
+                    if self.pitcher.has_mod("ECHO"):
+                        eligible_players.extend(self.batting_team.data["rotation"])
+                        eligible_players = [self.batter.id] + eligible_players
 
-                    target_team = self.batting_team if self.pitcher.has_mod("ECHO") else self.pitching_team
-                    players = target_team.data["lineup"] + target_team.data["rotation"]
-                    all_players = []
-                    players_with_mods = []
-                    for player_id in players:
-                        player = self.data.get_player(player_id)
-                        all_players.append(player)
-                        if player.mods:
-                            players_with_mods.append(player)
+                    else:
+                        eligible_players.extend(self.pitching_team.data["lineup"])
 
-                    self.print("all players:")
-                    for i, player in enumerate(all_players):
-                        self.print(
-                            "- {} ({}/{}, {:.03f}-{:.03f}) {}".format(
-                                player.name,
-                                i,
-                                len(all_players),
-                                i / len(all_players),
-                                (i + 1) / len(all_players),
-                                player.mods,
-                            )
-                        )
-                    self.print("players with mods:")
-                    for i, player in enumerate(players_with_mods):
-                        self.print(
-                            "- {} ({}/{}, {:.03f}-{:.03f})".format(
-                                player.name,
-                                i,
-                                len(players_with_mods),
-                                i / len(players_with_mods),
-                                (i + 1) / len(players_with_mods),
-                            )
-                        )
+                        if (self.season, self.day) > (13, 74):
+                            eligible_players.extend(self.pitching_team.data["rotation"])
+                            eligible_players.remove(self.pitcher.id)
 
-                    return True
-                if self.ty in [
-                    EventType.ECHO_INTO_STATIC,
-                    EventType.RECEIVER_BECOMES_ECHO,
-                ]:
-                    self.roll("echo target")
-                    self.roll("echo target")
+                        eligible_players = [self.pitcher.id] + eligible_players
+
+                    self.handle_echo_target_selection(eligible_players)
+
+                    if self.ty in [
+                        EventType.ECHO_INTO_STATIC,
+                        EventType.RECEIVER_BECOMES_ECHO,
+                    ]:
+                        self.roll("echo target 2?")
                     return True
         elif self.weather == Weather.REVERB:
             if self.stadium.has_mod("ECHO_CHAMBER"):
@@ -1258,6 +1270,18 @@ class Resim:
                 # todo: how many rolls?
                 self.roll("more reverb?")
                 return True
+
+            if self.batter.has_mod("ECHO"):
+                self.roll("echo?")
+
+                if self.ty in [EventType.ECHO_MESSAGE, EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
+                    eligible_players = self.batting_team.data["lineup"] + self.batting_team.data["rotation"]
+                    eligible_players.remove(self.batter.id)
+                    self.handle_echo_target_selection(eligible_players)
+
+                    if self.ty in [EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
+                        self.roll("echo target 2?")
+                    return True
 
         elif self.weather == Weather.BLACK_HOLE:
             pass
@@ -1301,6 +1325,43 @@ class Resim:
             self.roll("polarity")
         else:
             self.print(f"error: {self.weather.name} weather not implemented")
+
+    def handle_echo_target_selection(self, target_ids):
+        target_roll = self.roll("echo target")
+
+        all_players = []
+        players_with_mods = []
+        for player_id in target_ids:
+            player = self.data.get_player(player_id)
+            all_players.append(player)
+            if player.mods:
+                players_with_mods.append(player)
+
+        self.print("all players:")
+        for i, player in enumerate(all_players):
+            self.print(
+                "- {} ({}/{}, {:.03f}-{:.03f}) {}".format(
+                    player.name,
+                    i,
+                    len(all_players),
+                    i / len(all_players),
+                    (i + 1) / len(all_players),
+                    player.mods,
+                )
+            )
+        self.print("players with mods:")
+        for i, player in enumerate(players_with_mods):
+            self.print(
+                "- {} ({}/{}, {:.03f}-{:.03f})".format(
+                    player.name,
+                    i,
+                    len(players_with_mods),
+                    i / len(players_with_mods),
+                    (i + 1) / len(players_with_mods),
+                )
+            )
+
+        self.print(f"(hit {players_with_mods[int(target_roll * len(players_with_mods))].name})")
 
     def handle_flooding(self):
         if self.weather == Weather.FLOODING:
@@ -1855,7 +1916,11 @@ class Resim:
 
             if event["playerTags"]:
                 player = self.data.get_player(event["playerTags"][0])
-                player.data[position].remove(meta["mod"])
+
+                if meta["mod"] not in player.data[position]:
+                    self.print(f"!!! warn: trying to remove mod {meta['mod']} but can't find it")
+                else:
+                    player.data[position].remove(meta["mod"])
             else:
                 team = self.data.get_team(event["teamTags"][0])
 
@@ -1952,7 +2017,8 @@ class Resim:
             if meta["from"] == "RECEIVER":
                 for mod, source in player.data["state"]["seasModSources"].items():
                     if source == ["RECEIVER"]:
-                        player.data["seasAttr"].remove(mod)
+                        if mod in player.data["seasAttr"]:
+                            player.data["seasAttr"].remove(mod)
 
         # roster swap
         if event["type"] == EventType.PLAYER_TRADED:
