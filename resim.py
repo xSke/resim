@@ -1123,7 +1123,9 @@ class Resim:
             pass
 
         elif self.weather == Weather.ECLIPSE:
-            self.roll("eclipse")
+
+            threshold = self.get_eclipse_threshold()
+            eclipse_roll = self.roll("eclipse")
 
             if self.batter.has_mod("MARKED"):
                 self.roll("unstable")
@@ -1142,6 +1144,14 @@ class Resim:
                 self.roll("blood")
                 self.roll("coffee")
                 return True
+
+            if eclipse_roll < threshold:
+                # blocked "natural" incineration due to fireproof
+                # self.print(f"!!! too low eclipse roll ({eclipse_roll} < {threshold})")
+
+                if self.pitching_team.has_mod("FIREPROOF") and self.ty == EventType.INCINERATION_BLOCKED:
+                    self.roll("target")
+                    return True
 
             fire_eater_eligible = self.pitching_team.data["lineup"] + [
                 self.batter.id,
@@ -1747,6 +1757,15 @@ class Resim:
             if bases == [2, 2] or bases == [2, 1, 2]:
                 # don't roll twice when holding hands
                 break
+
+    def get_eclipse_threshold(self):
+        fort = self.stadium.data["fortification"]
+        if self.season == 11:
+            constant = 0.0002  # maybe???
+        else:
+            constant = 0.00025
+        threshold = constant - 0.0003 * (fort - 0.5)
+        return threshold
 
     def get_strike_threshold(self):
         vibes = self.pitcher.vibes(self.day)
