@@ -57,8 +57,14 @@ def get_mods(entity):
 def get_feed_between(start, end):
     key = f"feed_range_{start}_{end}"
     resp = get_cached(
-        key, f"https://api.sibr.dev/eventually/v2/events?after={start}&before={end}&sortorder=asc&limit=100000"
+        key, f"https://api.sibr.dev/eventually/v2/events?after={start}&before={end}&sortorder=asc&limit=200000"
     )
+    return resp
+
+
+def get_game_feed(game_id):
+    key = f"feed_game_{game_id}"
+    resp = get_cached(key, f"https://api.sibr.dev/eventually/v2/events?gameTags={game_id}&sortorder=asc&limit=1000")
     return resp
 
 
@@ -172,6 +178,7 @@ class EventType(IntEnum):
     REVERB_FULL_SHUFFLE = 130
     REVERB_LINEUP_SHUFFLE = 131
     REVERB_ROTATION_SHUFFLE = 132
+    TEAM_JOINED_LEAGUE = 135
     PLAYER_HATCHED = 137
     POSTSEASON_SPOT = 142
     FINAL_STANDINGS = 143
@@ -186,6 +193,7 @@ class EventType(IntEnum):
     ELIMINATED_FROM_POSTSEASON = 158
     POSTSEASON_ADVANCE = 159
     HIGH_PRESSURE_ON_OFF = 165
+    LOVERS_LINEUP_OPTIMIZED = 166
     ECHO_MESSAGE = 169
     ECHO_INTO_STATIC = 170
     REMOVED_MULTIPLE_MODIFICATIONS_ECHO = 171
@@ -447,3 +455,6 @@ def calculate_vibes(player, day) -> float:
     pressurization = player["pressurization"]
     cinnamon = player["cinnamon"] or 0
     return 0.5 * ((sin_phase - 1) * pressurization + (sin_phase + 1) * cinnamon)
+
+def clear_cache():
+    cache.clear()

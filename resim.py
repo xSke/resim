@@ -24,8 +24,6 @@ class Resim:
         self.raise_on_errors = raise_on_errors
         self.update = None
 
-        self.score_at_inning_start = {}
-
         self.is_strike = None
         self.strike_roll = None
         self.strike_threshold = None
@@ -233,6 +231,7 @@ class Resim:
             EventType.LATE_TO_THE_PARTY,
             EventType.MIDDLING,
             EventType.SHAMING_RUN,
+            EventType.EARLBIRD,
         ]:
             # skipping pregame messages
             return True
@@ -254,6 +253,8 @@ class Resim:
             EventType.SUN_2_OUTCOME,
             EventType.BLACK_HOLE_OUTCOME,
         ]:
+            if self.ty == EventType.SUN2 and "catches some rays" in self.desc:
+                self.roll("sun dialed target")
             # skipping sun 2 / black hole proc
             return True
         if self.ty in [
@@ -300,8 +301,9 @@ class Resim:
         ]:
             # skip postseason
             return True
-        if self.ty == EventType.REVERB_ROTATION_SHUFFLE:
+        if self.ty in [EventType.REVERB_ROTATION_SHUFFLE, EventType.REVERB_FULL_SHUFFLE]:
             # skip reverb
+            self.data.fetch_teams(self.event["created"], 30)
             return True
         if self.ty == EventType.PLAYER_TRADED:
             # skip feedback
@@ -337,12 +339,8 @@ class Resim:
             self.roll("salmon")
 
             # special case for a weird starting point with missing data
-            if self.event["created"] in ["2021-04-08T20:06:02.627Z"]:
-                self.roll("salmon")
-                return True
-
             last_inning = self.update["inning"]
-            last_inning_away_score, last_inning_home_score = self.score_at_inning_start[(self.game_id, last_inning)]
+            last_inning_away_score, last_inning_home_score = self.find_start_of_inning_score(self.game_id, last_inning)
             current_away_score, current_home_score = (
                 self.update["awayScore"],
                 self.update["homeScore"],
@@ -441,6 +439,16 @@ class Resim:
                 "f03707f1-8612-4b8c-bfcb-e84c5d9cc760": 1,
                 "24ff0b2e-ecb7-4f4c-aac2-18dac4911109": 1,
                 "f1925518-e056-46f6-be9a-fefd09c0c259": 1,
+                "94785708-7b40-47b7-a258-9ce10a157395": 9,  # earlsiesta reading
+                "e39803d0-add7-43cb-b472-04f04e4b0935": 1,
+                "12b62fd9-36ac-4744-8d67-20820bb68e77": 1,
+                "d5d3d040-571c-42cd-8e45-a79c2c8255ac": 1,
+                "483c8a63-4925-46b4-954d-c9cdebb4591a": 1,
+                "657f5360-7875-4abf-b2f5-54c4c25e170e": 1,
+                "fa25ee09-7889-4276-8b52-ac46f0e51cf5": 1,
+                "0b4929f8-68ed-4c99-b3bd-b65a7d8bc63e": 1,
+                "5a350a9d-8c13-49be-b4ca-845d5573ff6d": 1,
+                "f15ace24-7fae-46f2-b16e-c18bb4bd630f": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -471,10 +479,38 @@ class Resim:
                 self.roll("flag planted")
             return True
         if self.ty in [EventType.RENOVATION_BUILT]:
-            if "builds a" not in self.desc:
+            if "% more " in self.desc or "% less " in self.desc:
                 self.roll("stat change")
             return True
         if self.ty == EventType.TAROT_READING:
+            return True
+        if self.ty == EventType.LOVERS_LINEUP_OPTIMIZED:
+            return True
+        if self.ty in [EventType.EMERGENCY_ALERT, EventType.BIG_DEAL]:
+            if "NEW CHALLENGERS SURFACE" in self.desc:
+                # might be placing teams into divisions? divine favor? idk
+                self.roll("breach team stuff")
+                self.roll("breach team stuff")
+                self.roll("breach team stuff")
+                self.roll("breach team stuff")
+                self.roll("breach team stuff")
+                self.roll("breach team stuff")
+                self.roll("breach team stuff")
+                self.roll("breach team stuff")
+                self.roll("breach team stuff")
+                self.roll("breach team stuff")
+
+                for i in range(3):  # worms-mechs-georgias
+                    for j in range(9 + 5 + 11):  # lineup+rotation+shadows
+                        for k in range(2 + 26 + 6):  # name+stats+interview
+                            # todo: label this nicer, but these *do* line up as expected
+                            self.roll(f"breach team player gen (team {i} player {j})")
+
+                # i have no clue what this is but it makes day 73 line up.
+                for _ in range(339):
+                    self.roll("something else")
+            return True
+        if self.ty == EventType.TEAM_JOINED_LEAGUE:
             return True
 
     def handle_bird_ambush(self):
@@ -600,20 +636,9 @@ class Resim:
         if "The Salmon swim upstream!" in self.update["lastUpdate"]:
             return
 
-        # special case for a weird starting point with missing data
-        if self.event["created"] in [
-            "2021-04-08T20:05:02.637Z",
-            "2021-04-08T20:08:33.340Z",
-            "2021-04-06T19:08:52.156Z",
-            "2021-04-06T01:07:16.590Z",
-        ]:
-            self.roll("salmon")
-            return
-
         last_inning = self.next_update["inning"] - 1
-        inning_key = (self.game_id, last_inning)
         if self.weather == Weather.SALMON and last_inning >= 0 and not self.update["topOfInning"]:
-            last_inning_away_score, last_inning_home_score = self.score_at_inning_start[inning_key]
+            last_inning_away_score, last_inning_home_score = self.find_start_of_inning_score(self.game_id, last_inning)
             current_away_score, current_home_score = (
                 self.next_update["awayScore"],
                 self.next_update["homeScore"],
@@ -765,6 +790,10 @@ class Resim:
             # flyouts are nice and simple
             for runner_id, base, roll_outcome in calculate_advances(bases_before, bases_after, 0):
                 self.roll(f"adv ({base}, {roll_outcome})")
+
+                # todo: check to make sure this doesn't break later stuff
+                if self.update["basesOccupied"] == [2, 2] and base == 2 and not roll_outcome and "scores!" in self.desc:
+                    self.roll("holding hands case 2")
 
                 # or are they? [2,0] -> [2,0] = 1 roll?
                 # [1, 0] -> [2, 0] = 1 roll?
@@ -951,7 +980,7 @@ class Resim:
             self.roll(f"adv ({base}, {roll_outcome})")
 
     def handle_hr(self):
-        if not self.batter.has_mod("MAGMATIC"):
+        if " is Magmatic!" not in self.desc:
             self.throw_pitch()
             swing_roll = self.roll("swing")
             self.log_roll(
@@ -1085,7 +1114,7 @@ class Resim:
         self.roll_foul(True)
 
     def handle_batter_up(self):
-        if self.batter.has_mod("HAUNTED"):
+        if self.batter and self.batter.has_mod("HAUNTED"):
             self.roll("haunted")
 
         if "is Inhabiting" in self.event["description"]:
@@ -1144,10 +1173,18 @@ class Resim:
                 self.roll("siphon proc")
                 self.roll("siphon proc")
 
-                # this one is 1 more for some reason. don't know
+                # these ones are 1 more for some reason. don't know
                 if self.event["created"] in [
                     "2021-03-17T03:20:31.620Z",
                     "2021-04-07T13:02:47.102Z",
+                    "2021-03-03T03:17:25.555Z",
+                    "2021-03-03T05:17:29.552Z",
+                    "2021-03-03T06:13:25.353Z",
+                    "2021-03-03T18:26:00.538Z",
+                    "2021-03-09T06:07:27.564Z",
+                    "2021-03-04T06:05:07.060Z",
+                    "2021-03-11T06:16:24.968Z",
+                    "2021-04-07T18:07:53.969Z",
                 ]:
                     self.roll("siphon proc 2?")
                 return True
@@ -1156,7 +1193,13 @@ class Resim:
                 self.roll("blooddrain proc")
                 self.roll("blooddrain proc")
                 self.roll("blooddrain proc")
-                self.roll("blooddrain proc")
+
+                # todo: why are these shorter?
+                if self.event["created"] not in [
+                    "2021-03-09T10:27:56.571Z",
+                    "2021-03-11T03:12:13.124Z",
+                ]:
+                    self.roll("blooddrain proc")
                 return True
 
         elif self.weather == Weather.PEANUTS:
@@ -1225,6 +1268,12 @@ class Resim:
                 self.roll("player 2 fate")
                 return True
 
+            if self.ty == EventType.FEEDBACK_BLOCKED:
+                self.roll("target")
+                for _ in range(25):
+                    self.roll("stat")
+                return True
+
             if self.weather.can_echo() and (self.batter.has_mod("ECHO") or self.pitcher.has_mod("ECHO")):
                 # echo vs static, or batter echo vs pitcher echo?
                 if self.ty in [EventType.ECHO_MESSAGE, EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
@@ -1259,11 +1308,18 @@ class Resim:
 
             self.roll("reverb")
             if self.ty == EventType.REVERB_ROSTER_SHUFFLE:
-                # todo: how many rolls?
-                for _ in range(2):
-                    self.roll("reverb shuffle?")
-                for _ in range(len(self.pitching_team.data["rotation"])):
-                    self.roll("reverb shuffle?")
+                # todo: how many rolls? this needs a refactor and doesn't support lineup shuffles rn
+
+                if "were shuffled in the Reverb!" in self.desc:
+                    for _ in range(16):
+                        self.roll("reverb shuffle?")
+                else:
+                    for _ in range(2):
+                        self.roll("reverb shuffle?")
+
+                    for _ in range(len(self.pitching_team.data["rotation"])):
+                        self.roll("reverb shuffle?")
+
                 return True
 
             if self.ty == EventType.REVERB_BESTOWS_REVERBERATING:
@@ -1691,7 +1747,7 @@ class Resim:
                     )
                     return True
 
-            if bases == [2, 2]:
+            if bases == [2, 2] or bases == [2, 1, 2]:
                 # don't roll twice when holding hands
                 break
 
@@ -1878,14 +1934,6 @@ class Resim:
                 self.batter.data["name"] = self.update["homeBatterName"]
                 self.pitcher.data["name"] = self.update["awayPitcherName"]
 
-        if self.next_update:
-            inning_key = (self.game_id, self.next_update["inning"])
-            if inning_key not in self.score_at_inning_start:
-                self.score_at_inning_start[inning_key] = (
-                    self.next_update["awayScore"],
-                    self.next_update["homeScore"],
-                )
-
     def apply_event_changes(self, event):
         # maybe move this function to data.py?
         meta = event.get("metadata", {})
@@ -2034,14 +2082,21 @@ class Resim:
             b_team.data[b_location][b_idx] = a_player
             a_team.data[a_location][a_idx] = b_player
 
-    def run(self, start_timestamp, end_timestamp, progress):
-        tqdm.write(f"Starting fragment at {start_timestamp}")
+    def find_start_of_inning_score(self, game_id, inning):
+        for play in range(1000):
+            update = self.data.get_update(game_id, play)
+            if update:
+                if update["inning"] == inning:
+                    return update["awayScore"], update["homeScore"]
+
+    def run(self, start_timestamp, end_timestamp, progress_callback):
+        print(f"Starting fragment at {start_timestamp}")
         self.data.fetch_league_data(start_timestamp)
         feed_events = get_feed_between(start_timestamp, end_timestamp)
 
         for event in feed_events:
-            if progress:
-                progress.update()
+            if progress_callback:
+                progress_callback()
             event["type"] = EventType(event["type"])
             self.handle(event)
 
