@@ -391,6 +391,7 @@ class Resim:
 
             # todo: figure out the real logic here, i'm sure there's some
             extra_start_rolls = {
+                "608b496a-1b2c-4d5e-9251-011f949baafa": 1,
                 "fa9dab2a-409c-4886-979c-f1c584518d5d": 1,
                 "3244b12f-838a-4d75-abde-88874b75ab04": 0,
                 "a47f2a8b-0bde-42c8-bdd0-0513da92a6b1": 1,
@@ -463,14 +464,10 @@ class Resim:
                 timestamp = self.event["created"]
                 self.data.fetch_league_data(timestamp, 20)
 
-            if (
-                self.weather
-                in [
-                    Weather.FEEDBACK,
-                    Weather.REVERB,
-                ]
-                and self.stadium.has_mod("PSYCHOACOUSTICS")
-            ):
+            if self.weather in [
+                Weather.FEEDBACK,
+                Weather.REVERB,
+            ] and self.stadium.has_mod("PSYCHOACOUSTICS"):
                 self.print("away team mods:", self.away_team.data["permAttr"])
                 self.roll("echo team mod")
             return True
@@ -1251,7 +1248,7 @@ class Resim:
                 self.log_roll("bird-message", "NoCircle", bird_roll, False)
 
             # threshold is at 0.0125 at 0.5 fort
-            bird_threshold = 0.0225 - self.stadium.data["fortification"] * 0.02
+            bird_threshold = 0.0125 - 0.02 * (self.stadium.data["fortification"] - 0.5)
 
             if has_shelled_player and bird_roll < bird_threshold:
                 self.roll("extra bird roll")

@@ -12,7 +12,27 @@ from rng import Rng
 
 # (season1indexed, day1indexed): (s0, s1), rng offset, event offset, start timestamp, end timestamp
 FRAGMENTS = {
-
+    (12, 31): (
+        (2887724892689068370, 7824040834361231079),
+        49,
+        0,
+        "2021-03-02T23:00:00.000Z",
+        "2021-03-03T16:50:00.000Z",
+    ),
+    (12, 49): (
+        (9516845697228190797, 6441957190109821557),
+        10,
+        0,
+        "2021-03-03T17:00:00.000Z",
+        "2021-03-04T02:50:00.000Z",
+    ),
+    (12, 61): (
+        (6354326472372730027, 3011744895320117042),
+        10,
+        0,
+        "2021-03-04T05:00:00.000Z",
+        "2021-03-04T18:50:00.000Z",
+    ),
     (12, 74): (
         (617776737860945499, 6965272805741501853),
         10,
@@ -20,12 +40,33 @@ FRAGMENTS = {
         "2021-03-04T19:00:00.000Z",
         "2021-03-05T18:50:00Z",
     ),
-    (13, 29):  (
+    (12, 99): (
+        (3038364565806058511, 15510617008273015236),
+        0,
+        0,
+        "2021-03-05T19:15:00.000Z",
+        "2021-03-05T21:50:16.083Z",
+    ),
+    (13, 29): (
         (2154942915490753213, 4636043162326033301),
         13,
         0,
         "2021-03-09T21:00:00.000Z",
         "2021-03-10T17:50:00Z",
+    ),
+    (13, 81): (
+        (11529751786223941563, 7398827681552859473),
+        12,
+        0,
+        "2021-03-12T02:00:00.000Z",
+        "2021-03-12T08:50:00Z",
+    ),
+    (13, 88): (
+        (11538520003022455632, 18437432691309336752),
+        38,
+        0,
+        "2021-03-12T09:25:21.623Z",
+        "2021-03-12T19:50:00.533701Z",
     ),
     (14, 7): (
         (12335197627095558518, 4993735724122314585),
@@ -114,8 +155,8 @@ def main():
 
     fragment_key = None
 
-    if args.start:    
-        match = re.match(r'[sS]([0-9]{1,2})[dD]([0-9]{1,3})', args.start)
+    if args.start:
+        match = re.match(r"[sS]([0-9]{1,2})[dD]([0-9]{1,3})", args.start)
         if match:
             season = int(match[1])
             day = int(match[2])
@@ -129,26 +170,26 @@ def main():
     if not fragment_key:
         print("Known fragments are")
         for season, day in FRAGMENTS:
-            print(f'S{season}D{day}')
+            print(f"S{season}D{day}")
         exit()
 
     fragment = FRAGMENTS[fragment_key]
     end_time = fragment[3]
 
-    with open('deploys.txt', 'r') as deploys_file:
+    with open("deploys.txt", "r") as deploys_file:
         deploy_times = sorted([line.strip() for line in deploys_file])
 
     if args.start_time:
         start_time = args.start_time
     else:
         start_time = datetime.datetime.fromisoformat(fragment[3][:-1])
-        start_time = start_time.replace(minute = 0, second = 0, microsecond = 0) - datetime.timedelta(hours = args.jump_hours)
-        start_time = start_time.isoformat() + 'Z'
+        start_time = start_time.replace(minute=0, second=0, microsecond=0) - datetime.timedelta(hours=args.jump_hours)
+        start_time = start_time.isoformat() + "Z"
 
     i = bisect.bisect_left(deploy_times, start_time)
     if i != len(deploy_times) and deploy_times[i] < end_time:
-       print(f"This range spans a known deploy time at {deploy_times[i]}! It probably won't work.")
-       return
+        print(f"This range spans a known deploy time at {deploy_times[i]}! It probably won't work.")
+        return
 
     print("Loading events...")
     total_events = len(get_feed_between(start_time, end_time))
@@ -156,18 +197,16 @@ def main():
     rng_state, rng_offset, step, _, _ = fragment
     rng = Rng(rng_state, rng_offset)
     rng.step(step)
-    print(f'starting at state: {rng.get_state_str()} and jumping back {args.jump_rolls}')
+    print(f"starting at state: {rng.get_state_str()} and jumping back {args.jump_rolls}")
     rng.step(-args.jump_rolls)
-    print(f'to state {rng.get_state_str()}')
+    print(f"to state {rng.get_state_str()}")
 
-    with (
-        RngCountContext(rng) as rng_counter,
-        tqdm(total=total_events, unit="events") as progress
-        ):
-            resim = Resim(rng, out_file, start_time, raise_on_errors=False)
-            resim.run(start_time, end_time, progress)
-            tqdm.write(f"steps used: {rng_counter.count}/{args.jump_rolls}")
-            tqdm.write(f"state at end: {rng.get_state_str()}")
+    with (RngCountContext(rng) as rng_counter, tqdm(total=total_events, unit="events") as progress):
+        resim = Resim(rng, out_file, start_time, raise_on_errors=False)
+        resim.run(start_time, end_time, progress_callback=None)
+        tqdm.write(f"steps used: {rng_counter.count}/{args.jump_rolls}")
+        tqdm.write(f"state at end: {rng.get_state_str()}")
+
 
 if __name__ == "__main__":
     main()
