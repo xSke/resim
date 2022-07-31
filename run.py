@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 
 from tqdm import tqdm
 
-from data import get_feed_between
+from data import get_feed_between,clear_cache
 from resim import Resim
 from rng import Rng
 
@@ -125,6 +125,7 @@ def main():
             )
 
             tqdm.write(f"state at end: {rng.get_state_str()}")
+            clear_cache()
 
         progress.close()
 
