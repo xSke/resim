@@ -2089,14 +2089,14 @@ class Resim:
                 if update["inning"] == inning:
                     return update["awayScore"], update["homeScore"]
 
-    def run(self, start_timestamp, end_timestamp, progress):
-        tqdm.write(f"Starting fragment at {start_timestamp}")
+    def run(self, start_timestamp, end_timestamp, progress_callback):
+        print(f"Starting fragment at {start_timestamp}")
         self.data.fetch_league_data(start_timestamp)
         feed_events = get_feed_between(start_timestamp, end_timestamp)
 
         for event in feed_events:
-            if progress:
-                progress.update()
+            if progress_callback:
+                progress_callback()
             event["type"] = EventType(event["type"])
             self.handle(event)
 
