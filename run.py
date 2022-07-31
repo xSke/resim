@@ -136,7 +136,6 @@ def main():
             global progress_queue  # not really necessary but it gets rid of the shadowing warning in pycharm
             progress_queue = Queue()
             with Pool(initializer=init_pool_worker, initargs=(progress_queue,)) as pool:
-                # Need to list() because imap_unordered returns a lazy iterable
                 fragments_and_args = [((args.silent, args.outfile), fragment) for fragment in FRAGMENTS]
                 result = pool.map_async(run_fragment, fragments_and_args)
 
