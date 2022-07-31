@@ -1,5 +1,9 @@
+import os.path
 import sys
 from argparse import ArgumentParser
+from multiprocessing import Pool, Queue
+from queue import Empty
+from typing import Optional
 
 from tqdm import tqdm
 
@@ -90,6 +94,8 @@ FRAGMENTS = [
     ),
 ]
 
+progress_queue: Optional[Queue] = None
+
 
 def parse_args():
     parser = ArgumentParser("resim")
@@ -100,34 +106,70 @@ def parse_args():
     return parser.parse_args()
 
 
+def get_out_file(silent, out_file_name, start_time):
+    if silent:
+        return None
+    elif out_file_name == "-":
+        return sys.stdout
+
+    basic_filename, extension = os.path.splitext(out_file_name)
+    filename = f"{basic_filename}-{start_time.replace(':', '_')}{extension}"
+    return open(filename, "w")
+
+
 def main():
     args = parse_args()
-
-    if args.silent:
-        out_file = None
-    elif args.outfile == "-":
-        out_file = sys.stdout
-    else:
-        out_file = open(args.outfile, "w")
 
     print("Loading events...")
     total_events = sum(len(get_feed_between(start_time, end_time)) for _, _, _, start_time, end_time in FRAGMENTS)
 
-    with tqdm(total=total_events, unit="events") as progress:
-        for rng_state, rng_offset, step, start_time, end_time in FRAGMENTS:
-            rng = Rng(rng_state, rng_offset)
-            rng.step(step)
-            resim = Resim(rng, out_file, start_time, False)
-            resim.run(
-                start_time,
-                end_time,
-                progress,
-            )
+    progress_queue = Queue()
+    with tqdm(total=total_events, unit="events") as progress, Pool(
+        initializer=init_pool_worker, initargs=(progress_queue,)
+    ) as pool:
+        # Need to list() because imap_unordered returns a lazy iterable
+        fragments_and_args = [((args.silent, args.outfile), fragment) for fragment in FRAGMENTS]
+        result = pool.map_async(run_fragment, fragments_and_args)
 
-            tqdm.write(f"state at end: {rng.get_state_str()}")
-            clear_cache()
+        while not result.ready():
+            try:
+                new_progress = progress_queue.get(timeout=1)
+            except Empty:
+                pass  # Check loop condition and wait again
+            else:
+                progress.update(new_progress)
 
-        progress.close()
+
+def init_pool_worker(init_args):
+    global progress_queue
+    progress_queue = init_args
+
+
+def run_fragment(pool_args):
+    (silent, out_file_name), (rng_state, rng_offset, step, start_time, end_time) = pool_args
+    out_file = get_out_file(silent, out_file_name, start_time)
+    rng = Rng(rng_state, rng_offset)
+    rng.step(step)
+    resim = Resim(rng, out_file, start_time, False)
+
+    unreported_progress = 0
+
+    def progress_callback():
+        nonlocal unreported_progress
+        unreported_progress += 1
+        if progress_queue and unreported_progress > 100:
+            progress_queue.put(unreported_progress)
+            unreported_progress = 0
+
+    resim.run(start_time, end_time, progress_callback)
+
+    if out_file:
+        out_file.close()
+
+    if progress_queue:
+        progress_queue.put(unreported_progress)
+    print(f"state at end: {rng.get_state_str()}")
+    clear_cache()
 
 
 if __name__ == "__main__":
