@@ -1,0 +1,22 @@
+name: csv
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  run-py:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Python dependencies
+        uses: py-actions/py-dependency-install@v3
+      - run: python3 run.py --silent
+      - run: zip -r roll_data.zip roll_data
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: csvdir
+          path: roll_data.zip
