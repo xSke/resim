@@ -24,19 +24,12 @@
 
 ## In progress
 - Swing-out-of-zone formula (parabolas 😡)
-- Fielder's choice formula
 - Steal attempts formula
 - Steal success formula
 - Doubles formula
 - Triples formula
 - Home run formula
 - Hit vs. out formula
-- Double play vs FC roll
-  - runner on first only: DONE
-  - first and second
-  - bases loaded
-  - first and third (run scores?)
-  - "which runner to get out" roll: DONE
 - Echo/feedback activation
 - Fill out coverage for seasons we already have data for (s12/13 "done")
 
@@ -51,3 +44,6 @@
 - Contact-out-of-zone formula
 - Figure out how to go "backwards in time" through the rng stream
 - Contact-in-zone formula
+- DP formula
+- Sacrifice/Martyr formula
+- Advancment formula (groundouts)
