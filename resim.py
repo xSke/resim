@@ -54,7 +54,7 @@ class Resim:
                     "dp-basesloaded",
                     "advancement",
                     "bird-message",
-                    "groundout"
+                    "groundout",
                 ]
             }
         else:
@@ -814,7 +814,7 @@ class Resim:
                 (tuple(), tuple()): 0,
                 ((0,), tuple()): 2,  # !DP roll (pass), DP where (unused)
                 ((0,), (0,)): 2,  # !DP roll (fail), !martyr roll (fail)
-                ((0,), (1,)): 3,  # !DP roll (fail), !martyr roll (pass) + ??? (unused)
+                ((0,), (1,)): 3,  # !DP roll (fail), !martyr roll (pass) + advance (unused)
                 ((1,), (1,)): 2,  # !unused, !advance(fail)
                 ((1,), (2,)): 2,  # !unused, !advance(pass)
                 ((2,), tuple()): 2,  # !unused, !advance(pass)
@@ -823,24 +823,24 @@ class Resim:
                 ((1, 0), (1,)): 2,  # !DP roll (pass), !roll<0.50 out at 3rd
                 ((1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.50 out at 2nd
                 ((1, 0), (1, 0)): 2,  # !DP roll (fail), !martyr roll (fail)
-                ((1, 0), (2, 1)): 4,  # !DP roll (fail), !martyr roll (pass), ???x2 (unused)
+                ((1, 0), (2, 1)): 4,  # !DP roll (fail), !martyr roll (pass), advancex2 (unused)
                 ((2, 0), tuple()): 2,  # !DP roll (pass), DP where (unused)
-                ((2, 0),(0,)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (pass), !1st advance (fail)
-                ((2, 0),(1,)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (pass), !1st advance (pass)
-                ((2, 0),(2, 1)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (fail), ??? (unused)
+                ((2, 0), (0,)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (pass), !1st advance (fail)
+                ((2, 0), (1,)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (pass), !1st advance (pass)
+                ((2, 0), (2, 1)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (fail), advance (unused)
                 ((2, 1), (1,)): 3,  # !unused, !3rd advance (pass), !2nd advance (fail)
                 ((2, 1), (2,)): 3,  # !unused, !3rd advance (pass), !2nd advance (pass)
                 ((2, 1), (2, 1)): 3,  # !unused, !3rd advance (fail), !2nd advance (fail)
                 ((2, 1), (2, 2)): 3,  # !unused, !3rd advance (fail), !2nd advance (pass)
-                ((2, 2), tuple()): 3,  # ???, ?3rd advance (pass), ?3rd advance (pass)
-                ((2, 2), (2,)): 3,  # ??? ?3rd advance (fail/pass), ?3rd advance (pass/fail)
-                ((2, 2), (2, 2)): 3, # ???, ?3rd advance (fail), ?3rd advance (fail)
+                ((2, 2), tuple()): 3,  # !unused, !3rd advance (pass), !3rd advance (pass)
+                ((2, 2), (2,)): 3,  # !unused !3rd advance (fail/pass), !3rd advance (pass/fail)
+                ((2, 2), (2, 2)): 3,  # !unused, !3rd advance (fail), !3rd advance (fail)
                 ((2, 1, 0), tuple()): 2,  # !DP roll (pass), DP where (unused)
-                ((2, 1, 0),(1,)): 2,  # !DP roll (pass), !0.33<roll<0.67 out at 3rd
+                ((2, 1, 0), (1,)): 2,  # !DP roll (pass), !0.33<roll<0.67 out at 3rd
                 ((2, 1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.67 out at 2nd
-                ((2, 1, 0),(2, 1)): 5,  # !DP roll (fail), !martyr roll (pass), ???x3 (unused);NOT DP!
-                ((2, 1, 0), (2, 1, 0)): 2, # !DP roll (fail), !martyr roll (fail)
-                ((2, 1, 2, 0),(2, 0)): 3, # ?DP roll (fail), ?martyr roll(fail), ???
+                ((2, 1, 0), (2, 1)): 5,  # !DP roll (fail), !martyr roll (pass), advancex3 (unused);NOT DP!
+                ((2, 1, 0), (2, 1, 0)): 2,  # !DP roll (fail), !martyr roll (fail)
+                ((2, 1, 2, 0), (2, 0)): 3,  # ?DP roll (fail), ?martyr roll(fail), ???
             }
 
             fc_dp_event_type = "Out"
@@ -865,13 +865,7 @@ class Resim:
             # Here's a csv for looking at *any* groundout
             # No Implied pass/fail, and contains ALL extra rolls
             # Use selections in notebooks to look at different cases!
-            self.log_roll(
-                "groundout",
-                "groundout",
-                extra_rolls,
-                False,
-                fielder=fielder
-            )
+            self.log_roll("groundout", "groundout", extra_rolls, False, fielder=fielder)
 
             # FLOWCHART:
             # -Always roll for DP. Always. Ignore the roll if no runner on first.
@@ -896,13 +890,22 @@ class Resim:
             #         -Elif Sacrifice pass:
             #             -Roll Advancement for every baserunner
             #             -For each runner:
-            #                 -If not forced:
-            #                     -Check advancement roll. Rolls apply in basesOccupied order aka most advanced first ([2,1,2,0] untested!!!)
-            #                 -Elif forced:
-            #                     -If initial baserunners were [2,0] AND 3rd base PASSED advancement (:ballclark:):
-            #                         -Check advancement roll for 1st base.
-            #                     -Elif any other baserunner configuration:
-            #                         -Advance
+            #                  -If not forced:
+            #                      -Check advancement roll. Rolls apply in basesOccupied order aka most advanced first ([2,1,2,0] untested!!!)
+            #                  -Elif forced:
+            #                      -If initial baserunners were [2,0] AND 3rd base PASSED advancement (:ballclark:):
+            #                          -Check advancement roll for 1st base.
+            #                      -Elif any other baserunner configuration:
+            #                          -Advance
+            # -Elif no runner on first:
+            #      -For each runner:
+            #         -If not forced:
+            #             -Check advancement roll. Rolls apply in basesOccupied order aka most advanced first ([2,1,2,0] untested!!!)
+            #         -Elif forced:
+            #             -If initial baserunners were [2,0] AND 3rd base PASSED advancement (:ballclark:):
+            #                 -Check advancement roll for 1st base.
+            #             -Elif any other baserunner configuration:
+            #                 -Advance
             #
             # todo: make this not use a lookup table
             # Requires a LOT more knowledge about each situation
@@ -1824,11 +1827,11 @@ class Resim:
             runner_on_third_multiplier = self.get_batter_multiplier(runner_on_third)
         else:
             runner_on_third, runner_on_third_multiplier = None, 1
-        if len(runners_3rd) == 2: # Holding hands
+        if len(runners_3rd) == 2:  # Holding hands
             runner_on_third_hh = self.data.get_player(runners_3rd[1])
             runner_on_third_hh_multiplier = self.get_batter_multiplier(runner_on_third_hh)
         else:
-            runner_on_third_hh,runner_on_third_hh_multiplier = None, 1
+            runner_on_third_hh, runner_on_third_hh_multiplier = None, 1
         roll_csv.write(
             event_type,
             roll,
@@ -1857,7 +1860,7 @@ class Resim:
             runner_on_third_multiplier,
             runner_on_third_hh,
             runner_on_third_hh_multiplier,
-            self.next_update['basesOccupied'] if self.next_update else None,
+            self.next_update["basesOccupied"] if self.next_update else None,
         )
 
     def setup_data(self, event):
