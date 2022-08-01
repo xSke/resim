@@ -210,7 +210,6 @@ class Resim:
         self.handle_batter_reverb()
 
         if self.was_attractor_placed_in_secret_base_async():
-            self.roll("attractor?")  # this roll might be up by the trigger, idk yet
             self.roll("attractor pitching stars")
             self.roll("attractor batting stars")
             self.roll("attractor baserunning stars")
@@ -1648,6 +1647,7 @@ class Resim:
             if attractor:
                 # todo: some of these rolls seem to be done async
                 self.print(f"!!! attractor placed in secret base:{attractor.name}")
+                self.roll("choose attractor")
                 return
 
         if secret_base_exit_eligible:

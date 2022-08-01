@@ -6,7 +6,6 @@
 - Investigate runner advancement
 - Expand to Discipline Era
 - Expand to remainder of Expansion Era
-- Fill out coverage for seasons we already have data for
 - Investigate items
 - Investigate weird EE mechanics
   - consumer attack targeting & activation rates
@@ -25,8 +24,6 @@
 
 ## In progress
 - Swing-out-of-zone formula (parabolas 😡)
-- Contact-in-zone formula
-- Contact-out-of-zone formula
 - Fielder's choice formula
 - Steal attempts formula
 - Steal success formula
@@ -40,8 +37,8 @@
   - bases loaded
   - first and third (run scores?)
   - "which runner to get out" roll: DONE
-- Figure out how to go "backwards in time" through the rng stream
 - Echo/feedback activation
+- Fill out coverage for seasons we already have data for (s12/13 "done")
 
 ## Done (for now) (ignoring weird modifiers)
 - Strike zone formula
@@ -51,3 +48,6 @@
 - Foul ball formula
 - "Sacrifice bunt" vs FC roll
 - Bird message roll
+- Contact-out-of-zone formula
+- Figure out how to go "backwards in time" through the rng stream
+- Contact-in-zone formula
