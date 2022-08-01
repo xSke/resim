@@ -5,5 +5,5 @@ out/
 *.png
 .ipynb_checkpoints/
 output.txt
-#roll_data/
 .DS_Store
+/roll_data/
