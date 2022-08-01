@@ -1520,7 +1520,21 @@ class Resim:
                     if is_on_team:
                         attacked_player = self.data.get_player(attacked_player_id)
 
-                        self.roll("target")
+                        target_roll = self.roll("target")
+
+                        roster = [self.data.get_player(p) for p in team.data["lineup"] + team.data["rotation"]]
+                        densities = [p.data["eDensity"] for p in roster]
+                        total_density = sum(densities)
+
+                        acc = 0
+                        for target, density in zip(roster, densities):
+                            acc += density
+                            if acc > target_roll * total_density:
+                                break
+                        self.print("(rolled target: {})".format(target.name))
+                        if target.id != attacked_player.id:
+                            self.error("incorrect consumer target (rolled {}, expected {})".format(target.name, attacked_player.name))
+
                         for _ in range(25):
                             self.roll("stat change")
 
