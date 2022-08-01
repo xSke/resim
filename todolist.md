@@ -23,7 +23,6 @@
 
 
 ## In progress
-- Swing-out-of-zone formula (parabolas 😡)
 - Steal attempts formula
 - Steal success formula
 - Doubles formula
@@ -36,6 +35,7 @@
 ## Done (for now) (ignoring weird modifiers)
 - Strike zone formula
 - Swing-in-zone formula
+- Swing-out-of-zone formula (parabolas 😌)
 - Flyout vs groundout formula
 - Attractor star generation
 - Foul ball formula
