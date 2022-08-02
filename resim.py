@@ -55,6 +55,7 @@ class Resim:
                     "advancement",
                     "bird-message",
                     "groundout",
+                    "haunted",
                 ]
             }
         else:
@@ -1085,10 +1086,14 @@ class Resim:
 
     def handle_batter_up(self):
         if self.batter and self.batter.has_mod("HAUNTED"):
-            self.roll("haunted")
+            haunt_roll = self.roll("haunted")
+            self.log_roll("haunted", "NoHaunt", haunt_roll, False)
 
+        # if the haunting is successful the batter won't be the haunted player lol
         if "is Inhabiting" in self.event["description"]:
-            self.roll("haunted")
+            haunt_roll = self.roll("haunted")
+            self.log_roll("haunted", "YesHaunt", haunt_roll, True)
+            
             self.roll("haunter selection")
 
     def handle_weather(self):
