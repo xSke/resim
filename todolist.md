@@ -1,9 +1,8 @@
 ## Short-term to do
-- Update known ??? roll names (steal fielder, out fielder, bases fielder, doubles, triples, etc.)
-    - might be mostly done for now? always good to check
+- rename `what1` and `what2` and make sure they're in actually relevant locations
 
 ## To do
-- Investigate runner advancement
+- Runner extra advancement on hits
 - Expand to Discipline Era
 - Expand to remainder of Expansion Era
 - Investigate items
@@ -23,6 +22,7 @@
 
 
 ## In progress
+- Runner advancement on flyouts
 - Steal attempts formula
 - Steal success formula
 - Doubles formula
@@ -47,3 +47,5 @@
 - DP formula
 - Sacrifice/Martyr formula
 - Advancment formula (groundouts)
+- Haunted rates
+- Consumer target selection
