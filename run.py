@@ -78,7 +78,7 @@ def parse_args():
 
     parser.add_argument("outfile", nargs="?", default="-")
     parser.add_argument("--silent", default=False, action="store_true")
-    parser.add_argument("--no-multiprocessing", default=False, action="store_true")
+    parser.add_argument("--no-multiprocessing", "-no", default=False, action="store_true")
 
     return parser.parse_args()
 
