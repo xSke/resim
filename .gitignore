@@ -4,6 +4,6 @@ out/
 /.idea/
 *.png
 .ipynb_checkpoints/
-output.txt
+output*.txt
 .DS_Store
 /roll_data/

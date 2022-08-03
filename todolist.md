@@ -1,16 +1,14 @@
 ## Short-term to do
-- Update known ??? roll names (steal fielder, out fielder, bases fielder, doubles, triples, etc.)
-    - might be mostly done for now? always good to check
+- rename `what1` and `what2` and make sure they're in actually relevant locations
 
 ## To do
-- Investigate runner advancement
+- Runner extra advancement on hits
 - Expand to Discipline Era
 - Expand to remainder of Expansion Era
-- Fill out coverage for seasons we already have data for
 - Investigate items
 - Investigate weird EE mechanics
-  - consumer attack targeting & activation rates
   - weird ballpark modifications
+  - hype (derogatory)
 - Clean up formulas in general
 - Figure out how Spicy/On Fire works (consecutive hits?)
   - track actual consecutive hits in resim
@@ -24,30 +22,31 @@
 
 
 ## In progress
-- Swing-out-of-zone formula (parabolas 😡)
-- Contact-in-zone formula
-- Contact-out-of-zone formula
-- Fielder's choice formula
+- Runner advancement on flyouts
 - Steal attempts formula
 - Steal success formula
 - Doubles formula
-- Triples formula
-- Home run formula
 - Hit vs. out formula
-- Double play vs FC roll
-  - runner on first only: DONE
-  - first and second
-  - bases loaded
-  - first and third (run scores?)
-  - "which runner to get out" roll: DONE
-- Figure out how to go "backwards in time" through the rng stream
 - Echo/feedback activation
+- Fill out coverage for seasons we already have data for (s12/13 "done")
+- consumer attack activation rates
 
 ## Done (for now) (ignoring weird modifiers)
 - Strike zone formula
 - Swing-in-zone formula
+- Swing-out-of-zone formula (parabolas 😌)
 - Flyout vs groundout formula
+- Home run formula
+- Triples formula
 - Attractor star generation
 - Foul ball formula
 - "Sacrifice bunt" vs FC roll
 - Bird message roll
+- Contact-out-of-zone formula
+- Figure out how to go "backwards in time" through the rng stream
+- Contact-in-zone formula
+- DP formula
+- Sacrifice/Martyr formula
+- Advancment formula (groundouts)
+- Haunted rates
+- Consumer target selection

@@ -1,0 +1,27 @@
+name: csv
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  run-py:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Python dependencies
+        uses: py-actions/py-dependency-install@v3
+      - name: Load Cache
+        id: cache-API
+        uses: actions/cache@v3
+        with:
+          path: ./cache/*.json
+          key: ${{ runner.os }}-api-cache-${{ hashFiles('deploys.txt') }}
+      - run: python3 run.py --silent
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: roll_data
+          path: roll_data/

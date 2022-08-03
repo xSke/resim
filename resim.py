@@ -54,7 +54,9 @@ class Resim:
                     "dp-basesloaded",
                     "advancement",
                     "bird-message",
-                    "consumers"
+                    "consumers",
+                    "groundout",
+                    "haunted",
                 ]
             }
         else:
@@ -211,7 +213,6 @@ class Resim:
         self.handle_batter_reverb()
 
         if self.was_attractor_placed_in_secret_base_async():
-            self.roll("attractor?")  # this roll might be up by the trigger, idk yet
             self.roll("attractor pitching stars")
             self.roll("attractor batting stars")
             self.roll("attractor baserunning stars")
@@ -813,57 +814,40 @@ class Resim:
             # Successful DP always have 2 rolls (DP check + where check)
             extras = {
                 (tuple(), tuple()): 0,
-                ((0,), tuple()): 2,  # !DP roll (pass), roll where (unused)
-                ((0,), (0,)): 2,  # !DP roll (fail), martyr roll (fail)
-                ((0,), (1,)): 3,  # !DP roll (fail), martyr roll (pass) + ??? aka martyr2
-                ((1,), (1,)): 2,  # Out at 1st, no advancement
-                ((1,), (2,)): 2,  # Out at 1st, one runner advances
-                ((2,), tuple()): 2,  # Sacrifice Out at 1st, scoring from 3rd
-                ((2,), (2,)): 2,  # Out at 1st, no advancement
-                ((1, 0), tuple()): 2,  # Inning-ending DP
-                ((1, 0), (1,)): 2,  # !DP roll (pass), !roll<0.50 out at 3rd;DP at 3rd and 1st, 1st advances to 2nd
-                ((1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.50 out at 2nd;DP at 2nd and 1st, 2nd advances to 3rd
-                ((1, 0), (1, 0)): 2,  # ?DP roll (fail), ?martyr roll (fail);Out at 3rd
-                ((1, 0), (2, 1)): 4,  # ?DP roll (fail), ?martyr roll (pass), ???, ???;Out at 1st, both runners advance
-                ((2, 0), tuple()): 2,  # ?DP roll (pass), ?roll where;DP, 1 run scores OR inning-ending DP
-                (
-                    (2, 0),
-                    (0,),
-                ): 4,  # ?DP roll (fail), ?martyr roll (fail), ???, ???;FC, but scoring a 3rd runner. Sometimes 2 rolls!
-                (
-                    (2, 0),
-                    (1,),
-                ): 4,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???;Sac Out at 1st, both runners advance
-                (
-                    (2, 0),
-                    (2, 1),
-                ): 4,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???;Out at 1st, one runner advances, one stays
-                ((2, 1), (1,)): 3,  # Out at first, one run scores, other doesn't advance
-                ((2, 1), (2,)): 3,  # Sacrifice Out at 1st, both runners advance, +1 run
-                ((2, 1), (2, 1)): 3,  # Out at 1st, no advancement
-                ((2, 1), (2, 2)): 3,  # Out at 1st into holding hands on 3rd
-                ((2, 2), tuple()): 3,  # Sacrifice Out at 1st, both holding hands on 3rd scoring
-                ((2, 1, 0), tuple()): 2,  # ?DP roll (pass), ?roll where (unused);# Inning-ending DP
-                (
-                    (2, 1, 0),
-                    (1,),
-                ): 2,  # !DP roll (pass), !0.33<roll<0.67 out at 3rd; DP at 3rd and 1st, 1st and 3rd advance
-                ((2, 1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.67 out at 2nd; DP, 1 run scores, 2nd advances to 3rd
-                (
-                    (2, 1, 0),
-                    (2, 1),
-                ): 5,  # ?DP roll (fail), ?martyr roll (pass), ?martyr2, ???, ???;NOT DP! Out at 1st, all advance.
-                ((2, 1, 0), (2, 1, 0)): 2,  # ?DP roll (fail), ?martyr roll (fail);Out at home
-                ((2, 2), (2,)): 3,  # two players holding hands, one sac scoring
-                (
-                    (2, 1, 2, 0),
-                    (2, 0),
-                ): 3,  # holding hands, both scoring, runner on second advances, out at second, fielder's choice
-                ((2, 2), (2, 2)): 3,
+                ((0,), tuple()): 2,  # !DP roll (pass), DP where (unused)
+                ((0,), (0,)): 2,  # !DP roll (fail), !martyr roll (fail)
+                ((0,), (1,)): 3,  # !DP roll (fail), !martyr roll (pass) + advance (unused)
+                ((1,), (1,)): 2,  # !unused, !advance(fail)
+                ((1,), (2,)): 2,  # !unused, !advance(pass)
+                ((2,), tuple()): 2,  # !unused, !advance(pass)
+                ((2,), (2,)): 2,  # !unused, !advance (fail)
+                ((1, 0), tuple()): 2,  # !DP roll (pass), DP where (unused)
+                ((1, 0), (1,)): 2,  # !DP roll (pass), !roll<0.50 out at 3rd
+                ((1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.50 out at 2nd
+                ((1, 0), (1, 0)): 2,  # !DP roll (fail), !martyr roll (fail)
+                ((1, 0), (2, 1)): 4,  # !DP roll (fail), !martyr roll (pass), advancex2 (unused)
+                ((2, 0), tuple()): 2,  # !DP roll (pass), DP where (unused)
+                ((2, 0), (0,)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (pass), !1st advance (fail)
+                ((2, 0), (1,)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (pass), !1st advance (pass)
+                ((2, 0), (2, 1)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (fail), advance (unused)
+                ((2, 1), (1,)): 3,  # !unused, !3rd advance (pass), !2nd advance (fail)
+                ((2, 1), (2,)): 3,  # !unused, !3rd advance (pass), !2nd advance (pass)
+                ((2, 1), (2, 1)): 3,  # !unused, !3rd advance (fail), !2nd advance (fail)
+                ((2, 1), (2, 2)): 3,  # !unused, !3rd advance (fail), !2nd advance (pass)
+                ((2, 2), tuple()): 3,  # !unused, !3rd advance (pass), !3rd advance (pass)
+                ((2, 2), (2,)): 3,  # !unused !3rd advance (fail/pass), !3rd advance (pass/fail)
+                ((2, 2), (2, 2)): 3,  # !unused, !3rd advance (fail), !3rd advance (fail)
+                ((2, 1, 0), tuple()): 2,  # !DP roll (pass), DP where (unused)
+                ((2, 1, 0), (1,)): 2,  # !DP roll (pass), !0.33<roll<0.67 out at 3rd
+                ((2, 1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.67 out at 2nd
+                ((2, 1, 0), (2, 1)): 5,  # !DP roll (fail), !martyr roll (pass), advancex3 (unused);NOT DP!
+                ((2, 1, 0), (2, 1, 0)): 2,  # !DP roll (fail), !martyr roll (fail)
+                ((2, 1, 2, 0), (2, 0)): 3,  # ?DP roll (fail), ?martyr roll(fail), ???
             }
 
             fc_dp_event_type = "Out"
             if "reaches on fielder's choice" in self.desc:
+                # !DP roll (fail), !martyr roll (fail)
                 extras[((2, 0), (0,))] = 2  # what
                 fc_dp_event_type = "FC"
 
@@ -880,61 +864,51 @@ class Resim:
             ]
             extra_rolls = [self.roll("extra") for _ in range(extra_roll_desc)]
 
-            if 0 in self.update["basesOccupied"]:
-                # fielder = self.get_fielder_for_roll(extra_rolls[0])
-                self.log_roll(
-                    "fc-dp",
-                    fc_dp_event_type,
-                    extra_rolls[1],  # it seems like there's never exactly 1 extra roll
-                    fc_dp_event_type == "Out",
-                    fielder=fielder,
-                )
+            # Here's a csv for looking at *any* groundout
+            # No Implied pass/fail, and contains ALL extra rolls
+            # Use selections in notebooks to look at different cases!
+            self.log_roll("groundout", "groundout", extra_rolls, False, fielder=fielder)
 
-            if self.update["basesOccupied"] == [0]:  # Runner on 1st
-                # Pad rolls to always have 3
-                if len(extra_rolls) == 2:
-                    extra_rolls.append(None)
-                self.log_roll(
-                    "dp",
-                    fc_dp_event_type,
-                    extra_rolls,  # In this case it's a LIST, not one roll!
-                    fc_dp_event_type == "DP",
-                    fielder=fielder,
-                )
-
-            if self.update["basesOccupied"] == [1, 0] and self.next_update["basesOccupied"] in [[1], [2]]:
-                self.log_roll(
-                    "dp-tworunners",
-                    fc_dp_event_type,
-                    extra_rolls,  # In this case it's a LIST, not one roll!
-                    self.next_update["basesOccupied"] == [2],
-                    fielder=fielder,
-                )
-            if (
-                fc_dp_event_type == "DP"
-                and self.update["basesOccupied"] == [2, 1, 0]
-                and self.next_update["basesOccupied"] in [[2, 1], [1], [2]]
-            ):
-                self.log_roll(
-                    "dp-basesloaded",
-                    fc_dp_event_type,
-                    extra_rolls,  # In this case it's a LIST, not one roll!
-                    self.next_update["basesOccupied"] == [1],  # Out at 3rd
-                    fielder=fielder,
-                )
-
-            if self.update["basesOccupied"] == [1]:
-                advance_eventType = "Stay"
-                if self.next_update["basesOccupied"] == [2]:
-                    advance_eventType = "Advance"
-                self.log_roll(
-                    "advancement",
-                    advance_eventType,
-                    extra_rolls,
-                    advance_eventType == "Advance",
-                    fielder=fielder,
-                )
-
+            # FLOWCHART:
+            # -Always roll for DP. Always. Ignore the roll if no runner on first.
+            # -If runner on first (DP is possible):
+            #     -Roll Where.
+            #     -If DP pass:
+            #         -If this ends the inning, DONE
+            #         -If only forced runner is on first: Doesn't matter
+            #         -Elif two forced runners:
+            #             -Roll < 1/2 -> Out at third
+            #             -Roll > 1/2 -> Out at second
+            #         -Elif three forced runners:
+            #             -Roll < 1/3 -> Out at home
+            #             -Roll > 1/3, < 2/3 -> Out at third
+            #             -Roll > 2/3 -> Out at second
+            #         -Advance all other runners
+            #     -Elif DP fail:
+            #         -Roll Sacrifice
+            #         -If Sacrifice fail:
+            #             -Most advanced runner is out.
+            #             -Advance everyone else
+            #         -Elif Sacrifice pass:
+            #             -Roll Advancement for every baserunner
+            #             -For each runner:
+            #                  -If not forced:
+            #                      -Check advancement roll. Rolls apply in basesOccupied order aka most advanced first ([2,1,2,0] untested!!!)
+            #                  -Elif forced:
+            #                      -If initial baserunners were [2,0] AND 3rd base PASSED advancement (:ballclark:):
+            #                          -Check advancement roll for 1st base.
+            #                      -Elif any other baserunner configuration:
+            #                          -Advance
+            # -Elif no runner on first:
+            #      -For each runner:
+            #         -If not forced:
+            #             -Check advancement roll. Rolls apply in basesOccupied order aka most advanced first ([2,1,2,0] untested!!!)
+            #         -Elif forced:
+            #             -If initial baserunners were [2,0] AND 3rd base PASSED advancement (:ballclark:):
+            #                 -Check advancement roll for 1st base.
+            #             -Elif any other baserunner configuration:
+            #                 -Advance
+            #
             # todo: make this not use a lookup table
             # Requires a LOT more knowledge about each situation
             # adv_eligible_runners = dict(bases_before)
@@ -1113,10 +1087,14 @@ class Resim:
 
     def handle_batter_up(self):
         if self.batter and self.batter.has_mod("HAUNTED"):
-            self.roll("haunted")
+            haunt_roll = self.roll("haunted")
+            self.log_roll("haunted", "NoHaunt", haunt_roll, False)
 
+        # if the haunting is successful the batter won't be the haunted player lol
         if "is Inhabiting" in self.event["description"]:
-            self.roll("haunted")
+            haunt_roll = self.roll("haunted")
+            self.log_roll("haunted", "YesHaunt", haunt_roll, True)
+            
             self.roll("haunter selection")
 
     def handle_weather(self):
@@ -1558,6 +1536,20 @@ class Resim:
                         self.log_roll("consumers", attacked_player.name,
                                     target_roll,
                                     True)
+
+                        roster = [self.data.get_player(p) for p in team.data["lineup"] + team.data["rotation"]]
+                        densities = [p.data["eDensity"] for p in roster]
+                        total_density = sum(densities)
+
+                        acc = 0
+                        for target, density in zip(roster, densities):
+                            acc += density
+                            if acc > target_roll * total_density:
+                                break
+                        self.print("(rolled target: {})".format(target.name))
+                        if target.id != attacked_player.id:
+                            self.error("incorrect consumer target (rolled {}, expected {})".format(target.name, attacked_player.name))
+
                         for _ in range(25):
                             self.roll("stat change")
 
@@ -1666,6 +1658,7 @@ class Resim:
             if attractor:
                 # todo: some of these rolls seem to be done async
                 self.print(f"!!! attractor placed in secret base:{attractor.name}")
+                self.roll("choose attractor")
                 return
 
         if secret_base_exit_eligible:
@@ -1856,7 +1849,7 @@ class Resim:
         roll_csv = self.csvs[csv_name]
         runner_1st = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 0]
         runner_2nd = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 1]
-        runner_3rd = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 2]
+        runners_3rd = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 2]
         if runner_1st:
             runner_on_first = self.data.get_player(runner_1st[0])
             runner_on_first_multiplier = self.get_batter_multiplier(runner_on_first)
@@ -1867,11 +1860,16 @@ class Resim:
             runner_on_second_multiplier = self.get_batter_multiplier(runner_on_second)
         else:
             runner_on_second, runner_on_second_multiplier = None, 1
-        if runner_3rd:
-            runner_on_third = self.data.get_player(runner_3rd[0])
+        if runners_3rd:
+            runner_on_third = self.data.get_player(runners_3rd[0])
             runner_on_third_multiplier = self.get_batter_multiplier(runner_on_third)
         else:
             runner_on_third, runner_on_third_multiplier = None, 1
+        if len(runners_3rd) == 2:  # Holding hands
+            runner_on_third_hh = self.data.get_player(runners_3rd[1])
+            runner_on_third_hh_multiplier = self.get_batter_multiplier(runner_on_third_hh)
+        else:
+            runner_on_third_hh, runner_on_third_hh_multiplier = None, 1
         roll_csv.write(
             event_type,
             roll,
@@ -1898,7 +1896,10 @@ class Resim:
             runner_on_second_multiplier,
             runner_on_third,
             runner_on_third_multiplier,
-            attacked_team
+            attacked_team,
+            runner_on_third_hh,
+            runner_on_third_hh_multiplier,
+            self.next_update["basesOccupied"] if self.next_update else None,
         )
 
     def setup_data(self, event):
