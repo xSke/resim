@@ -149,6 +149,7 @@ class SaveCsv:
             "strike_threshold",
             "fielder_roll",
             "batter_consecutive_hits",
+            "team_level"
         ]
         self.num_columns = len(columns)
         self.csv.writerow(columns)
@@ -180,6 +181,7 @@ class SaveCsv:
         runner_on_second_multiplier,
         runner_on_third,
         runner_on_third_multiplier,
+        attacked_team
     ):
         row = [
             event_type,
@@ -318,6 +320,7 @@ class SaveCsv:
             strike_threshold,
             fielder_roll,
             batter.data["consecutiveHits"],
+            attacked_team.data["level"] if (attacked_team and "level" in attacked_team.data) else None
         ]
         assert len(row) == self.num_columns
         self.csv.writerow(row)
