@@ -26,7 +26,6 @@
 - Steal attempts formula
 - Steal success formula
 - Doubles formula
-- Triples formula
 - Hit vs. out formula
 - Echo/feedback activation
 - Fill out coverage for seasons we already have data for (s12/13 "done")
@@ -38,6 +37,7 @@
 - Swing-out-of-zone formula (parabolas 😌)
 - Flyout vs groundout formula
 - Home run formula
+- Triples formula
 - Attractor star generation
 - Foul ball formula
 - "Sacrifice bunt" vs FC roll
