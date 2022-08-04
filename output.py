@@ -161,6 +161,8 @@ class SaveCsv:
             "fielder_roll",
             "batter_consecutive_hits",
             "team_level",
+            "team_eDensity",
+            "team_name",
         ]
         self.num_columns = len(columns)
         self.csv.writerow(columns)
@@ -346,6 +348,8 @@ class SaveCsv:
             fielder_roll,
             batter.data["consecutiveHits"],
             attacked_team.data["level"] if (attacked_team and "level" in attacked_team.data) else None,
+            attacked_team.data["eDensity"] if (attacked_team and "level" in attacked_team.data) else None,
+            attacked_team.data["nickname"] if (attacked_team and "level" in attacked_team.data) else None,
         ]
         assert len(row) == self.num_columns
         self.csv.writerow(row)

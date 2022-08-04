@@ -1891,10 +1891,10 @@ class Resim:
             runner_on_second_multiplier,
             runner_on_third,
             runner_on_third_multiplier,
-            attacked_team,
             runner_on_third_hh,
             runner_on_third_hh_multiplier,
             self.next_update["basesOccupied"] if self.next_update else None,
+            attacked_team,
         )
 
     def setup_data(self, event):
