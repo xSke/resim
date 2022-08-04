@@ -25,7 +25,6 @@
 - Runner advancement on flyouts
 - Steal attempts formula
 - Steal success formula
-- Hit vs. out formula
 - Echo/feedback activation
 - Fill out coverage for seasons we already have data for (s12/13 "done")
 - consumer attack activation rates
@@ -34,6 +33,7 @@
 - Strike zone formula
 - Swing-in-zone formula
 - Swing-out-of-zone formula (parabolas 😌)
+- Hit vs out formula (it's kinda ugly tho)
 - Flyout vs groundout formula
 - Home run formula
 - Triples formula
