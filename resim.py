@@ -3,8 +3,6 @@ import os
 import sys
 import itertools
 
-from tqdm import tqdm
-
 from data import EventType, GameData, Weather, get_feed_between, null_stadium
 from output import SaveCsv
 from rng import Rng
@@ -845,16 +843,16 @@ class Resim:
                 ((2, 1, 2, 0), (2, 0)): 3,  # ?DP roll (fail), ?martyr roll(fail), ???
             }
 
-            fc_dp_event_type = "Out"
+            # fc_dp_event_type = "Out"
             if "reaches on fielder's choice" in self.desc:
                 # !DP roll (fail), !martyr roll (fail)
                 extras[((2, 0), (0,))] = 2  # what
-                fc_dp_event_type = "FC"
+                # fc_dp_event_type = "FC"
 
             if "into a double play!" in self.desc:
                 # !DP roll (pass), !roll<0.33 out at home
                 extras[((2, 1, 0), (2, 1))] = 2
-                fc_dp_event_type = "DP"
+                # fc_dp_event_type = "DP"
 
             extra_roll_desc = extras[
                 (
@@ -1057,8 +1055,8 @@ class Resim:
             known_outcome = None
 
         threshold = self.get_foul_threshold()
-        lower_bound = threshold if known_outcome == False else 0
-        upper_bound = threshold if known_outcome == True else 1
+        lower_bound = threshold if known_outcome is False else 0
+        upper_bound = threshold if known_outcome is True else 1
 
         foul_roll = self.roll("foul", lower=lower_bound, upper=upper_bound)
         if known_outcome is not None:

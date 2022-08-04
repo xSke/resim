@@ -236,7 +236,7 @@ def main():
     rng.step(-args.jump_rolls)
     print(f"to state {rng.get_state_str()}")
 
-    with (RngCountContext(rng) as rng_counter, tqdm(total=total_events, unit="events") as progress):
+    with (RngCountContext(rng) as rng_counter, tqdm(total=total_events, unit="events") as _):
         resim = Resim(rng, out_file, start_time, raise_on_errors=False)
         resim.run(start_time, end_time, progress_callback=None)
         tqdm.write(f"steps used: {rng_counter.count}/{args.jump_rolls}")
