@@ -3,8 +3,6 @@ import os
 import sys
 import itertools
 
-from tqdm import tqdm
-
 from data import EventType, GameData, Weather, get_feed_between, null_stadium
 from output import SaveCsv
 from rng import Rng
@@ -865,16 +863,16 @@ class Resim:
                 ((2, 1, 2, 0), (2, 0)): 3,  # ?DP roll (fail), ?martyr roll(fail), ???
             }
 
-            fc_dp_event_type = "Out"
+            # fc_dp_event_type = "Out"
             if "reaches on fielder's choice" in self.desc:
                 # !DP roll (fail), !martyr roll (fail)
                 extras[((2, 0), (0,))] = 2  # what
-                fc_dp_event_type = "FC"
+                # fc_dp_event_type = "FC"
 
             if "into a double play!" in self.desc:
                 # !DP roll (pass), !roll<0.33 out at home
                 extras[((2, 1, 0), (2, 1))] = 2
-                fc_dp_event_type = "DP"
+                # fc_dp_event_type = "DP"
 
             extra_roll_desc = extras[
                 (
@@ -1077,8 +1075,8 @@ class Resim:
             known_outcome = None
 
         threshold = self.get_foul_threshold()
-        lower_bound = threshold if known_outcome == False else 0
-        upper_bound = threshold if known_outcome == True else 1
+        lower_bound = threshold if known_outcome is False else 0
+        upper_bound = threshold if known_outcome is True else 1
 
         foul_roll = self.roll("foul", lower=lower_bound, upper=upper_bound)
         if known_outcome is not None:
@@ -1114,7 +1112,7 @@ class Resim:
         if "is Inhabiting" in self.event["description"]:
             haunt_roll = self.roll("haunted")
             self.log_roll("haunted", "YesHaunt", haunt_roll, True)
-            
+
             self.roll("haunter selection")
 
     def handle_weather(self):
@@ -1543,19 +1541,14 @@ class Resim:
 
                 if self.ty == EventType.CONSUMERS_ATTACK:
                     attacked_player_id = self.event["playerTags"][0]
-                    is_on_team = attacked_player_id in (team.data["lineup"] +
-                                                     team.data["rotation"])
+                    is_on_team = attacked_player_id in (team.data["lineup"] + team.data["rotation"])
                     if is_on_team:
-                        self.log_roll("consumers", "Attack", attack_roll,
-                                          True, attacked_team=team)
+                        self.log_roll("consumers", "Attack", attack_roll, True, attacked_team=team)
 
-                        attacked_player = self.data.get_player(
-                            attacked_player_id)
+                        attacked_player = self.data.get_player(attacked_player_id)
 
                         target_roll = self.roll("target")
-                        self.log_roll("consumers", attacked_player.name,
-                                    target_roll,
-                                    True)
+                        self.log_roll("consumers", attacked_player.name, target_roll, True)
 
                         roster = [self.data.get_player(p) for p in team.data["lineup"] + team.data["rotation"]]
                         densities = [p.data["eDensity"] for p in roster]
@@ -1568,16 +1561,18 @@ class Resim:
                                 break
                         self.print("(rolled target: {})".format(target.name))
                         if target.id != attacked_player.id:
-                            self.error("incorrect consumer target (rolled {}, expected {})".format(target.name, attacked_player.name))
+                            self.error(
+                                "incorrect consumer target (rolled {}, expected {})".format(
+                                    target.name, attacked_player.name
+                                )
+                            )
 
                         for _ in range(25):
                             self.roll("stat change")
 
                             if attacked_player.data["soul"] == 1:
                                 # lost their last soul, redact :<
-                                self.print(
-                                f"!!! {attacked_player.name} lost last soul, "
-                                f"redacting")
+                                self.print(f"!!! {attacked_player.name} lost last soul, " f"redacting")
                                 if attacked_player_id in team.data["lineup"]:
                                     team.data["lineup"].remove(attacked_player_id)
                                 if attacked_player_id in team.data["rotation"]:
@@ -1585,11 +1580,9 @@ class Resim:
 
                         return True
                     else:
-                        self.log_roll("consumers", "Miss", attack_roll,
-                                      False)
+                        self.log_roll("consumers", "Miss", attack_roll, False)
                 else:
-                    self.log_roll("consumers", "Miss", attack_roll, False,
-                                  attacked_team=team)
+                    self.log_roll("consumers", "Miss", attack_roll, False, attacked_team=team)
 
     def handle_party(self):
         # lol. turns out it just rolls party all the time and throws out the roll if the team isn't partying
@@ -1862,7 +1855,7 @@ class Resim:
         relevant_batter=None,
         fielder_roll=None,
         fielder=None,
-        attacked_team=None
+        attacked_team=None,
     ):
         if not self.csvs:
             return
@@ -1916,10 +1909,10 @@ class Resim:
             runner_on_second_multiplier,
             runner_on_third,
             runner_on_third_multiplier,
-            attacked_team,
             runner_on_third_hh,
             runner_on_third_hh_multiplier,
             self.next_update["basesOccupied"] if self.next_update else None,
+            attacked_team,
         )
 
     def setup_data(self, event):

@@ -4,7 +4,7 @@ import struct
 # original code by ubuntor: https://discord.com/channels/738107179294523402/875833188537208842/965050266258903070
 
 MASK = 0xFFFFFFFFFFFFFFFF
-BRUTEFORCE_THRESHOLD = 2 ** 20
+BRUTEFORCE_THRESHOLD = 2**20
 
 
 def powerset(s):
@@ -136,7 +136,7 @@ def solve(knowns):
             known_bits = 52 - (lo_mantissa ^ hi_mantissa).bit_length()
             bits += int_to_bits(lo_mantissa >> (52 - known_bits), known_bits)
             bits_sym += state0_sym[:known_bits]
-        elif known == None:
+        elif known is None:
             pass
         else:
             print("unknown type for known", known)
