@@ -456,5 +456,6 @@ def calculate_vibes(player, day) -> float:
     cinnamon = player["cinnamon"] or 0
     return 0.5 * ((sin_phase - 1) * pressurization + (sin_phase + 1) * cinnamon)
 
+
 def clear_cache():
     cache.clear()
