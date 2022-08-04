@@ -198,7 +198,6 @@ class SaveCsv:
         runner_on_third_hh_multiplier,
         baserunners_next,
         attacked_team,
-
     ):
         row = [
             event_type,
@@ -348,12 +347,9 @@ class SaveCsv:
             strike_threshold,
             fielder_roll,
             batter.data["consecutiveHits"],
-            attacked_team.data["level"] if (attacked_team and "level" in
-                                            attacked_team.data) else None,
-            attacked_team.data["eDensity"] if (attacked_team and "level" in
-                                            attacked_team.data) else None,
-            attacked_team.data["nickname"] if (attacked_team and "level" in
-                                            attacked_team.data) else None,
+            attacked_team.data["level"] if (attacked_team and "level" in attacked_team.data) else None,
+            attacked_team.data["eDensity"] if (attacked_team and "level" in attacked_team.data) else None,
+            attacked_team.data["nickname"] if (attacked_team and "level" in attacked_team.data) else None,
         ]
         assert len(row) == self.num_columns
         self.csv.writerow(row)
