@@ -66,8 +66,11 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             elif attr == "laserlikeness":
                 multiplier += 0.80
         elif mod == "ON_FIRE":
-            # todo: figure out how the heck "on fire" works
-            pass
+            # still some room for error here (might include gf too)
+            if attr == "thwackability":
+                multiplier += 4 if meta.season >= 13 else 3
+            if attr == "moxie":
+                multiplier += 2 if meta.season >= 13 else 1
         elif mod == "MINIMALIST":
             if meta.is_maximum_blaseball:
                 multiplier -= 0.75
@@ -232,6 +235,9 @@ def get_contact_ball_threshold(
     invpath = (1 - batter.data["patheticism"] / get_multiplier(batter, batting_team, "batter", "patheticism", meta)) * (
         1 + 0.2 * batter_vibes
     )
+    if invpath < 0:
+        return float("nan")
+
     ruth = (
         pitcher.data["ruthlessness"]
         * get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)
