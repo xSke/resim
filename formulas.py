@@ -22,7 +22,7 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             multiplier -= 0.2
         elif mod == "GROWTH":
             # todo: do we ever want this for other positions?
-            if position == "batter" and attr not in ["patheticism", "thwackability"]:
+            if attr not in ["patheticism", "thwackability", "ruthlessness"]:
                 multiplier += min(0.05, 0.05 * (meta.day / 99))
         elif mod == "HIGH_PRESSURE":
             # checks for flooding weather and baserunners
@@ -31,10 +31,8 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
                 # "should we really boost the pitcher when the *other* team's batters are on base" yes.
                 multiplier += 0.25
         elif mod == "TRAVELING":
-            if meta.top_of_inning and position == "batter":
-                if attr in ["patheticism", "thwackability"]:
-                    multiplier -= 0
-                else:
+            if (meta.top_of_inning and position == "batter") or (not meta.top_of_inning and position == "pitcher"):
+                if attr not in ["patheticism", "thwackability", "ruthlessness"]:
                     multiplier += 0.05
 
             # todo: do we ever want this?
@@ -78,10 +76,7 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             if meta.is_maximum_blaseball:
                 multiplier += 2.50
 
-    if player.name == "Sutton Dreamy" and meta.weather == Weather.ECLIPSE:
-        # this is going to break if Sutton ever gets scattered...or when they lose the NVGs
-        # (which happens at the start of season 15)
-        # todo: make this only apply to seasons before s15
+    if player.data.get("bat") == "NIGHT_VISION_GOGGLES" and meta.weather == Weather.ECLIPSE:
         # Blessing description: Item. Random player on your team hits 50% better during Solar Eclipses.
         if attr == "thwackability":
             multiplier += 0.5
@@ -274,4 +269,43 @@ def get_foul_threshold(batter: PlayerData, batting_team: TeamData, stadium: Stad
     batter_sum = (musc + thwack + div) / 3
 
     threshold = 0.25 + 0.1 * fwd - 0.1 * obt + 0.1 * batter_sum
+    return threshold
+
+
+def get_hr_threshold(
+    batter: PlayerData,
+    batting_team: TeamData,
+    pitcher: PlayerData,
+    pitching_team: TeamData,
+    stadium: StadiumData,
+    meta: StatRelevantData,
+):
+    batter_vibes = batter.vibes(meta.day)
+    pitcher_vibes = pitcher.vibes(meta.day)
+
+    div = (
+        batter.data["divinity"]
+        * get_multiplier(batter, batting_team, "batter", "divinity", meta)
+        * (1 + 0.2 * batter_vibes)
+    )
+    opw = (
+        pitcher.data["overpowerment"]
+        * get_multiplier(pitcher, pitching_team, "pitcher", "overpowerment", meta)
+        * (1 + 0.2 * pitcher_vibes)
+    )
+    supp = (
+        pitcher.data["suppression"]
+        * get_multiplier(pitcher, pitching_team, "pitcher", "suppression", meta)
+        * (1 + 0.2 * pitcher_vibes)
+    )
+
+    grand = stadium.data["grandiosity"] - 0.5
+    fort = stadium.data["fortification"] - 0.5
+    visc = stadium.data["viscosity"] - 0.5
+    om = stadium.data["ominousness"] - 0.5
+    fwd = stadium.data["forwardness"] - 0.5
+    ballpark_sum = 0.4 * grand + 0.2 * fort + 0.08 * visc + 0.08 * om - 0.24 * fwd
+
+    opw_supp = (10 * opw + supp) / 11
+    threshold = 0.12 + 0.16 * div - 0.08 * opw_supp - 0.18 * ballpark_sum
     return threshold

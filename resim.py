@@ -11,6 +11,7 @@ from typing import List
 from formulas import (
     get_contact_strike_threshold,
     get_contact_ball_threshold,
+    get_hr_threshold,
     get_strike_threshold,
     get_foul_threshold,
     StatRelevantData,
@@ -590,6 +591,19 @@ class Resim:
             # skipping mild proc
             return True
 
+    def roll_hr(self, is_hr):
+        roll = self.roll("home run")
+
+        threshold = get_hr_threshold(
+            self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
+        )
+        if not self.batter.has_mod("ON_FIRE"):
+            if is_hr and roll > threshold:
+                self.print("!!! warn: home run roll too high ({} > {})".format(roll, threshold))
+            elif not is_hr and roll < threshold:
+                self.print("!!! warn: home run roll too low ({} < {})".format(roll, threshold))
+        return roll
+
     def roll_swing(self, did_swing: bool):
         roll = self.roll("swing")
 
@@ -1040,7 +1054,7 @@ class Resim:
                 fielder=self.get_fielder_for_roll(fielder_roll),
             )
 
-            hr_roll = self.roll("home run")
+            hr_roll = self.roll_hr(True)
             self.log_roll("hr", "HomeRun", hr_roll, True)
         else:
             # not sure why we need this
@@ -1076,7 +1090,7 @@ class Resim:
             fielder=self.get_fielder_for_roll(fielder_roll),
         )
 
-        hr_roll = self.roll("home run")
+        hr_roll = self.roll_hr(False)
         self.log_roll("hr", "BaseHit", hr_roll, False)
 
         defender_roll = self.roll("hit fielder")
@@ -1932,7 +1946,7 @@ class Resim:
             self.strike_threshold,
             fielder_roll,
             fielder,
-            self.get_fielder_multiplier(fielder),  # uhhhhhhhhh
+            self.get_fielder_multiplier(fielder) if fielder else 1,  # uhhhhhhhhh
             runner_on_first,
             runner_on_first_multiplier,
             runner_on_second,
