@@ -1,5 +1,5 @@
-import csv
 import os
+from csv import DictWriter
 from data import calculate_vibes
 
 
@@ -199,7 +199,7 @@ class SaveCsv:
         # fmt: on
 
         if self.csv is None:
-            self.csv = csv.DictWriter(self.file, fieldnames=list(row.keys()))
+            self.csv = DictWriter(self.file, fieldnames=list(row.keys()))
             self.csv.writeheader()
 
         self.csv.writerow(row)
