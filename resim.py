@@ -468,14 +468,10 @@ class Resim:
                 timestamp = self.event["created"]
                 self.data.fetch_league_data(timestamp, 20)
 
-            if (
-                self.weather
-                in [
-                    Weather.FEEDBACK,
-                    Weather.REVERB,
-                ]
-                and self.stadium.has_mod("PSYCHOACOUSTICS")
-            ):
+            if self.weather in [
+                Weather.FEEDBACK,
+                Weather.REVERB,
+            ] and self.stadium.has_mod("PSYCHOACOUSTICS"):
                 self.print("away team mods:", self.away_team.data["permAttr"])
                 self.roll("echo team mod")
             return True
@@ -1936,7 +1932,7 @@ class Resim:
             self.strike_threshold,
             fielder_roll,
             fielder,
-            self.get_batter_multiplier(fielder),  # uhhhhhhhhh
+            self.get_fielder_multiplier(fielder),  # uhhhhhhhhh
             runner_on_first,
             runner_on_first_multiplier,
             runner_on_second,
@@ -2213,6 +2209,7 @@ class Resim:
         return value
 
     def get_batter_multiplier(self, relevant_batter=None, relevant_attr=None):
+        # todo: retire in favor of get_multiplier() in formulas.py? this is only being used for logging right now...
         batter = relevant_batter or self.batter
         # attr = relevant_attr
 
@@ -2258,6 +2255,7 @@ class Resim:
         return batter_multiplier
 
     def get_pitcher_multiplier(self, relevant_attr=None):
+        # todo: retire in favor of get_multiplier() in formulas.py? this is only being used for logging right now...
         pitcher_multiplier = 1
         # attr = relevant_attr
         # growth or traveling do not work for pitchers as of s14
@@ -2278,6 +2276,7 @@ class Resim:
         return pitcher_multiplier
 
     def get_fielder_multiplier(self, relevant_fielder=None, relevant_attr=None):
+        # todo: retire in favor of get_multiplier() in formulas.py? this is only being used for logging right now...
         fielder = relevant_fielder or self.fielder
         # attr = relevant_attr
 

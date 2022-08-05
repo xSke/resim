@@ -50,28 +50,39 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
         elif mod == "CHUNKY" and meta.weather == Weather.PEANUTS:
             # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
             #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
-            if attr in ["musclitude", "divinity", "ground_friction"]:
+            # gfric boost hasn't been "tested" necessarily
+            if attr in ["musclitude", "divinity"]:
                 multiplier += 1.0
+            elif attr == "ground_friction":
+                multiplier += 0.5
         elif mod == "SMOOTH" and meta.weather == Weather.PEANUTS:
             # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted everything in
             #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
-            # if attr in [
-            #     "musclitude",
-            #     "continuation",
-            #     "ground_friction",
-            #     "laserlikeness",
-            # ]:
-            #     multiplier += 1.0
+            # the musc boost here has been "tested in the data", the others have not
             if attr == "musclitude":
                 multiplier += 0.15
+            elif attr == "continuation":
+                multiplier += 0.50
+            elif attr == "ground_friction":
+                multiplier += 0.50
+            elif attr == "laserlikeness":
+                multiplier += 0.80
         elif mod == "ON_FIRE":
             # todo: figure out how the heck "on fire" works
             pass
         elif mod == "MINIMALIST":
             if meta.is_maximum_blaseball:
                 multiplier -= 0.75
+        elif mod == "MAXIMALIST":
+            # not "seen in the data" yet
+            if meta.is_maximum_blaseball:
+                multiplier += 2.50
 
     if player.name == "Sutton Dreamy" and meta.weather == Weather.ECLIPSE:
+        # this is going to break if Sutton ever gets scattered...or when they lose the NVGs
+        # (which happens at the start of season 15)
+        # todo: make this only apply to seasons before s15
+        # Blessing description: Item. Random player on your team hits 50% better during Solar Eclipses.
         if attr == "thwackability":
             multiplier += 0.5
     return multiplier
@@ -167,7 +178,7 @@ def get_swing_ball_threshold(
     if combined < 0:
         return float("nan")
 
-    threshold = max(min(combined ** 1.5, 0.95), 0.1)
+    threshold = max(min(combined**1.5, 0.95), 0.1)
     return threshold
 
 
@@ -208,7 +219,7 @@ def get_contact_strike_threshold(
         14: (0.78, 0.17, 0.925),
     }[meta.season]
 
-    threshold = constant - 0.08 * ruth + 0.16 * ballpark_sum + batting_factor * (combined_batting ** 1.2)
+    threshold = constant - 0.08 * ruth + 0.16 * ballpark_sum + batting_factor * (combined_batting**1.2)
     return min(cap, threshold)
 
 
@@ -241,7 +252,7 @@ def get_contact_ball_threshold(
         meta.season
     ]
 
-    threshold = constant - 0.1 * ruth + path_factor * (invpath ** 1.5) + 0.14 * ballpark_sum
+    threshold = constant - 0.1 * ruth + path_factor * (invpath**1.5) + 0.14 * ballpark_sum
     return min(cap, threshold)
 
 

@@ -1,6 +1,3 @@
-## Short-term to do
-- rename `what1` and `what2` and make sure they're in actually relevant locations
-
 ## To do
 - Runner extra advancement on hits
 - Expand to Discipline Era
