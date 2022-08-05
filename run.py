@@ -79,6 +79,7 @@ def parse_args():
     parser.add_argument("outfile", nargs="?", default="-")
     parser.add_argument("--silent", default=False, action="store_true")
     parser.add_argument("--no-multiprocessing", "-no", default=False, action="store_true")
+    parser.add_argument("--jobs", "-j", default=None)
 
     return parser.parse_args()
 
@@ -111,7 +112,9 @@ def main():
         else:
             global progress_queue  # not really necessary but it gets rid of the shadowing warning in pycharm
             progress_queue = Queue()
-            with Pool(initializer=init_pool_worker, initargs=(progress_queue,)) as pool:
+
+            processes = int(args.jobs) if args.jobs else None
+            with Pool(processes=processes, initializer=init_pool_worker, initargs=(progress_queue,)) as pool:
                 fragments_and_args = [((args.silent, args.outfile), fragment) for fragment in FRAGMENTS]
                 result = pool.map_async(run_fragment, fragments_and_args)
 
