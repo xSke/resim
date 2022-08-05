@@ -4,7 +4,7 @@ import struct
 # original code by ubuntor: https://discord.com/channels/738107179294523402/875833188537208842/965050266258903070
 
 MASK = 0xFFFFFFFFFFFFFFFF
-BRUTEFORCE_THRESHOLD = 2**20
+BRUTEFORCE_THRESHOLD = 2 ** 20
 
 
 def powerset(s):
