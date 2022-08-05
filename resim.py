@@ -597,11 +597,10 @@ class Resim:
         threshold = get_hr_threshold(
             self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
         )
-        if not self.batter.has_mod("ON_FIRE"):
-            if is_hr and roll > threshold:
-                self.print("!!! warn: home run roll too high ({} > {})".format(roll, threshold))
-            elif not is_hr and roll < threshold:
-                self.print("!!! warn: home run roll too low ({} < {})".format(roll, threshold))
+        if is_hr and roll > threshold:
+            self.print("!!! warn: home run roll too high ({} > {})".format(roll, threshold))
+        elif not is_hr and roll < threshold:
+            self.print("!!! warn: home run roll too low ({} < {})".format(roll, threshold))
         return roll
 
     def roll_swing(self, did_swing: bool):
@@ -616,9 +615,7 @@ class Resim:
                 self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
             )
 
-        if not (self.batting_team.has_mod("O_NO") and self.strikes == self.max_strikes - 1) and not self.batter.has_mod(
-            "ON_FIRE"
-        ):
+        if not (self.batting_team.has_mod("O_NO") and self.strikes == self.max_strikes - 1):
             if did_swing and roll > threshold:
                 self.print(
                     "!!! warn: swing on {} roll too high ({} > {})".format(
@@ -646,9 +643,7 @@ class Resim:
                 self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
             )
 
-        if not (self.batting_team.has_mod("O_NO") and self.strikes == self.max_strikes - 1) and not self.batter.has_mod(
-            "ON_FIRE"
-        ):
+        if not (self.batting_team.has_mod("O_NO") and self.strikes == self.max_strikes - 1):
             if did_contact and roll > threshold:
                 self.print(
                     "!!! warn: contact on {} roll too high ({} > {})".format(
@@ -1145,7 +1140,7 @@ class Resim:
 
     def roll_foul(self, known_outcome: bool):
         is_0_no_eligible = self.batting_team.has_mod("O_NO") and self.strikes == 2 and self.balls == 0
-        if is_0_no_eligible or self.batter.has_any("ON_FIRE", "SPICY", "CHUNKY", "SMOOTH"):
+        if is_0_no_eligible or self.batter.has_any("CHUNKY", "SMOOTH"):
             known_outcome = None
 
         meta = self.get_stat_meta()
@@ -1880,11 +1875,10 @@ class Resim:
         self.strike_roll = roll
         self.strike_threshold = threshold
 
-        if not self.batter.has_mod("ON_FIRE"):
-            if known_result == "strike" and roll > threshold:
-                self.print(f"!!! warn: too high strike roll (threshold {threshold})")
-            elif known_result == "ball" and roll < threshold:
-                self.print(f"!!! warn: too low strike roll (threshold {threshold})")
+        if known_result == "strike" and roll > threshold:
+            self.print(f"!!! warn: too high strike roll (threshold {threshold})")
+        elif known_result == "ball" and roll < threshold:
+            self.print(f"!!! warn: too low strike roll (threshold {threshold})")
 
         # todo: double strike
 
