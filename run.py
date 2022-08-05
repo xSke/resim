@@ -126,6 +126,8 @@ def main():
                     else:
                         progress.update(new_progress)
 
+    print("Finished")
+
 
 def init_pool_worker(init_args):
     global progress_queue
@@ -157,7 +159,7 @@ def run_fragment(pool_args, progress_callback=None):
 
     if progress_queue:
         progress_queue.put(unreported_progress)
-    print(f"state at end: {rng.get_state_str()}")
+
     clear_cache()
 
 

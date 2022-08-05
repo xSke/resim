@@ -2190,7 +2190,6 @@ class Resim:
                     return update["awayScore"], update["homeScore"]
 
     def run(self, start_timestamp, end_timestamp, progress_callback):
-        print(f"Starting fragment at {start_timestamp}")
         self.data.fetch_league_data(start_timestamp)
         feed_events = get_feed_between(start_timestamp, end_timestamp)
 
@@ -2335,7 +2334,6 @@ class Resim:
         return fielder_multiplier
 
     def save_data(self):
-        print("Saving data...")
         for csv in self.csvs.values():
             csv.close()
 
