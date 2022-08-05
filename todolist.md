@@ -27,7 +27,6 @@
 - Steal success formula
 - Echo/feedback activation
 - Fill out coverage for seasons we already have data for (s12/13 "done")
-- consumer attack activation rates
 
 ## Done (for now) (ignoring weird modifiers)
 - Strike zone formula
@@ -50,3 +49,4 @@
 - Advancment formula (groundouts)
 - Haunted rates
 - Consumer target selection
+- consumer attack activation rates
