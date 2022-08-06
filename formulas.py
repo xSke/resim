@@ -232,11 +232,11 @@ def get_contact_ball_threshold(
     batter_vibes = batter.vibes(meta.day)
     pitcher_vibes = pitcher.vibes(meta.day)
 
-    invpath = (1 - batter.data["patheticism"] / get_multiplier(batter, batting_team, "batter", "patheticism", meta)) * (
-        1 + 0.2 * batter_vibes
+    invpath = min(
+        0,
+        (1 - batter.data["patheticism"] / get_multiplier(batter, batting_team, "batter", "patheticism", meta))
+        * (1 + 0.2 * batter_vibes),
     )
-    if invpath < 0:
-        return float("nan")
 
     ruth = (
         pitcher.data["ruthlessness"]
