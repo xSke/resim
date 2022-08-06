@@ -232,10 +232,10 @@ def get_contact_ball_threshold(
     batter_vibes = batter.vibes(meta.day)
     pitcher_vibes = pitcher.vibes(meta.day)
 
-    invpath = min(
-        0,
+    invpath = max(
         (1 - batter.data["patheticism"] / get_multiplier(batter, batting_team, "batter", "patheticism", meta))
         * (1 + 0.2 * batter_vibes),
+        0,
     )
 
     ruth = (
@@ -249,9 +249,12 @@ def get_contact_ball_threshold(
     fwd = stadium.data["forwardness"] - 0.5
     ballpark_sum = (fort + 3 * visc - 6 * fwd) / 10
 
-    constant, path_factor, cap = {11: (0.35, 0.4, 1), 12: (0.35, 0.4, 1), 13: (0.4, 0.35, 1), 14: (0.4, 0.35, 1)}[
-        meta.season
-    ]
+    constant, path_factor, cap = {
+        11: (0.35, 0.4, 1),
+        12: (0.35, 0.4, 1),
+        13: (0.4, 0.35, 1),
+        14: (0.4, 0.35, 1),
+    }[meta.season]
 
     threshold = constant - 0.1 * ruth + path_factor * (invpath**1.5) + 0.14 * ballpark_sum
     return min(cap, threshold)
