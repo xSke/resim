@@ -1045,9 +1045,25 @@ class Resim:
             runner = self.data.get_player(runner_id)
             fielder = self.get_fielder_for_roll(defender_roll)
             if base == 1:
-                self.log_roll("hitadvance", "second", roll, roll_outcome, relevant_runner=runner, fielder_roll=defender_roll, fielder=fielder)
+                self.log_roll(
+                    "hitadvance",
+                    "second",
+                    roll,
+                    roll_outcome,
+                    relevant_runner=runner,
+                    fielder_roll=defender_roll,
+                    fielder=fielder,
+                )
             elif base == 2:
-                self.log_roll("hitadvance", "third", roll, roll_outcome, relevant_runner=runner, fielder_roll=defender_roll, fielder=fielder)
+                self.log_roll(
+                    "hitadvance",
+                    "third",
+                    roll,
+                    roll_outcome,
+                    relevant_runner=runner,
+                    fielder_roll=defender_roll,
+                    fielder=fielder,
+                )
 
     def handle_hr(self):
         if " is Magmatic!" not in self.desc:
