@@ -65,6 +65,7 @@ class Resim:
                     "consumers",
                     "groundout",
                     "haunted",
+                    "flyout",
                 ]
             }
         else:
@@ -857,13 +858,31 @@ class Resim:
         bases_after = make_base_map(self.next_update)
 
         if self.ty == EventType.FLY_OUT:
-            # flyouts are nice and simple
+            # flyouts are NOT nice and simple
+            # -If there are baserunners:
+            #     -Roll advancement
+            #         -Check roll against most advanced runner
+            #         -If fail, end.
+            #         -If pass and no other baserunners, end.
+            #         -If pass and there are other baserunners...
+            #         -If most advanced runner was on 2nd aka initial state was [1, 0], end. <--- This is the weird part
+            #         -Roll advancement again
+            #             -Check roll against second most advanced runner
+            #             -end <--- also kind of weird
+
+            # rolls_advance = []
+            # if self.update(['basesOccupied']):
+            #     base = 
+            #     rolls_advance.append(self.roll(f"adv ({base}, {roll_outcome})"))
+            # rolls_advance.append()
+
+            rolls_advance = []
             for runner_id, base, roll_outcome in calculate_advances(bases_before, bases_after, 0):
-                self.roll(f"adv ({base}, {roll_outcome})")
+                rolls_advance.append(self.roll(f"adv ({base}, {roll_outcome})"))
 
                 # todo: check to make sure this doesn't break later stuff
                 if self.update["basesOccupied"] == [2, 2] and base == 2 and not roll_outcome and "scores!" in self.desc:
-                    self.roll("holding hands case 2")
+                    rolls_advance.append(self.roll("holding hands case 2"))
 
                 # or are they? [2,0] -> [2,0] = 1 roll?
                 # [1, 0] -> [2, 0] = 1 roll?
@@ -875,7 +894,8 @@ class Resim:
                 # rerolling for the "second" player on third's advance if the first successfully advanced,
                 # since it's possible for both
                 if self.update["basesOccupied"] == [2, 2] and base == 2 and roll_outcome:
-                    self.roll("holding hands")
+                    rolls_advance.append(self.roll("holding hands"))
+            self.log_roll("flyout", "flyout", rolls_advance, False, fielder=fielder)
 
         elif self.ty == EventType.GROUND_OUT:
             # All groundout baserunner situations and the number of extra rolls used
