@@ -22,7 +22,7 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             multiplier -= 0.2
         elif mod == "GROWTH":
             # todo: do we ever want this for other positions?
-            if position == "batter" and attr not in ["patheticism", "thwackability"]:
+            if attr not in ["patheticism", "thwackability", "ruthlessness"]:
                 multiplier += min(0.05, 0.05 * (meta.day / 99))
         elif mod == "HIGH_PRESSURE":
             # checks for flooding weather and baserunners
@@ -31,10 +31,8 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
                 # "should we really boost the pitcher when the *other* team's batters are on base" yes.
                 multiplier += 0.25
         elif mod == "TRAVELING":
-            if meta.top_of_inning and position == "batter":
-                if attr in ["patheticism", "thwackability"]:
-                    multiplier -= 0
-                else:
+            if (meta.top_of_inning and position == "batter") or (not meta.top_of_inning and position == "pitcher"):
+                if attr not in ["patheticism", "thwackability", "ruthlessness"]:
                     multiplier += 0.05
 
             # todo: do we ever want this?
@@ -50,28 +48,39 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
         elif mod == "CHUNKY" and meta.weather == Weather.PEANUTS:
             # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
             #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
-            if attr in ["musclitude", "divinity", "ground_friction"]:
+            # gfric boost hasn't been "tested" necessarily
+            if attr in ["musclitude", "divinity"]:
                 multiplier += 1.0
+            elif attr == "ground_friction":
+                multiplier += 0.5
         elif mod == "SMOOTH" and meta.weather == Weather.PEANUTS:
             # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted everything in
             #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
-            # if attr in [
-            #     "musclitude",
-            #     "continuation",
-            #     "ground_friction",
-            #     "laserlikeness",
-            # ]:
-            #     multiplier += 1.0
+            # the musc boost here has been "tested in the data", the others have not
             if attr == "musclitude":
                 multiplier += 0.15
+            elif attr == "continuation":
+                multiplier += 0.50
+            elif attr == "ground_friction":
+                multiplier += 0.50
+            elif attr == "laserlikeness":
+                multiplier += 0.80
         elif mod == "ON_FIRE":
-            # todo: figure out how the heck "on fire" works
-            pass
+            # still some room for error here (might include gf too)
+            if attr == "thwackability":
+                multiplier += 4 if meta.season >= 13 else 3
+            if attr == "moxie":
+                multiplier += 2 if meta.season >= 13 else 1
         elif mod == "MINIMALIST":
             if meta.is_maximum_blaseball:
                 multiplier -= 0.75
+        elif mod == "MAXIMALIST":
+            # not "seen in the data" yet
+            if meta.is_maximum_blaseball:
+                multiplier += 2.50
 
-    if player.name == "Sutton Dreamy" and meta.weather == Weather.ECLIPSE:
+    if player.data.get("bat") == "NIGHT_VISION_GOGGLES" and meta.weather == Weather.ECLIPSE:
+        # Blessing description: Item. Random player on your team hits 50% better during Solar Eclipses.
         if attr == "thwackability":
             multiplier += 0.5
     return multiplier
@@ -167,7 +176,7 @@ def get_swing_ball_threshold(
     if combined < 0:
         return float("nan")
 
-    threshold = max(min(combined ** 1.5, 0.95), 0.1)
+    threshold = max(min(combined**1.5, 0.95), 0.1)
     return threshold
 
 
@@ -208,7 +217,7 @@ def get_contact_strike_threshold(
         14: (0.78, 0.17, 0.925),
     }[meta.season]
 
-    threshold = constant - 0.08 * ruth + 0.16 * ballpark_sum + batting_factor * (combined_batting ** 1.2)
+    threshold = constant - 0.08 * ruth + 0.16 * ballpark_sum + batting_factor * (combined_batting**1.2)
     return min(cap, threshold)
 
 
@@ -223,9 +232,12 @@ def get_contact_ball_threshold(
     batter_vibes = batter.vibes(meta.day)
     pitcher_vibes = pitcher.vibes(meta.day)
 
-    invpath = (1 - batter.data["patheticism"] / get_multiplier(batter, batting_team, "batter", "patheticism", meta)) * (
-        1 + 0.2 * batter_vibes
+    invpath = max(
+        (1 - batter.data["patheticism"] / get_multiplier(batter, batting_team, "batter", "patheticism", meta))
+        * (1 + 0.2 * batter_vibes),
+        0,
     )
+
     ruth = (
         pitcher.data["ruthlessness"]
         * get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)
@@ -237,11 +249,14 @@ def get_contact_ball_threshold(
     fwd = stadium.data["forwardness"] - 0.5
     ballpark_sum = (fort + 3 * visc - 6 * fwd) / 10
 
-    constant, path_factor, cap = {11: (0.35, 0.4, 1), 12: (0.35, 0.4, 1), 13: (0.4, 0.35, 1), 14: (0.4, 0.35, 1)}[
-        meta.season
-    ]
+    constant, path_factor, cap = {
+        11: (0.35, 0.4, 1),
+        12: (0.35, 0.4, 1),
+        13: (0.4, 0.35, 1),
+        14: (0.4, 0.35, 1),
+    }[meta.season]
 
-    threshold = constant - 0.1 * ruth + path_factor * (invpath ** 1.5) + 0.14 * ballpark_sum
+    threshold = constant - 0.1 * ruth + path_factor * (invpath**1.5) + 0.14 * ballpark_sum
     return min(cap, threshold)
 
 
@@ -263,4 +278,43 @@ def get_foul_threshold(batter: PlayerData, batting_team: TeamData, stadium: Stad
     batter_sum = (musc + thwack + div) / 3
 
     threshold = 0.25 + 0.1 * fwd - 0.1 * obt + 0.1 * batter_sum
+    return threshold
+
+
+def get_hr_threshold(
+    batter: PlayerData,
+    batting_team: TeamData,
+    pitcher: PlayerData,
+    pitching_team: TeamData,
+    stadium: StadiumData,
+    meta: StatRelevantData,
+):
+    batter_vibes = batter.vibes(meta.day)
+    pitcher_vibes = pitcher.vibes(meta.day)
+
+    div = (
+        batter.data["divinity"]
+        * get_multiplier(batter, batting_team, "batter", "divinity", meta)
+        * (1 + 0.2 * batter_vibes)
+    )
+    opw = (
+        pitcher.data["overpowerment"]
+        * get_multiplier(pitcher, pitching_team, "pitcher", "overpowerment", meta)
+        * (1 + 0.2 * pitcher_vibes)
+    )
+    supp = (
+        pitcher.data["suppression"]
+        * get_multiplier(pitcher, pitching_team, "pitcher", "suppression", meta)
+        * (1 + 0.2 * pitcher_vibes)
+    )
+
+    grand = stadium.data["grandiosity"] - 0.5
+    fort = stadium.data["fortification"] - 0.5
+    visc = stadium.data["viscosity"] - 0.5
+    om = stadium.data["ominousness"] - 0.5
+    fwd = stadium.data["forwardness"] - 0.5
+    ballpark_sum = 0.4 * grand + 0.2 * fort + 0.08 * visc + 0.08 * om - 0.24 * fwd
+
+    opw_supp = (10 * opw + supp) / 11
+    threshold = 0.12 + 0.16 * div - 0.08 * opw_supp - 0.18 * ballpark_sum
     return threshold

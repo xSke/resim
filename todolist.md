@@ -1,8 +1,5 @@
-## Short-term to do
-- rename `what1` and `what2` and make sure they're in actually relevant locations
-
 ## To do
-- Runner extra advancement on hits
+- better error reporting for multiprocessing?
 - Expand to Discipline Era
 - Expand to remainder of Expansion Era
 - Investigate items
@@ -23,6 +20,7 @@
 
 ## In progress
 - Runner advancement on flyouts
+- Runner extra advancement on hits
 - Steal attempts formula
 - Steal success formula
 - Echo/feedback activation

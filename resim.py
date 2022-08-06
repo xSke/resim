@@ -11,6 +11,7 @@ from typing import List
 from formulas import (
     get_contact_strike_threshold,
     get_contact_ball_threshold,
+    get_hr_threshold,
     get_strike_threshold,
     get_foul_threshold,
     StatRelevantData,
@@ -469,14 +470,10 @@ class Resim:
                 timestamp = self.event["created"]
                 self.data.fetch_league_data(timestamp, 20)
 
-            if (
-                self.weather
-                in [
-                    Weather.FEEDBACK,
-                    Weather.REVERB,
-                ]
-                and self.stadium.has_mod("PSYCHOACOUSTICS")
-            ):
+            if self.weather in [
+                Weather.FEEDBACK,
+                Weather.REVERB,
+            ] and self.stadium.has_mod("PSYCHOACOUSTICS"):
                 self.print("away team mods:", self.away_team.data["permAttr"])
                 self.roll("echo team mod")
             return True
@@ -595,6 +592,18 @@ class Resim:
             # skipping mild proc
             return True
 
+    def roll_hr(self, is_hr):
+        roll = self.roll("home run")
+
+        threshold = get_hr_threshold(
+            self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
+        )
+        if is_hr and roll > threshold:
+            self.print("!!! warn: home run roll too high ({} > {})".format(roll, threshold))
+        elif not is_hr and roll < threshold:
+            self.print("!!! warn: home run roll too low ({} < {})".format(roll, threshold))
+        return roll
+
     def roll_swing(self, did_swing: bool):
         roll = self.roll("swing")
 
@@ -607,9 +616,7 @@ class Resim:
                 self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
             )
 
-        if not (self.batting_team.has_mod("O_NO") and self.strikes == self.max_strikes - 1) and not self.batter.has_mod(
-            "ON_FIRE"
-        ):
+        if not (self.batting_team.has_mod("O_NO") and self.strikes == self.max_strikes - 1):
             if did_swing and roll > threshold:
                 self.print(
                     "!!! warn: swing on {} roll too high ({} > {})".format(
@@ -637,9 +644,7 @@ class Resim:
                 self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
             )
 
-        if not (self.batting_team.has_mod("O_NO") and self.strikes == self.max_strikes - 1) and not self.batter.has_mod(
-            "ON_FIRE"
-        ):
+        if not (self.batting_team.has_mod("O_NO") and self.strikes == self.max_strikes - 1):
             if did_contact and roll > threshold:
                 self.print(
                     "!!! warn: contact on {} roll too high ({} > {})".format(
@@ -1064,7 +1069,7 @@ class Resim:
                 fielder=self.get_fielder_for_roll(fielder_roll),
             )
 
-            hr_roll = self.roll("home run")
+            hr_roll = self.roll_hr(True)
             self.log_roll("hr", "HomeRun", hr_roll, True)
         else:
             # not sure why we need this
@@ -1100,7 +1105,7 @@ class Resim:
             fielder=self.get_fielder_for_roll(fielder_roll),
         )
 
-        hr_roll = self.roll("home run")
+        hr_roll = self.roll_hr(False)
         self.log_roll("hr", "BaseHit", hr_roll, False)
 
         defender_roll = self.roll("hit fielder")
@@ -1155,7 +1160,7 @@ class Resim:
 
     def roll_foul(self, known_outcome: bool):
         is_0_no_eligible = self.batting_team.has_mod("O_NO") and self.strikes == 2 and self.balls == 0
-        if is_0_no_eligible or self.batter.has_any("ON_FIRE", "SPICY", "CHUNKY", "SMOOTH"):
+        if is_0_no_eligible or self.batter.has_any("CHUNKY", "SMOOTH"):
             known_outcome = None
 
         meta = self.get_stat_meta()
@@ -1890,11 +1895,10 @@ class Resim:
         self.strike_roll = roll
         self.strike_threshold = threshold
 
-        if not self.batter.has_mod("ON_FIRE"):
-            if known_result == "strike" and roll > threshold:
-                self.print(f"!!! warn: too high strike roll (threshold {threshold})")
-            elif known_result == "ball" and roll < threshold:
-                self.print(f"!!! warn: too low strike roll (threshold {threshold})")
+        if known_result == "strike" and roll > threshold:
+            self.print(f"!!! warn: too high strike roll (threshold {threshold})")
+        elif known_result == "ball" and roll < threshold:
+            self.print(f"!!! warn: too low strike roll (threshold {threshold})")
 
         # todo: double strike
 
@@ -1956,7 +1960,7 @@ class Resim:
             self.strike_threshold,
             fielder_roll,
             fielder,
-            self.get_batter_multiplier(fielder),  # uhhhhhhhhh
+            self.get_fielder_multiplier(fielder) if fielder else 1,  # uhhhhhhhhh
             runner_on_first,
             runner_on_first_multiplier,
             runner_on_second,
@@ -2206,7 +2210,6 @@ class Resim:
                     return update["awayScore"], update["homeScore"]
 
     def run(self, start_timestamp, end_timestamp, progress_callback):
-        print(f"Starting fragment at {start_timestamp}")
         self.data.fetch_league_data(start_timestamp)
         feed_events = get_feed_between(start_timestamp, end_timestamp)
 
@@ -2233,6 +2236,7 @@ class Resim:
         return value
 
     def get_batter_multiplier(self, relevant_batter=None, relevant_attr=None):
+        # todo: retire in favor of get_multiplier() in formulas.py? this is only being used for logging right now...
         batter = relevant_batter or self.batter
         # attr = relevant_attr
 
@@ -2278,6 +2282,7 @@ class Resim:
         return batter_multiplier
 
     def get_pitcher_multiplier(self, relevant_attr=None):
+        # todo: retire in favor of get_multiplier() in formulas.py? this is only being used for logging right now...
         pitcher_multiplier = 1
         # attr = relevant_attr
         # growth or traveling do not work for pitchers as of s14
@@ -2298,6 +2303,7 @@ class Resim:
         return pitcher_multiplier
 
     def get_fielder_multiplier(self, relevant_fielder=None, relevant_attr=None):
+        # todo: retire in favor of get_multiplier() in formulas.py? this is only being used for logging right now...
         fielder = relevant_fielder or self.fielder
         # attr = relevant_attr
 
@@ -2348,7 +2354,6 @@ class Resim:
         return fielder_multiplier
 
     def save_data(self):
-        print("Saving data...")
         for csv in self.csvs.values():
             csv.close()
 
