@@ -1926,28 +1926,28 @@ class Resim:
         if not self.csvs:
             return
         roll_csv = self.csvs[csv_name]
-        relevant_runner_multiplier = self.get_batter_multiplier(relevant_runner)
+        relevant_runner_multiplier = self.get_runner_multiplier(relevant_runner)
         runner_1st = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 0]
         runner_2nd = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 1]
         runners_3rd = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 2]
         if runner_1st:
             runner_on_first = self.data.get_player(runner_1st[0])
-            runner_on_first_multiplier = self.get_batter_multiplier(runner_on_first)
+            runner_on_first_multiplier = self.get_runner_multiplier(runner_on_first)
         else:
             runner_on_first, runner_on_first_multiplier = None, 1
         if runner_2nd:
             runner_on_second = self.data.get_player(runner_2nd[0])
-            runner_on_second_multiplier = self.get_batter_multiplier(runner_on_second)
+            runner_on_second_multiplier = self.get_runner_multiplier(runner_on_second)
         else:
             runner_on_second, runner_on_second_multiplier = None, 1
         if runners_3rd:
             runner_on_third = self.data.get_player(runners_3rd[0])
-            runner_on_third_multiplier = self.get_batter_multiplier(runner_on_third)
+            runner_on_third_multiplier = self.get_runner_multiplier(runner_on_third)
         else:
             runner_on_third, runner_on_third_multiplier = None, 1
         if len(runners_3rd) == 2:  # Holding hands
             runner_on_third_hh = self.data.get_player(runners_3rd[1])
-            runner_on_third_hh_multiplier = self.get_batter_multiplier(runner_on_third_hh)
+            runner_on_third_hh_multiplier = self.get_runner_multiplier(runner_on_third_hh)
         else:
             runner_on_third_hh, runner_on_third_hh_multiplier = None, 1
         roll_csv.write(
@@ -2332,13 +2332,13 @@ class Resim:
                     # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
                     fielder_multiplier += 0.25
             elif mod == "TRAVELING":
-                if self.update["topOfInning"]:
+                if not self.update["topOfInning"]:
                     fielder_multiplier += 0.05
             elif mod == "SINKING_SHIP":
                 roster_size = len(self.pitching_team.data["lineup"]) + len(self.pitching_team.data["rotation"])
                 fielder_multiplier += (14 - roster_size) * 0.01
-            elif mod == "AFFINITY_FOR_CROWS" and self.weather == Weather.BIRDS:
-                fielder_multiplier += 0.5
+            # elif mod == "AFFINITY_FOR_CROWS" and self.weather == Weather.BIRDS:
+            #     fielder_multiplier += 0.5
             elif mod == "SHELLED":
                 # lol, lmao
                 # is it this, or is it "mul = 0", I wonder
@@ -2363,6 +2363,14 @@ class Resim:
             #     # todo: figure out how the heck "on fire" works
             #     pass
         return fielder_multiplier
+
+    def get_runner_multiplier(self, runner, relevant_attr=None):
+
+        runner_multiplier = 1
+
+        # It looks like no multipliers apply based on hit advancement.
+
+        return runner_multiplier
 
     def save_data(self):
         for csv in self.csvs.values():
