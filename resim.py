@@ -56,17 +56,13 @@ class Resim:
                     "out",
                     "fly",
                     "party",
-                    "fc-dp",
-                    "dp",
-                    "dp-tworunners",
-                    "dp-basesloaded",
-                    "advancement",
                     "bird-message",
                     "consumers",
-                    "groundout",
-                    "haunted",
-                    "flyout",
                     "hitadvance",
+                    "flyout",
+                    "groundout",
+                    "groundout_formulas",
+                    "haunted",
                 ]
             }
         else:
@@ -909,9 +905,9 @@ class Resim:
                 ((0,), tuple()): 2,  # !DP roll (pass), DP where (unused)
                 ((0,), (0,)): 2,  # !DP roll (fail), !martyr roll (fail)
                 ((0,), (1,)): 3,  # !DP roll (fail), !martyr roll (pass) + advance (unused)
-                ((1,), (1,)): 2,  # !unused, !advance(fail)
-                ((1,), (2,)): 2,  # !unused, !advance(pass)
-                ((2,), tuple()): 2,  # !unused, !advance(pass)
+                ((1,), (1,)): 2,  # !unused, !advance (fail)
+                ((1,), (2,)): 2,  # !unused, !advance (pass)
+                ((2,), tuple()): 2,  # !unused, !advance (pass)
                 ((2,), (2,)): 2,  # !unused, !advance (fail)
                 ((1, 0), tuple()): 2,  # !DP roll (pass), DP where (unused)
                 ((1, 0), (1,)): 2,  # !DP roll (pass), !roll<0.50 out at 3rd
@@ -937,16 +933,16 @@ class Resim:
                 ((2, 1, 2, 0), (2, 0)): 3,  # ?DP roll (fail), ?martyr roll(fail), ???
             }
 
-            # fc_dp_event_type = "Out"
+            event_type = "Out"
             if "reaches on fielder's choice" in self.desc:
                 # !DP roll (fail), !martyr roll (fail)
                 extras[((2, 0), (0,))] = 2  # what
-                # fc_dp_event_type = "FC"
+                event_type = "FC"
 
             if "into a double play!" in self.desc:
                 # !DP roll (pass), !roll<0.33 out at home
                 extras[((2, 1, 0), (2, 1))] = 2
-                # fc_dp_event_type = "DP"
+                event_type = "DP"
 
             extra_roll_desc = extras[
                 (
@@ -955,6 +951,55 @@ class Resim:
                 )
             ]
             extra_rolls = [self.roll("extra") for _ in range(extra_roll_desc)]
+
+            # DP rolls
+            if 0 in self.update["basesOccupied"]:
+                self.log_roll("groundout_formulas", "DP", extra_rolls[0], event_type=="DP", fielder=fielder)
+
+            # Martyr/Sacrifice rolls
+            if ((self.update["basesOccupied"] in [[0]]) and (self.next_update["basesOccupied"] in [[0],[1]])) \
+                or ((self.update["basesOccupied"] in [[1,0]]) and (self.next_update["basesOccupied"] in [[1,0],[2,1]])) \
+                or ((self.update["basesOccupied"] in [[2,0]]) and (self.next_update["basesOccupied"] in [[0],[1],[2,1]])) \
+                or ((self.update["basesOccupied"] in [[2,1,0]]) and (self.next_update["basesOccupied"] in [[2,1],[2,1,0]]) and (event_type != "DP")):
+
+                passed = ((self.update["basesOccupied"] in [[0]]) and (self.next_update["basesOccupied"] in [[1]])) \
+                            or ((self.update["basesOccupied"] in [[1,0]]) and (self.next_update["basesOccupied"] in [[2,1]])) \
+                            or ((self.update["basesOccupied"] in [[2,0]]) and (len(extra_rolls) == 4)) \
+                            or ((self.update["basesOccupied"] in [[2,1,0]]) and (self.next_update["basesOccupied"] in [[2,1]]))
+
+                self.log_roll("groundout_formulas", "Sac", extra_rolls[1], passed, fielder=fielder)
+
+            # Advance from 1st base
+            if (self.update["basesOccupied"] in [[2,0]]) and (self.next_update["basesOccupied"] in [[0],[1]]) and (len(extra_rolls) == 4):
+                runner = self.data.get_player(self.update["baseRunners"][1])
+                passed = self.next_update["basesOccupied"] == [1]
+                self.log_roll("groundout_formulas", "advance", extra_rolls[3], passed, fielder=fielder, relevant_runner=runner)
+
+            # Advance from 2nd base
+            if (self.update["basesOccupied"] in [[2,1]]):
+                runner = self.data.get_player(self.update["baseRunners"][1])
+                passed = self.next_update["basesOccupied"] in [[2],[2,2]]
+                self.log_roll("groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner)
+
+            # Advance from 3rd base
+            # [2,0] situation
+            if (self.update["basesOccupied"] in [[2,0]]) and (self.next_update["basesOccupied"] in [[0],[1],[2,1]]) and (len(extra_rolls) == 4):
+                runner = self.data.get_player(self.update["baseRunners"][0])
+                passed = self.next_update["basesOccupied"] in [[0],[1]]
+                self.log_roll("groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner)
+            # [2,1] situation
+            if (self.update["basesOccupied"] in [[2,1]]):
+                runner = self.data.get_player(self.update["baseRunners"][0])
+                passed = self.next_update["basesOccupied"] in [[1],[2]]
+                self.log_roll("groundout_formulas", "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner)
+            # [2,2] situation
+            if (self.update["basesOccupied"] in [[2,2]]):
+                if (self.next_update["basesOccupied"] in [[],[2,2]]): # Can't tell with [2] final state! Need to check actual runners
+                    passed = self.next_update["basesOccupied"] in [[]]
+                    runner = self.data.get_player(self.update["baseRunners"][0])
+                    self.log_roll("groundout_formulas", "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner)
+                    runner = self.data.get_player(self.update["baseRunners"][1])
+                    self.log_roll("groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner)
 
             # Here's a csv for looking at *any* groundout
             # No Implied pass/fail, and contains ALL extra rolls
