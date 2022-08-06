@@ -16,13 +16,8 @@ def offset_timestamp(timestamp: str, delta_secs: float) -> str:
     return timestamp.replace("+00:00", "Z")
 
 
-cache = {}
-
-
 def get_cached(key, url):
     key = key.replace(":", "_")
-    if key in cache:
-        return cache[key]
 
     path = os.path.join("cache", key + ".json")
     if not os.path.exists(os.path.dirname(path)):
@@ -32,7 +27,6 @@ def get_cached(key, url):
         with open(path, "r", encoding="utf-8") as f:
             try:
                 data = json.load(f)
-                cache[key] = data
                 return data
             except json.JSONDecodeError:
                 pass
@@ -40,7 +34,6 @@ def get_cached(key, url):
     data = requests.get(url).json()
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f)
-    cache[key] = data
     return data
 
 
@@ -455,7 +448,3 @@ def calculate_vibes(player, day) -> float:
     pressurization = player["pressurization"]
     cinnamon = player["cinnamon"] or 0
     return 0.5 * ((sin_phase - 1) * pressurization + (sin_phase + 1) * cinnamon)
-
-
-def clear_cache():
-    cache.clear()

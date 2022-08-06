@@ -7,7 +7,7 @@ from typing import Optional
 
 from tqdm import tqdm
 
-from data import get_feed_between, clear_cache
+from data import get_feed_between
 from resim import Resim
 from rng import Rng
 
@@ -98,9 +98,13 @@ def get_out_file(silent, out_file_name, start_time):
 def main():
     args = parse_args()
 
-    print("Loading events...")
-    total_events = sum(len(get_feed_between(start_time, end_time)) for _, _, _, start_time, end_time in FRAGMENTS)
+    print("Counting events...")
+    total_events = sum(
+        len(get_feed_between(start_time, end_time))
+        for _, _, _, start_time, end_time in tqdm(FRAGMENTS, unit="fragments")
+    )
 
+    print("Running resim...")
     with tqdm(total=total_events, unit="events") as progress:
         if args.no_multiprocessing:
 
@@ -159,8 +163,6 @@ def run_fragment(pool_args, progress_callback=None):
 
     if progress_queue:
         progress_queue.put(unreported_progress)
-
-    clear_cache()
 
 
 if __name__ == "__main__":
