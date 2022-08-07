@@ -270,7 +270,7 @@ class Resim:
             EventType.PLAYER_STAT_INCREASE,
             EventType.PLAYER_STAT_DECREASE,
         ]:
-            if "are Bottom Dwellers" in self.desc:         
+            if "are Bottom Dwellers" in self.desc:
                 team = self.data.get_team(self.event["teamTags"][0])
                 # boost amounts are 0.04 * roll + 0.01, rolled in this order:
                 # Omniscience, Tenaciousness, Watchfulness, Anticapitalism, Chasiness,
@@ -979,52 +979,92 @@ class Resim:
 
             # DP rolls
             if 0 in self.update["basesOccupied"]:
-                self.log_roll("groundout_formulas", "DP", extra_rolls[0], event_type=="DP", fielder=fielder)
+                self.log_roll("groundout_formulas", "DP", extra_rolls[0], event_type == "DP", fielder=fielder)
 
             # Martyr/Sacrifice rolls
-            if ((self.update["basesOccupied"] in [[0]]) and (self.next_update["basesOccupied"] in [[0],[1]])) \
-                or ((self.update["basesOccupied"] in [[1,0]]) and (self.next_update["basesOccupied"] in [[1,0],[2,1]])) \
-                or ((self.update["basesOccupied"] in [[2,0]]) and (self.next_update["basesOccupied"] in [[0],[1],[2,1]])) \
-                or ((self.update["basesOccupied"] in [[2,1,0]]) and (self.next_update["basesOccupied"] in [[2,1],[2,1,0]]) and (event_type != "DP")):
+            if (
+                ((self.update["basesOccupied"] in [[0]]) and (self.next_update["basesOccupied"] in [[0], [1]]))
+                or (
+                    (self.update["basesOccupied"] in [[1, 0]])
+                    and (self.next_update["basesOccupied"] in [[1, 0], [2, 1]])
+                )
+                or (
+                    (self.update["basesOccupied"] in [[2, 0]])
+                    and (self.next_update["basesOccupied"] in [[0], [1], [2, 1]])
+                )
+                or (
+                    (self.update["basesOccupied"] in [[2, 1, 0]])
+                    and (self.next_update["basesOccupied"] in [[2, 1], [2, 1, 0]])
+                    and (event_type != "DP")
+                )
+            ):
 
-                passed = ((self.update["basesOccupied"] in [[0]]) and (self.next_update["basesOccupied"] in [[1]])) \
-                            or ((self.update["basesOccupied"] in [[1,0]]) and (self.next_update["basesOccupied"] in [[2,1]])) \
-                            or ((self.update["basesOccupied"] in [[2,0]]) and (len(extra_rolls) == 4)) \
-                            or ((self.update["basesOccupied"] in [[2,1,0]]) and (self.next_update["basesOccupied"] in [[2,1]]))
+                passed = (
+                    ((self.update["basesOccupied"] in [[0]]) and (self.next_update["basesOccupied"] in [[1]]))
+                    or ((self.update["basesOccupied"] in [[1, 0]]) and (self.next_update["basesOccupied"] in [[2, 1]]))
+                    or ((self.update["basesOccupied"] in [[2, 0]]) and (len(extra_rolls) == 4))
+                    or (
+                        (self.update["basesOccupied"] in [[2, 1, 0]])
+                        and (self.next_update["basesOccupied"] in [[2, 1]])
+                    )
+                )
 
                 self.log_roll("groundout_formulas", "Sac", extra_rolls[1], passed, fielder=fielder)
 
             # Advance from 1st base
-            if (self.update["basesOccupied"] in [[2,0]]) and (self.next_update["basesOccupied"] in [[0],[1]]) and (len(extra_rolls) == 4):
+            if (
+                (self.update["basesOccupied"] in [[2, 0]])
+                and (self.next_update["basesOccupied"] in [[0], [1]])
+                and (len(extra_rolls) == 4)
+            ):
                 runner = self.data.get_player(self.update["baseRunners"][1])
                 passed = self.next_update["basesOccupied"] == [1]
-                self.log_roll("groundout_formulas", "advance", extra_rolls[3], passed, fielder=fielder, relevant_runner=runner)
+                self.log_roll(
+                    "groundout_formulas", "advance", extra_rolls[3], passed, fielder=fielder, relevant_runner=runner
+                )
 
             # Advance from 2nd base
-            if (self.update["basesOccupied"] in [[2,1]]):
+            if self.update["basesOccupied"] in [[2, 1]]:
                 runner = self.data.get_player(self.update["baseRunners"][1])
-                passed = self.next_update["basesOccupied"] in [[2],[2,2]]
-                self.log_roll("groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner)
+                passed = self.next_update["basesOccupied"] in [[2], [2, 2]]
+                self.log_roll(
+                    "groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
+                )
 
             # Advance from 3rd base
             # [2,0] situation
-            if (self.update["basesOccupied"] in [[2,0]]) and (self.next_update["basesOccupied"] in [[0],[1],[2,1]]) and (len(extra_rolls) == 4):
+            if (
+                (self.update["basesOccupied"] in [[2, 0]])
+                and (self.next_update["basesOccupied"] in [[0], [1], [2, 1]])
+                and (len(extra_rolls) == 4)
+            ):
                 runner = self.data.get_player(self.update["baseRunners"][0])
-                passed = self.next_update["basesOccupied"] in [[0],[1]]
-                self.log_roll("groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner)
+                passed = self.next_update["basesOccupied"] in [[0], [1]]
+                self.log_roll(
+                    "groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
+                )
             # [2,1] situation
-            if (self.update["basesOccupied"] in [[2,1]]):
+            if self.update["basesOccupied"] in [[2, 1]]:
                 runner = self.data.get_player(self.update["baseRunners"][0])
-                passed = self.next_update["basesOccupied"] in [[1],[2]]
-                self.log_roll("groundout_formulas", "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner)
+                passed = self.next_update["basesOccupied"] in [[1], [2]]
+                self.log_roll(
+                    "groundout_formulas", "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner
+                )
             # [2,2] situation
-            if (self.update["basesOccupied"] in [[2,2]]):
-                if (self.next_update["basesOccupied"] in [[],[2,2]]): # Can't tell with [2] final state! Need to check actual runners
+            if self.update["basesOccupied"] in [[2, 2]]:
+                if self.next_update["basesOccupied"] in [
+                    [],
+                    [2, 2],
+                ]:  # Can't tell with [2] final state! Need to check actual runners
                     passed = self.next_update["basesOccupied"] in [[]]
                     runner = self.data.get_player(self.update["baseRunners"][0])
-                    self.log_roll("groundout_formulas", "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner)
+                    self.log_roll(
+                        "groundout_formulas", "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner
+                    )
                     runner = self.data.get_player(self.update["baseRunners"][1])
-                    self.log_roll("groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner)
+                    self.log_roll(
+                        "groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
+                    )
 
             # Here's a csv for looking at *any* groundout
             # No Implied pass/fail, and contains ALL extra rolls
@@ -1462,7 +1502,9 @@ class Resim:
                     self.roll("stat")
                 return True
 
-            if self.weather.can_echo() and ((self.batter and self.batter.has_mod("ECHO")) or (self.pitcher and self.pitcher.has_mod("ECHO"))):
+            if self.weather.can_echo() and (
+                (self.batter and self.batter.has_mod("ECHO")) or (self.pitcher and self.pitcher.has_mod("ECHO"))
+            ):
                 # echo vs static, or batter echo vs pitcher echo?
                 if self.ty in [EventType.ECHO_MESSAGE, EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
                     eligible_players = []
@@ -2452,7 +2494,7 @@ class Resim:
             #     # todo: figure out how the heck "on fire" works
             #     pass
         return fielder_multiplier
-    
+
     def generate_player(self):
         self.roll("first name")
         self.roll("last name")
