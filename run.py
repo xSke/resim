@@ -26,6 +26,7 @@ FRAGMENTS = [
     ((617776737860945499, 6965272805741501853), 10, 0, "2021-03-04T19:00:00.000Z", "2021-03-05T19:15:00.000Z"),
     # mid-game restart during S12D98, between 2021-03-05T19:14:36.000Z and 2021-03-05T19:15:10.091Z
     ((3038364565806058511, 15510617008273015236), 0, 0, "2021-03-05T19:15:00.000Z", "2021-03-05T21:50:16.083Z"),
+    ((11460721463282082147, 11936110632627786929), 53, 0, "2021-03-05T22:00:00Z", "2021-03-06T18:50:00.000Z"),
     # SEASON 13:
     ((2300985152363521761, 16070535759624553037), 0, 0, "2021-03-08T16:00:00.000Z", "2021-03-09T01:50:00.000Z"),
     # deploy at 2021-03-09T01:55:00Z
@@ -148,7 +149,7 @@ def main():
                         pass  # Check loop condition and wait again
                     else:
                         progress.update(new_progress)
-                result.get() # reraise any exception from the processes
+                result.get()  # reraise any exception from the processes
     print("Finished")
 
 
