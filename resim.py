@@ -35,6 +35,8 @@ class Resim:
         self.is_strike = None
         self.strike_roll = None
         self.strike_threshold = None
+        self.game_id = None
+        self.play = None
 
         if run_name:
             os.makedirs("roll_data", exist_ok=True)
@@ -110,6 +112,10 @@ class Resim:
             )
         self.print(f"===== {self.ty.value} {self.desc}")
         self.print(f"===== rng pos: {self.rng.get_state_str()}")
+
+        # I have no idea why there's an extra roll here, but it works.
+        if self.game_id == "e1fda957-f4ac-4188-835d-265a67b9585d" and self.play == 145:
+            self.roll("???")
 
         if self.handle_misc():
             return
@@ -264,6 +270,19 @@ class Resim:
             EventType.PLAYER_STAT_INCREASE,
             EventType.PLAYER_STAT_DECREASE,
         ]:
+            if "are Bottom Dwellers" in self.desc:
+                team = self.data.get_team(self.event["teamTags"][0])
+                # boost amounts are 0.04 * roll + 0.01, rolled in this order:
+                # Omniscience, Tenaciousness, Watchfulness, Anticapitalism, Chasiness,
+                # Shakespearianism, Suppression, Unthwackability, Coldness, Overpowerment, Ruthlessness,
+                # Base Thirst, Laserlikeness, Ground Friction, Continuation, Indulgence,
+                # Tragicness, Buoyancy, Thwackability, Moxie, Divinity, Musclitude, Patheticism, Martyrdom, Cinnamon
+                for player_id in team.data["lineup"]:
+                    for _ in range(25):
+                        self.roll("stat")
+                for player_id in team.data["rotation"]:
+                    for _ in range(25):
+                        self.roll("stat")
             # skip party/consumer stat change
             return True
         if self.ty in [
@@ -297,12 +316,24 @@ class Resim:
                     self.roll("stat")
 
             return True
+        if self.ty == EventType.EXISTING_PLAYER_ADDED_TO_ILB:
+            if "pulled through the Rift" in self.desc:
+                # The Second Wyatt Masoning
+                # The rolls normally assigned to "Let's Go" happen before the Second Wyatt Masoning
+                if self.desc == "Wyatt Mason was pulled through the Rift.":
+                    for _ in range(12):
+                        self.roll("game start")
+                self.generate_player()
+            return True
         if self.ty in [
             EventType.PLAYER_ADDED_TO_TEAM,
-            EventType.POSTSEASON_SPOT,
             EventType.BIG_DEAL,
+            EventType.WON_INTERNET_SERIES,
         ]:
             # skip postseason
+            return True
+        if self.ty == EventType.POSTSEASON_SPOT:
+            self.generate_player()
             return True
         if self.ty in [EventType.REVERB_ROTATION_SHUFFLE, EventType.REVERB_FULL_SHUFFLE]:
             # skip reverb
@@ -388,7 +419,11 @@ class Resim:
             if self.event["day"] >= 99:
                 self.roll("game start")
 
-            if self.event["day"] != 98:
+            if self.event["day"] != 98 and (
+                # These rolls happen before the Second Wyatt Masoning
+                self.event["season"] != 13
+                or self.event["day"] != 72
+            ):
                 # *why*
                 self.roll("game start")
 
@@ -453,6 +488,12 @@ class Resim:
                 "0b4929f8-68ed-4c99-b3bd-b65a7d8bc63e": 1,
                 "5a350a9d-8c13-49be-b4ca-845d5573ff6d": 1,
                 "f15ace24-7fae-46f2-b16e-c18bb4bd630f": 1,
+                "3ff91111-7862-442e-aa59-c338871c63fe": 2,
+                "1514e79b-e14b-45e0-aada-dad2ba4d753d": 1,
+                "6173c3f5-f244-405d-b9a3-62fe8c48e656": 1,
+                "7fda4e9c-a20e-4163-aba3-6ad1663a747f": 1,
+                "b35f095d-9bc9-4a1c-822a-3749a7b83bcb": 1,
+                "a327e425-aaf4-4199-8292-bba0ec4a226a": 2,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -826,9 +867,8 @@ class Resim:
         if fielder_idx is not None:
             if rolled_idx != fielder_idx:
                 self.error(
-                    "incorrect fielder! expected {}, got {}, needs to be {:.3f}-{:.3f}\n{}".format(
-                        fielder_idx, rolled_idx, expected_min, expected_max, self.rng.get_state_str()
-                    )
+                    f"incorrect fielder! expected {fielder_idx}, got {rolled_idx}, needs to be {expected_min:.3f}-{expected_max:.3f}\n"
+                    f"{self.rng.get_state_str()}"
                 )
 
             matching = []
@@ -954,52 +994,92 @@ class Resim:
 
             # DP rolls
             if 0 in self.update["basesOccupied"]:
-                self.log_roll("groundout_formulas", "DP", extra_rolls[0], event_type=="DP", fielder=fielder)
+                self.log_roll("groundout_formulas", "DP", extra_rolls[0], event_type == "DP", fielder=fielder)
 
             # Martyr/Sacrifice rolls
-            if ((self.update["basesOccupied"] in [[0]]) and (self.next_update["basesOccupied"] in [[0],[1]])) \
-                or ((self.update["basesOccupied"] in [[1,0]]) and (self.next_update["basesOccupied"] in [[1,0],[2,1]])) \
-                or ((self.update["basesOccupied"] in [[2,0]]) and (self.next_update["basesOccupied"] in [[0],[1],[2,1]])) \
-                or ((self.update["basesOccupied"] in [[2,1,0]]) and (self.next_update["basesOccupied"] in [[2,1],[2,1,0]]) and (event_type != "DP")):
+            if (
+                ((self.update["basesOccupied"] in [[0]]) and (self.next_update["basesOccupied"] in [[0], [1]]))
+                or (
+                    (self.update["basesOccupied"] in [[1, 0]])
+                    and (self.next_update["basesOccupied"] in [[1, 0], [2, 1]])
+                )
+                or (
+                    (self.update["basesOccupied"] in [[2, 0]])
+                    and (self.next_update["basesOccupied"] in [[0], [1], [2, 1]])
+                )
+                or (
+                    (self.update["basesOccupied"] in [[2, 1, 0]])
+                    and (self.next_update["basesOccupied"] in [[2, 1], [2, 1, 0]])
+                    and (event_type != "DP")
+                )
+            ):
 
-                passed = ((self.update["basesOccupied"] in [[0]]) and (self.next_update["basesOccupied"] in [[1]])) \
-                            or ((self.update["basesOccupied"] in [[1,0]]) and (self.next_update["basesOccupied"] in [[2,1]])) \
-                            or ((self.update["basesOccupied"] in [[2,0]]) and (len(extra_rolls) == 4)) \
-                            or ((self.update["basesOccupied"] in [[2,1,0]]) and (self.next_update["basesOccupied"] in [[2,1]]))
+                passed = (
+                    ((self.update["basesOccupied"] in [[0]]) and (self.next_update["basesOccupied"] in [[1]]))
+                    or ((self.update["basesOccupied"] in [[1, 0]]) and (self.next_update["basesOccupied"] in [[2, 1]]))
+                    or ((self.update["basesOccupied"] in [[2, 0]]) and (len(extra_rolls) == 4))
+                    or (
+                        (self.update["basesOccupied"] in [[2, 1, 0]])
+                        and (self.next_update["basesOccupied"] in [[2, 1]])
+                    )
+                )
 
                 self.log_roll("groundout_formulas", "Sac", extra_rolls[1], passed, fielder=fielder)
 
             # Advance from 1st base
-            if (self.update["basesOccupied"] in [[2,0]]) and (self.next_update["basesOccupied"] in [[0],[1]]) and (len(extra_rolls) == 4):
+            if (
+                (self.update["basesOccupied"] in [[2, 0]])
+                and (self.next_update["basesOccupied"] in [[0], [1]])
+                and (len(extra_rolls) == 4)
+            ):
                 runner = self.data.get_player(self.update["baseRunners"][1])
                 passed = self.next_update["basesOccupied"] == [1]
-                self.log_roll("groundout_formulas", "advance", extra_rolls[3], passed, fielder=fielder, relevant_runner=runner)
+                self.log_roll(
+                    "groundout_formulas", "advance", extra_rolls[3], passed, fielder=fielder, relevant_runner=runner
+                )
 
             # Advance from 2nd base
-            if (self.update["basesOccupied"] in [[2,1]]):
+            if self.update["basesOccupied"] in [[2, 1]]:
                 runner = self.data.get_player(self.update["baseRunners"][1])
-                passed = self.next_update["basesOccupied"] in [[2],[2,2]]
-                self.log_roll("groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner)
+                passed = self.next_update["basesOccupied"] in [[2], [2, 2]]
+                self.log_roll(
+                    "groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
+                )
 
             # Advance from 3rd base
             # [2,0] situation
-            if (self.update["basesOccupied"] in [[2,0]]) and (self.next_update["basesOccupied"] in [[0],[1],[2,1]]) and (len(extra_rolls) == 4):
+            if (
+                (self.update["basesOccupied"] in [[2, 0]])
+                and (self.next_update["basesOccupied"] in [[0], [1], [2, 1]])
+                and (len(extra_rolls) == 4)
+            ):
                 runner = self.data.get_player(self.update["baseRunners"][0])
-                passed = self.next_update["basesOccupied"] in [[0],[1]]
-                self.log_roll("groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner)
+                passed = self.next_update["basesOccupied"] in [[0], [1]]
+                self.log_roll(
+                    "groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
+                )
             # [2,1] situation
-            if (self.update["basesOccupied"] in [[2,1]]):
+            if self.update["basesOccupied"] in [[2, 1]]:
                 runner = self.data.get_player(self.update["baseRunners"][0])
-                passed = self.next_update["basesOccupied"] in [[1],[2]]
-                self.log_roll("groundout_formulas", "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner)
+                passed = self.next_update["basesOccupied"] in [[1], [2]]
+                self.log_roll(
+                    "groundout_formulas", "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner
+                )
             # [2,2] situation
-            if (self.update["basesOccupied"] in [[2,2]]):
-                if (self.next_update["basesOccupied"] in [[],[2,2]]): # Can't tell with [2] final state! Need to check actual runners
+            if self.update["basesOccupied"] in [[2, 2]]:
+                if self.next_update["basesOccupied"] in [
+                    [],
+                    [2, 2],
+                ]:  # Can't tell with [2] final state! Need to check actual runners
                     passed = self.next_update["basesOccupied"] in [[]]
                     runner = self.data.get_player(self.update["baseRunners"][0])
-                    self.log_roll("groundout_formulas", "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner)
+                    self.log_roll(
+                        "groundout_formulas", "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner
+                    )
                     runner = self.data.get_player(self.update["baseRunners"][1])
-                    self.log_roll("groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner)
+                    self.log_roll(
+                        "groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
+                    )
 
             # Here's a csv for looking at *any* groundout
             # No Implied pass/fail, and contains ALL extra rolls
@@ -1287,17 +1367,7 @@ class Resim:
 
             if self.ty == EventType.INCINERATION:
                 self.roll("target")
-                # self.roll("target")
-                self.roll("first name")
-                self.roll("last name")
-                for _ in range(26):
-                    self.roll("stat")
-                self.roll("soul")
-                self.roll("allergy")
-                self.roll("fate")
-                self.roll("ritual")
-                self.roll("blood")
-                self.roll("coffee")
+                self.generate_player()
                 return True
 
             if eclipse_roll < threshold:
@@ -1360,6 +1430,13 @@ class Resim:
                 if self.event["created"] not in [
                     "2021-03-09T10:27:56.571Z",
                     "2021-03-11T03:12:13.124Z",
+                    "2021-03-12T01:07:27.467Z",
+                ]:
+                    self.roll("blooddrain proc")
+
+                # todo: ???
+                if self.event["created"] in [
+                    "2021-03-12T01:10:43.414Z",
                 ]:
                     self.roll("blooddrain proc")
                 return True
@@ -1417,6 +1494,10 @@ class Resim:
 
             if has_shelled_player and bird_roll < bird_threshold:
                 self.roll("extra bird roll")
+                if self.ty == EventType.BIRDS_UNSHELL:
+                    # ???
+                    self.roll("extra bird roll")
+                    return True
                 pass
 
         elif self.weather == Weather.FEEDBACK:
@@ -1436,7 +1517,9 @@ class Resim:
                     self.roll("stat")
                 return True
 
-            if self.weather.can_echo() and (self.batter.has_mod("ECHO") or self.pitcher.has_mod("ECHO")):
+            if self.weather.can_echo() and (
+                (self.batter and self.batter.has_mod("ECHO")) or (self.pitcher and self.pitcher.has_mod("ECHO"))
+            ):
                 # echo vs static, or batter echo vs pitcher echo?
                 if self.ty in [EventType.ECHO_MESSAGE, EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
                     eligible_players = []
@@ -2376,7 +2459,9 @@ class Resim:
 
     def get_fielder_multiplier(self, relevant_fielder=None, relevant_attr=None):
         # todo: retire in favor of get_multiplier() in formulas.py? this is only being used for logging right now...
-        fielder = relevant_fielder or self.fielder
+        if not relevant_fielder:
+            return 1
+        fielder = relevant_fielder
         # attr = relevant_attr
 
         fielder_multiplier = 1
@@ -2424,6 +2509,18 @@ class Resim:
             #     # todo: figure out how the heck "on fire" works
             #     pass
         return fielder_multiplier
+
+    def generate_player(self):
+        self.roll("first name")
+        self.roll("last name")
+        for _ in range(26):
+            self.roll("stat")
+        self.roll("soul")
+        self.roll("allergy")
+        self.roll("fate")
+        self.roll("ritual")
+        self.roll("blood")
+        self.roll("coffee")
 
     def get_runner_multiplier(self, runner, relevant_attr=None):
 
