@@ -16,7 +16,7 @@
   - Night Vision Goggles
   - CHUNKY
   - SMOOTH
-
+- work out what the hardcoded blooddrain exceptions are actually for (there's probably a simple pattern)
 
 ## In progress
 - Runner advancement on flyouts
