@@ -421,7 +421,9 @@ class Resim:
 
             if self.event["day"] != 98 and (
                 # These rolls happen before the Second Wyatt Masoning
-                self.event["season"] != 13 or self.event["day"] != 72):
+                self.event["season"] != 13
+                or self.event["day"] != 72
+            ):
                 # *why*
                 self.roll("game start")
 
@@ -491,6 +493,7 @@ class Resim:
                 "6173c3f5-f244-405d-b9a3-62fe8c48e656": 1,
                 "7fda4e9c-a20e-4163-aba3-6ad1663a747f": 1,
                 "b35f095d-9bc9-4a1c-822a-3749a7b83bcb": 1,
+                "a327e425-aaf4-4199-8292-bba0ec4a226a": 2,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
