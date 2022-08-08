@@ -1996,7 +1996,8 @@ class Resim:
                     f"StealAttempt{base}",
                     steal_roll,
                     was_success,
-                    runner,
+                    relevant_batter=self.batter,
+                    relevant_runner=runner,
                     fielder_roll=steal_fielder_roll,
                     fielder=self.get_fielder_for_roll(steal_fielder_roll),
                 )
@@ -2010,7 +2011,8 @@ class Resim:
                         f"StealSuccess{base}",
                         success_roll,
                         not was_caught,
-                        runner,
+                        relevant_batter=self.batter,
+                        relevant_runner=runner,
                         fielder_roll=steal_fielder_roll,
                         fielder=self.get_fielder_for_roll(steal_fielder_roll),
                     )
