@@ -316,6 +316,15 @@ class Resim:
                     self.roll("stat")
 
             return True
+        if self.ty == EventType.EXISTING_PLAYER_ADDED_TO_ILB:
+            if "pulled through the Rift" in self.desc:
+                # The Second Wyatt Masoning
+                # The rolls normally assigned to "Let's Go" happen before the Second Wyatt Masoning
+                if self.desc == "Wyatt Mason was pulled through the Rift.":
+                    for _ in range(12):
+                        self.roll("game start")
+                self.generate_player()
+            return True
         if self.ty in [
             EventType.PLAYER_ADDED_TO_TEAM,
             EventType.BIG_DEAL,
@@ -410,7 +419,9 @@ class Resim:
             if self.event["day"] >= 99:
                 self.roll("game start")
 
-            if self.event["day"] != 98:
+            if self.event["day"] != 98 and (
+                # These rolls happen before the Second Wyatt Masoning
+                self.event["season"] != 13 or self.event["day"] != 72):
                 # *why*
                 self.roll("game start")
 
@@ -479,6 +490,7 @@ class Resim:
                 "1514e79b-e14b-45e0-aada-dad2ba4d753d": 1,
                 "6173c3f5-f244-405d-b9a3-62fe8c48e656": 1,
                 "7fda4e9c-a20e-4163-aba3-6ad1663a747f": 1,
+                "b35f095d-9bc9-4a1c-822a-3749a7b83bcb": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
