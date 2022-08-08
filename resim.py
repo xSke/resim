@@ -867,7 +867,8 @@ class Resim:
         if fielder_idx is not None:
             if rolled_idx != fielder_idx:
                 self.error(
-                    f"incorrect fielder! expected {fielder_idx}, got {rolled_idx}, needs to be {expected_min:.3f}-{expected_max:.3f}\n"
+                    f"incorrect fielder! expected {fielder_idx}, got {rolled_idx}, "
+                    f"needs to be {expected_min:.3f}-{expected_max:.3f}\n"
                     f"{self.rng.get_state_str()}"
                 )
 
@@ -1110,7 +1111,8 @@ class Resim:
             #             -Roll Advancement for every baserunner
             #             -For each runner:
             #                  -If not forced:
-            #                      -Check advancement roll. Rolls apply in basesOccupied order aka most advanced first ([2,1,2,0] untested!!!)
+            #                      -Check advancement roll. Rolls apply in basesOccupied order
+            #                       aka most advanced first ([2,1,2,0] untested!!!)
             #                  -Elif forced:
             #                      -If initial baserunners were [2,0] AND 3rd base PASSED advancement (:ballclark:):
             #                          -Check advancement roll for 1st base.
@@ -1119,7 +1121,8 @@ class Resim:
             # -Elif no runner on first:
             #      -For each runner:
             #         -If not forced:
-            #             -Check advancement roll. Rolls apply in basesOccupied order aka most advanced first ([2,1,2,0] untested!!!)
+            #             -Check advancement roll. Rolls apply in basesOccupied order
+            #              aka most advanced first ([2,1,2,0] untested!!!)
             #         -Elif forced:
             #             -If initial baserunners were [2,0] AND 3rd base PASSED advancement (:ballclark:):
             #                 -Check advancement roll for 1st base.

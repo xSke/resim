@@ -2,7 +2,6 @@ import bisect
 import datetime
 import io
 import re
-import sys
 from argparse import ArgumentParser
 
 from tqdm import tqdm
@@ -309,7 +308,7 @@ def main():
     if args.rolls > 0:
         rolls = args.rolls
     else:
-        print(f"Estimating roll count...")
+        print("Estimating roll count...")
 
         rng = Rng(rng_state, rng_offset)
         rng.step(step)
@@ -336,7 +335,7 @@ def main():
     out_file.seek(0)
     for line in out_file:
         if not found_incorrect:
-            if re.match("Error:\s*incorrect fielder!", line):
+            if re.match(r"Error:\s*incorrect fielder!", line):
                 found_incorrect = True
         else:
             pattern = r"\(matching offsets: \[([-0-9,\s]+)\]\)"
@@ -380,7 +379,7 @@ def main():
 
     out_file.seek(0)
     for line in out_file:
-        if re.match("Error:\s*incorrect fielder!", line):
+        if re.match(r"Error:\s*incorrect fielder!", line):
             print("That didn't work! It might not be reachable or may have other errors.")
             with open("jump.txt", "w") as out:
                 out.write(out_file.getvalue())
