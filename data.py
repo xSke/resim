@@ -272,37 +272,44 @@ class TeamData:
 
 @dataclass
 class StadiumData:
-    data: Dict[str, Any]
-    id: str = field(init=False)
-    mods: List[str] = field(init=False, default_factory=list)
-
-    def __post_init__(self):
-        self.id = self.data["id"]
-        self.mods = self.data["mods"]
+    id: Optional[str]
+    mods: list[str]
+    name: str
+    nickname: str
+    mysticism: float
+    viscosity: float
+    elongation: float
+    filthiness: float
+    obtuseness: float
+    forwardness: float
+    grandiosity: float
+    ominousness: float
+    fortification: float
+    inconvenience: float
+    hype: float
 
     def has_mod(self, mod) -> bool:
         return mod in self.mods
 
-
-null_stadium = StadiumData(
-    {
-        "id": None,
-        "mods": [],
-        "name": "Null Stadium",
-        "nickname": "Null Stadium",
-        "mysticism": 0.5,
-        "viscosity": 0.5,
-        "elongation": 0.5,
-        "filthiness": 0,
-        "obtuseness": 0.5,
-        "forwardness": 0.5,
-        "grandiosity": 0.5,
-        "ominousness": 0.5,
-        "fortification": 0.5,
-        "inconvenience": 0.5,
-        "hype": 0,
-    }
-)
+    @staticmethod
+    def null():
+        return StadiumData(
+            id=None,
+            mods=[],
+            name="Null Stadium",
+            nickname="Null Stadium",
+            mysticism=0.5,
+            viscosity=0.5,
+            elongation=0.5,
+            filthiness=0,
+            obtuseness=0.5,
+            forwardness=0.5,
+            grandiosity=0.5,
+            ominousness=0.5,
+            fortification=0.5,
+            inconvenience=0.5,
+            hype=0,
+        )
 
 
 @dataclass
@@ -427,7 +434,26 @@ class GameData:
         return TeamData(self.teams[team_id])
 
     def get_stadium(self, stadium_id) -> StadiumData:
-        return StadiumData(self.stadiums[stadium_id])
+        if not stadium_id:
+            return StadiumData.null()
+        data = self.stadiums[stadium_id]
+        return StadiumData(
+            id=data["id"],
+            mods=data["mods"],
+            name=data["name"],
+            nickname=data["nickname"],
+            mysticism=data["mysticism"],
+            viscosity=data["viscosity"],
+            elongation=data["elongation"],
+            filthiness=data["filthiness"],
+            obtuseness=data["obtuseness"],
+            forwardness=data["forwardness"],
+            grandiosity=data["grandiosity"],
+            ominousness=data["ominousness"],
+            fortification=data["fortification"],
+            inconvenience=data["inconvenience"],
+            hype=data["hype"],
+        )
 
 
 def calculate_vibes(player, day) -> float:
