@@ -260,7 +260,7 @@ class Weather(IntEnum):
 class TeamData:
     data: Dict[str, Any]
     id: str = field(init=False)
-    mods: list[str] = field(init=False, default_factory=list)
+    mods: list = field(init=False, default_factory=list)
 
     def __post_init__(self):
         self.id = self.data["id"]
@@ -274,7 +274,7 @@ class TeamData:
 class StadiumData:
     data: Dict[str, Any]
     id: str = field(init=False)
-    mods: list[str] = field(init=False, default_factory=list)
+    mods: list = field(init=False, default_factory=list)
 
     def __post_init__(self):
         self.id = self.data["id"]
@@ -309,7 +309,7 @@ null_stadium = StadiumData(
 class PlayerData:
     data: Dict[str, Any]
     id: str = field(init=False)
-    mods: list[str] = field(init=False, default_factory=list)
+    mods: list = field(init=False, default_factory=list)
     raw_name: str = field(init=False)
     name: str = field(init=False)
 
