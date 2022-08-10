@@ -1,8 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
 import json
 import requests
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from datetime import datetime, timedelta
 from enum import IntEnum, unique
 from sin_values import __static_sin_phase
@@ -259,14 +259,12 @@ class Weather(IntEnum):
 @dataclass
 class TeamData:
     data: Dict[str, Any]
+    id: str = field(init=False)
+    mods: list[str] = field(init=False, default_factory=list)
 
-    @property
-    def id(self):
-        return self.data["id"]
-
-    @property
-    def mods(self):
-        return get_mods(self.data)
+    def __post_init__(self):
+        self.id = self.data["id"]
+        self.mods = get_mods(self.data)
 
     def has_mod(self, mod) -> bool:
         return mod in self.mods
@@ -275,14 +273,12 @@ class TeamData:
 @dataclass
 class StadiumData:
     data: Dict[str, Any]
+    id: str = field(init=False)
+    mods: list[str] = field(init=False, default_factory=list)
 
-    @property
-    def id(self):
-        return self.data["id"]
-
-    @property
-    def mods(self):
-        return self.data["mods"]
+    def __post_init__(self):
+        self.id = self.data["id"]
+        self.mods = self.data["mods"]
 
     def has_mod(self, mod) -> bool:
         return mod in self.mods
@@ -312,23 +308,17 @@ null_stadium = StadiumData(
 @dataclass
 class PlayerData:
     data: Dict[str, Any]
+    id: str = field(init=False)
+    mods: list[str] = field(init=False, default_factory=list)
+    raw_name: str = field(init=False)
+    name: str = field(init=False)
 
-    @property
-    def id(self):
-        return self.data["id"]
-
-    @property
-    def mods(self):
-        return get_mods(self.data)
-
-    @property
-    def name(self):
+    def __post_init__(self):
+        self.id = self.data["id"]
+        self.mods = get_mods(self.data)
+        self.raw_name = self.data["name"]
         unscattered_name = self.data.get("state", {}).get("unscatteredName")
-        return unscattered_name or self.data["name"]
-
-    @property
-    def raw_name(self):
-        return self.data["name"]
+        self.name = unscattered_name or self.data["name"]
 
     def has_mod(self, mod) -> bool:
         return mod in self.mods
