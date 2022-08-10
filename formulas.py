@@ -98,7 +98,7 @@ def get_strike_threshold(
     vibes = pitcher.vibes(meta.day)
     ruth = pitcher.data["ruthlessness"] * get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)
     musc = batter.data["musclitude"] * get_multiplier(batter, batting_team, "batter", "musclitude", meta)
-    fwd = stadium.data["forwardness"]
+    fwd = stadium.forwardness
 
     constant = 0.2 if not is_flinching else 0.4
 
@@ -143,7 +143,7 @@ def get_swing_strike_threshold(
         * get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)
         * (1 + 0.2 * pitcher_vibes)
     )
-    visc = stadium.data["viscosity"]
+    visc = stadium.viscosity
 
     combined_batting = (div + musc + invpath + thwack) / 4
     threshold = 0.7 + 0.35 * combined_batting - 0.4 * ruth + 0.2 * (visc - 0.5)
@@ -170,7 +170,7 @@ def get_swing_ball_threshold(
         * get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)
         * (1 + 0.2 * pitcher_vibes)
     )
-    visc = stadium.data["viscosity"]
+    visc = stadium.viscosity
 
     combined = (12 * ruth - 5 * moxie + 5 * path + 4 * visc) / 20
     if combined < 0:
@@ -205,9 +205,9 @@ def get_contact_strike_threshold(
         * (1 + 0.2 * pitcher_vibes)
     )
 
-    fort = stadium.data["fortification"] - 0.5
-    visc = stadium.data["viscosity"] - 0.5
-    fwd = stadium.data["forwardness"] - 0.5
+    fort = stadium.fortification - 0.5
+    visc = stadium.viscosity - 0.5
+    fwd = stadium.forwardness - 0.5
     ballpark_sum = (fort + 3 * visc - 6 * fwd) / 10
 
     constant, batting_factor, cap = {
@@ -244,9 +244,9 @@ def get_contact_ball_threshold(
         * (1 + 0.2 * pitcher_vibes)
     )
 
-    fort = stadium.data["fortification"] - 0.5
-    visc = stadium.data["viscosity"] - 0.5
-    fwd = stadium.data["forwardness"] - 0.5
+    fort = stadium.fortification - 0.5
+    visc = stadium.viscosity - 0.5
+    fwd = stadium.forwardness - 0.5
     ballpark_sum = (fort + 3 * visc - 6 * fwd) / 10
 
     constant, path_factor, cap = {
@@ -262,8 +262,8 @@ def get_contact_ball_threshold(
 
 def get_foul_threshold(batter: PlayerData, batting_team: TeamData, stadium: StadiumData, meta: StatRelevantData):
     vibes = batter.vibes(meta.day)
-    fwd = stadium.data["forwardness"]
-    obt = stadium.data["obtuseness"]
+    fwd = stadium.forwardness
+    obt = stadium.obtuseness
     musc = (
         batter.data["musclitude"]
         * get_multiplier(batter, batting_team, "batter", "musclitude", meta)
@@ -308,11 +308,11 @@ def get_hr_threshold(
         * (1 + 0.2 * pitcher_vibes)
     )
 
-    grand = stadium.data["grandiosity"] - 0.5
-    fort = stadium.data["fortification"] - 0.5
-    visc = stadium.data["viscosity"] - 0.5
-    om = stadium.data["ominousness"] - 0.5
-    fwd = stadium.data["forwardness"] - 0.5
+    grand = stadium.grandiosity - 0.5
+    fort = stadium.fortification - 0.5
+    visc = stadium.viscosity - 0.5
+    om = stadium.ominousness - 0.5
+    fwd = stadium.forwardness - 0.5
     ballpark_sum = 0.4 * grand + 0.2 * fort + 0.08 * visc + 0.08 * om - 0.24 * fwd
 
     opw_supp = (10 * opw + supp) / 11

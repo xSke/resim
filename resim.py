@@ -3,7 +3,7 @@ import os
 import sys
 import itertools
 
-from data import EventType, GameData, Weather, get_feed_between, null_stadium
+from data import EventType, GameData, Weather, get_feed_between
 from output import SaveCsv
 from rng import Rng
 from dataclasses import dataclass
@@ -136,7 +136,7 @@ class Resim:
             self.print(
                 "- pitcher mods: {} + {} ({})".format(self.pitcher.mods, self.pitching_team.mods, self.pitcher.name)
             )
-        self.print("- stadium mods: {} ({})".format(self.stadium.mods, self.stadium.data["nickname"]))
+        self.print("- stadium mods: {} ({})".format(self.stadium.mods, self.stadium.nickname))
 
         if self.ty == EventType.BATTER_UP:
             self.handle_batter_up()
@@ -1493,7 +1493,7 @@ class Resim:
                 self.log_roll("bird-message", "NoCircle", bird_roll, False)
 
             # threshold is at 0.0125 at 0.5 fort
-            bird_threshold = 0.0125 - 0.02 * (self.stadium.data["fortification"] - 0.5)
+            bird_threshold = 0.0125 - 0.02 * (self.stadium.fortification - 0.5)
 
             if has_shelled_player and bird_roll < bird_threshold:
                 self.roll("extra bird roll")
@@ -2026,7 +2026,7 @@ class Resim:
                 break
 
     def get_eclipse_threshold(self):
-        fort = self.stadium.data["fortification"]
+        fort = self.stadium.fortification
         if self.season == 11:
             constant = 0.0002  # maybe???
         else:
@@ -2184,7 +2184,7 @@ class Resim:
         self.home_pitcher = self.data.get_player(home_pitcher_id) if home_pitcher_id else None
         self.away_pitcher = self.data.get_player(away_pitcher_id) if away_pitcher_id else None
 
-        self.stadium = self.data.get_stadium(update["stadiumId"]) if update["stadiumId"] else null_stadium
+        self.stadium = self.data.get_stadium(update["stadiumId"])
 
         self.outs = update["halfInningOuts"]
         self.max_outs = update["awayOuts"] if update["topOfInning"] else update["homeOuts"]
