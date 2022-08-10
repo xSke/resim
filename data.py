@@ -273,7 +273,7 @@ class TeamData:
 @dataclass
 class StadiumData:
     id: Optional[str]
-    mods: list[str]
+    mods: List[str]
     name: str
     nickname: str
     mysticism: float
