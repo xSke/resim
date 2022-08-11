@@ -3,7 +3,7 @@ import os
 import sys
 import itertools
 
-from data import EventType, GameData, Weather, get_feed_between
+from data import EventType, GameData, Mod, Weather, get_feed_between
 from output import SaveCsv
 from rng import Rng
 from dataclasses import dataclass
@@ -94,15 +94,15 @@ class Resim:
         # in chron until after the game ends, but we need it earlier
         if self.game_id == "8577919c-4288-4404-bde2-694f5e7a38d1":
             jands = self.data.get_team("a37f9158-7f82-46bc-908c-c9e2dda7c33b")
-            if not jands.has_mod("OVERPERFORMING"):
-                jands.data["permAttr"].append("OVERPERFORMING")
+            if not jands.has_mod(Mod.OVERPERFORMING):
+                jands.data["permAttr"].append(Mod.OVERPERFORMING.value)
                 jands.update_mods()
 
         # another workaround for bad data
         if self.game_id == "c608b5db-29ad-4216-a703-8f0627057523":
             caleb_novak = self.data.get_player("0eddd056-9d72-4804-bd60-53144b785d5c")
-            if caleb_novak.has_mod("ELSEWHERE"):
-                caleb_novak.data["permAttr"].remove("ELSEWHERE")
+            if caleb_novak.has_mod(Mod.ELSEWHERE):
+                caleb_novak.data["permAttr"].remove(Mod.ELSEWHERE.value)
                 caleb_novak.update_mods()
 
         self.print()
@@ -174,7 +174,7 @@ class Resim:
             return
 
         # todo: don't know where this actually is - seems to be before mild at least
-        if self.pitcher.has_mod("DEBT_THREE") and not self.batter.has_mod("COFFEE_PERIL"):
+        if self.pitcher.has_mod(Mod.DEBT_THREE) and not self.batter.has_mod(Mod.COFFEE_PERIL):
             self.roll("debt")
             if self.ty == EventType.HIT_BY_PITCH:
                 # debt success
@@ -412,7 +412,7 @@ class Resim:
                 )
                 for player_id in rosters:
                     player = self.data.get_player(player_id)
-                    if player.has_mod("COFFEE_PERIL"):
+                    if player.has_mod(Mod.COFFEE_PERIL):
                         self.roll(f"redaction ({player.name})")
 
             return True
@@ -513,7 +513,7 @@ class Resim:
             if self.weather in [
                 Weather.FEEDBACK,
                 Weather.REVERB,
-            ] and self.stadium.has_mod("PSYCHOACOUSTICS"):
+            ] and self.stadium.has_mod(Mod.PSYCHOACOUSTICS):
                 self.print("away team mods:", self.away_team.data["permAttr"])
                 self.roll("echo team mod")
             return True
@@ -568,8 +568,8 @@ class Resim:
 
     def handle_charm(self):
         pitch_charm_eligible = self.update["atBatBalls"] == 0 and self.update["atBatStrikes"] == 0
-        batter_charm_eligible = self.batting_team.has_mod("LOVE") and pitch_charm_eligible
-        pitcher_charm_eligible = self.pitching_team.has_mod("LOVE") and pitch_charm_eligible
+        batter_charm_eligible = self.batting_team.has_mod(Mod.LOVE) and pitch_charm_eligible
+        pitcher_charm_eligible = self.pitching_team.has_mod(Mod.LOVE) and pitch_charm_eligible
 
         # before season 16, love blood only proc'd when the player also had love blood
         if self.event["season"] < 15:
@@ -597,7 +597,7 @@ class Resim:
     def handle_electric(self):
         # todo: don't roll this if <s15 and batter doesn't have electric blood?
         # only case here would be baldwin breadwinner in s14 but it seems to work okay?
-        if self.batting_team.has_mod("ELECTRIC") and self.update["atBatStrikes"] > 0:
+        if self.batting_team.has_mod(Mod.ELECTRIC) and self.update["atBatStrikes"] > 0:
             self.roll("electric")
 
             if self.ty == EventType.STRIKE_ZAPPED:
@@ -605,7 +605,7 @@ class Resim:
                 return True
 
     def handle_batter_reverb(self):
-        if self.batter and self.batter.has_mod("REVERBERATING"):
+        if self.batter and self.batter.has_mod(Mod.REVERBERATING):
             is_at_bat_end = self.ty in [
                 EventType.WALK,
                 EventType.STRIKEOUT,
@@ -656,7 +656,7 @@ class Resim:
                 self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
             )
 
-        if not (self.batting_team.has_mod("O_NO") and self.strikes == self.max_strikes - 1):
+        if not (self.batting_team.has_mod(Mod.O_NO) and self.strikes == self.max_strikes - 1):
             if did_swing and roll > threshold:
                 self.print(
                     "!!! warn: swing on {} roll too high ({} > {})".format(
@@ -684,7 +684,7 @@ class Resim:
                 self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
             )
 
-        if not (self.batting_team.has_mod("O_NO") and self.strikes == self.max_strikes - 1):
+        if not (self.batting_team.has_mod(Mod.O_NO) and self.strikes == self.max_strikes - 1):
             if did_contact and roll > threshold:
                 self.print(
                     "!!! warn: contact on {} roll too high ({} > {})".format(
@@ -710,7 +710,7 @@ class Resim:
                 self.print("!!! very low swing roll on ball")
             self.log_roll(Csv.SWING_ON_BALL, "Ball", swing_roll, False)
 
-        if self.ty == EventType.WALK and self.batting_team.has_mod("BASE_INSTINCTS"):
+        if self.ty == EventType.WALK and self.batting_team.has_mod(Mod.BASE_INSTINCTS):
             self.roll("base instincts")
 
             if "Base Instincts take them directly to" in self.desc:
@@ -761,11 +761,11 @@ class Resim:
                 self.roll("salmon")
 
     def is_flinching(self):
-        return self.batter.has_mod("FLINCH") and self.strikes == 0
+        return self.batter.has_mod(Mod.FLINCH) and self.strikes == 0
 
     def get_fielder_for_roll(self, fielder_roll: float):
         candidates = [self.data.get_player(player) for player in self.pitching_team.lineup]
-        candidates = [c for c in candidates if not c.has_mod("ELSEWHERE")]
+        candidates = [c for c in candidates if not c.has_mod(Mod.ELSEWHERE)]
 
         return candidates[math.floor(fielder_roll * len(candidates))]
 
@@ -834,7 +834,7 @@ class Resim:
         if self.outs < self.max_outs - 1:
             self.handle_out_advances(fielder)
 
-        if not is_fc_dp and self.batter.has_mod("DEBT_THREE") and fielder and not fielder.has_mod("COFFEE_PERIL"):
+        if not is_fc_dp and self.batter.has_mod(Mod.DEBT_THREE) and fielder and not fielder.has_mod(Mod.COFFEE_PERIL):
             self.roll("debt")
 
     def roll_fielder(self, check_name=True):
@@ -842,7 +842,7 @@ class Resim:
         fielder_idx = None
         for fielder_id in self.pitching_team.lineup:
             fielder = self.data.get_player(fielder_id)
-            if fielder.has_mod("ELSEWHERE"):
+            if fielder.has_mod(Mod.ELSEWHERE):
                 continue
 
             # cut off extra parts with potential name collisions
@@ -1238,7 +1238,7 @@ class Resim:
             # not sure why we need this
             self.roll("magmatic")
 
-        if self.stadium.has_mod("BIG_BUCKET"):
+        if self.stadium.has_mod(Mod.BIG_BUCKET):
             self.roll("big buckets")
 
     def handle_base_hit(self):
@@ -1322,8 +1322,8 @@ class Resim:
         )
 
     def roll_foul(self, known_outcome: bool):
-        is_0_no_eligible = self.batting_team.has_mod("O_NO") and self.strikes == 2 and self.balls == 0
-        if is_0_no_eligible or self.batter.has_any("CHUNKY", "SMOOTH"):
+        is_0_no_eligible = self.batting_team.has_mod(Mod.O_NO) and self.strikes == 2 and self.balls == 0
+        if is_0_no_eligible or self.batter.has_any(Mod.CHUNKY, Mod.SMOOTH):
             known_outcome = None
 
         meta = self.get_stat_meta()
@@ -1357,7 +1357,7 @@ class Resim:
         self.roll_foul(True)
 
     def handle_batter_up(self):
-        if self.batter and self.batter.has_mod("HAUNTED"):
+        if self.batter and self.batter.has_mod(Mod.HAUNTED):
             haunt_roll = self.roll("haunted")
             self.log_roll(Csv.HAUNTED, "NoHaunt", haunt_roll, False)
 
@@ -1377,7 +1377,7 @@ class Resim:
             threshold = self.get_eclipse_threshold()
             eclipse_roll = self.roll("eclipse")
 
-            if self.batter.has_mod("MARKED"):
+            if self.batter.has_mod(Mod.MARKED):
                 self.roll("unstable")
 
             if self.ty == EventType.INCINERATION:
@@ -1389,7 +1389,7 @@ class Resim:
                 # blocked "natural" incineration due to fireproof
                 # self.print(f"!!! too low eclipse roll ({eclipse_roll} < {threshold})")
 
-                if self.pitching_team.has_mod("FIREPROOF") and self.ty == EventType.INCINERATION_BLOCKED:
+                if self.pitching_team.has_mod(Mod.FIREPROOF) and self.ty == EventType.INCINERATION_BLOCKED:
                     self.roll("target")
                     return True
 
@@ -1400,7 +1400,7 @@ class Resim:
             for player_id in fire_eater_eligible:
                 player = self.data.get_player(player_id)
 
-                if player.has_mod("FIRE_EATER") and not player.has_mod("ELSEWHERE"):
+                if player.has_mod(Mod.FIRE_EATER) and not player.has_mod(Mod.ELSEWHERE):
                     self.roll(f"fire eater ({player.name})")
 
                     if self.ty == EventType.INCINERATION_BLOCKED:
@@ -1468,9 +1468,9 @@ class Resim:
                 self.roll("target")
                 return True
 
-            if self.batter.has_mod("HONEY_ROASTED"):
+            if self.batter.has_mod(Mod.HONEY_ROASTED):
                 self.roll("honey roasted")
-            elif self.pitcher.has_mod("HONEY_ROASTED"):
+            elif self.pitcher.has_mod(Mod.HONEY_ROASTED):
                 self.roll("honey roasted")
 
             if self.ty == EventType.TASTE_THE_INFINITE:
@@ -1494,7 +1494,7 @@ class Resim:
                 player = self.data.get_player(player_id)
                 # also must be specifically permAttr - moses mason (shelled in s15 through receiver, so seasonal mod)
                 # is exempt
-                if "SHELLED" in player.data["permAttr"]:
+                if Mod.SHELLED.value in player.data["permAttr"]:
                     has_shelled_player = True
 
             if self.ty == EventType.BIRDS_CIRCLE:
@@ -1533,12 +1533,12 @@ class Resim:
                 return True
 
             if self.weather.can_echo() and (
-                (self.batter and self.batter.has_mod("ECHO")) or (self.pitcher and self.pitcher.has_mod("ECHO"))
+                (self.batter and self.batter.has_mod(Mod.ECHO)) or (self.pitcher and self.pitcher.has_mod(Mod.ECHO))
             ):
                 # echo vs static, or batter echo vs pitcher echo?
                 if self.ty in [EventType.ECHO_MESSAGE, EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
                     eligible_players = []
-                    if self.pitcher.has_mod("ECHO"):
+                    if self.pitcher.has_mod(Mod.ECHO):
                         eligible_players.extend(self.batting_team.rotation)
                         eligible_players = [self.batter.id] + eligible_players
 
@@ -1560,7 +1560,7 @@ class Resim:
                         self.roll("echo target 2?")
                     return True
         elif self.weather == Weather.REVERB:
-            if self.stadium.has_mod("ECHO_CHAMBER"):
+            if self.stadium.has_mod(Mod.ECHO_CHAMBER):
                 self.roll("echo chamber")
                 if self.ty == EventType.ECHO_CHAMBER:
                     self.roll("echo chamber")
@@ -1587,7 +1587,7 @@ class Resim:
                 self.roll("more reverb?")
                 return True
 
-            if self.batter.has_mod("ECHO"):
+            if self.batter.has_mod(Mod.ECHO):
                 self.roll("echo?")
 
                 if self.ty in [EventType.ECHO_MESSAGE, EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
@@ -1610,7 +1610,7 @@ class Resim:
 
                 return True
 
-            if self.batter.has_mod("COFFEE_PERIL"):
+            if self.batter.has_mod(Mod.COFFEE_PERIL):
                 self.roll("observed?")
 
         elif self.weather == Weather.COFFEE_2:
@@ -1622,11 +1622,11 @@ class Resim:
                 self.roll("coffee 2 proc")
                 return True
 
-            if self.batter.has_mod("COFFEE_PERIL"):
+            if self.batter.has_mod(Mod.COFFEE_PERIL):
                 self.roll("observed?")
 
         elif self.weather == Weather.COFFEE_3S:
-            if self.batter.has_mod("COFFEE_PERIL"):
+            if self.batter.has_mod(Mod.COFFEE_PERIL):
                 self.roll("observed?")
             pass
 
@@ -1688,10 +1688,10 @@ class Resim:
                 # handle flood
                 for runner_id in self.update["baseRunners"]:
                     runner = self.data.get_player(runner_id)
-                    if not runner.has_any("EGO1", "SWIM_BLADDER"):
+                    if not runner.has_any(Mod.EGO1, Mod.SWIM_BLADDER):
                         self.roll(f"sweep ({runner.name})")
 
-                if self.stadium.id and not self.stadium.has_mod("FLOOD_PUMPS"):
+                if self.stadium.id and not self.stadium.has_mod(Mod.FLOOD_PUMPS):
                     self.roll("filthiness")
                 return True
 
@@ -1719,7 +1719,7 @@ class Resim:
         for player_id in players:
             player = self.data.get_player(player_id)
 
-            if player.has_mod("ELSEWHERE"):
+            if player.has_mod(Mod.ELSEWHERE):
                 self.roll(f"elsewhere ({player.raw_name})")
 
                 if self.ty == EventType.RETURN_FROM_ELSEWHERE and player.raw_name in self.desc:
@@ -1731,7 +1731,7 @@ class Resim:
         for player_id in players:
             player = self.data.get_player(player_id)
 
-            if player.has_mod("SCATTERED"):
+            if player.has_mod(Mod.SCATTERED):
                 unscatter_roll = self.roll(f"unscatter ({player.raw_name})")
 
                 # todo: find actual threshold
@@ -1856,27 +1856,27 @@ class Resim:
         # this is probably influenced by ballpark myst or something (or not??)
         elif party_roll < 0.0055:
             team_roll = self.roll("target team (not partying)")
-            if team_roll < 0.5 and self.home_team.has_mod("PARTY_TIME"):
+            if team_roll < 0.5 and self.home_team.has_mod(Mod.PARTY_TIME):
                 self.print("!!! home team is in party time")
-            elif team_roll > 0.5 and self.away_team.has_mod("PARTY_TIME"):
+            elif team_roll > 0.5 and self.away_team.has_mod(Mod.PARTY_TIME):
                 self.print("!!! away team is in party time")
 
     def handle_ballpark(self):
-        if self.stadium.has_mod("PEANUT_MISTER"):
+        if self.stadium.has_mod(Mod.PEANUT_MISTER):
             self.roll("peanut mister")
 
             if self.ty == EventType.PEANUT_MISTER:
                 self.roll("target")
                 return True
 
-        if self.stadium.has_mod("SMITHY"):
+        if self.stadium.has_mod(Mod.SMITHY):
             self.roll("smithy")
 
-        if self.stadium.has_mod("SECRET_BASE"):
+        if self.stadium.has_mod(Mod.SECRET_BASE):
             if self.handle_secret_base():
                 return True
 
-        if self.stadium.has_mod("GRIND_RAIL"):
+        if self.stadium.has_mod(Mod.GRIND_RAIL):
             if self.handle_grind_rail():
                 return True
 
@@ -2054,7 +2054,7 @@ class Resim:
         upper_bound = threshold if known_result == "strike" else 1
 
         roll = self.roll("strike", lower=lower_bound, upper=upper_bound)
-        if self.pitching_team.has_mod("ACIDIC"):
+        if self.pitching_team.has_mod(Mod.ACIDIC):
             self.roll("acidic")
 
         self.is_strike = roll < threshold
@@ -2214,13 +2214,13 @@ class Resim:
         # hardcoding another fix - if we missed the "perks up" event apply it "manually". but not to ghosts
         if (
             self.batter
-            and self.batter.has_mod("PERK")
+            and self.batter.has_mod(Mod.PERK)
             and self.weather.is_coffee()
-            and "OVERPERFORMING" not in self.batter.data["gameAttr"]
-            and not self.batter.has_mod("INHABITING")
+            and Mod.OVERPERFORMING.value not in self.batter.data["gameAttr"]
+            and not self.batter.has_mod(Mod.INHABITING)
             and self.ty != EventType.BATTER_UP
         ):
-            self.batter.data["gameAttr"].append("OVERPERFORMING")
+            self.batter.data["gameAttr"].append(Mod.OVERPERFORMING.value)
             self.batter.update_mods()
 
     def apply_event_changes(self, event):
@@ -2422,31 +2422,32 @@ class Resim:
 
         batter_multiplier = 1
         for mod in itertools.chain(batter.mods, self.batting_team.mods):
-            if mod == "OVERPERFORMING":
+            mod = Mod.coerce(mod)
+            if mod == Mod.OVERPERFORMING:
                 batter_multiplier += 0.2
-            elif mod == "UNDERPERFORMING":
+            elif mod == Mod.UNDERPERFORMING:
                 batter_multiplier -= 0.2
-            elif mod == "GROWTH":
+            elif mod == Mod.GROWTH:
                 batter_multiplier += min(0.05, 0.05 * (self.day / 99))
-            elif mod == "HIGH_PRESSURE":
+            elif mod == Mod.HIGH_PRESSURE:
                 # checks for flooding weather and baserunners
                 if self.weather == Weather.FLOODING and len(self.update["baseRunners"]) > 0:
                     # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
                     batter_multiplier += 0.25
-            elif mod == "TRAVELING":
+            elif mod == Mod.TRAVELING:
                 if self.update["topOfInning"]:
                     batter_multiplier += 0.05
-            elif mod == "SINKING_SHIP":
+            elif mod == Mod.SINKING_SHIP:
                 roster_size = len(self.batting_team.lineup) + len(self.batting_team.rotation)
                 batter_multiplier += (14 - roster_size) * 0.01
-            elif mod == "AFFINITY_FOR_CROWS" and self.weather == Weather.BIRDS:
+            elif mod == Mod.AFFINITY_FOR_CROWS and self.weather == Weather.BIRDS:
                 batter_multiplier += 0.5
-            elif mod == "CHUNKY" and self.weather == Weather.PEANUTS:
+            elif mod == Mod.CHUNKY and self.weather == Weather.PEANUTS:
                 # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
                 #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
                 if relevant_attr in ["musclitude", "divinity", "ground_friction"]:
                     batter_multiplier += 1.0
-            elif mod == "SMOOTH" and self.weather == Weather.PEANUTS:
+            elif mod == Mod.SMOOTH and self.weather == Weather.PEANUTS:
                 # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted everything in
                 #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
                 if relevant_attr in [
@@ -2456,7 +2457,7 @@ class Resim:
                     "laserlikeness",
                 ]:
                     batter_multiplier += 1.0
-            elif mod == "ON_FIRE":
+            elif mod == Mod.ON_FIRE:
                 # todo: figure out how the heck "on fire" works
                 pass
         return batter_multiplier
@@ -2467,16 +2468,17 @@ class Resim:
         # attr = relevant_attr
         # growth or traveling do not work for pitchers as of s14
         for mod in itertools.chain(self.pitcher.mods, self.pitching_team.mods):
-            if mod == "OVERPERFORMING":
+            mod = Mod.coerce(mod)
+            if mod == Mod.OVERPERFORMING:
                 pitcher_multiplier += 0.2
-            elif mod == "UNDERPERFORMING":
+            elif mod == Mod.UNDERPERFORMING:
                 pitcher_multiplier -= 0.2
-            elif mod == "SINKING_SHIP":
+            elif mod == Mod.SINKING_SHIP:
                 roster_size = len(self.pitching_team.lineup) + len(self.pitching_team.rotation)
                 pitcher_multiplier += (14 - roster_size) * 0.01
-            elif mod == "AFFINITY_FOR_CROWS" and self.weather == Weather.BIRDS:
+            elif mod == Mod.AFFINITY_FOR_CROWS and self.weather == Weather.BIRDS:
                 pitcher_multiplier += 0.5
-            elif mod == "HIGH_PRESSURE":
+            elif mod == Mod.HIGH_PRESSURE:
                 # "should we really boost the pitcher when the *other* team's batters are on base" yes.
                 if self.weather == Weather.FLOODING and len(self.update["baseRunners"]) > 0:
                     pitcher_multiplier += 0.25
@@ -2491,36 +2493,37 @@ class Resim:
 
         fielder_multiplier = 1
         for mod in itertools.chain(fielder.mods, self.pitching_team.mods):
-            if mod == "OVERPERFORMING":
+            mod = Mod.coerce(mod)
+            if mod == Mod.OVERPERFORMING:
                 fielder_multiplier += 0.2
-            elif mod == "UNDERPERFORMING":
+            elif mod == Mod.UNDERPERFORMING:
                 fielder_multiplier -= 0.2
-            elif mod == "GROWTH":
+            elif mod == Mod.GROWTH:
                 fielder_multiplier += min(0.05, 0.05 * (self.day / 99))
-            elif mod == "HIGH_PRESSURE":
+            elif mod == Mod.HIGH_PRESSURE:
                 # checks for flooding weather and baserunners
                 if self.weather == Weather.FLOODING and len(self.update["baseRunners"]) > 0:
                     # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
                     fielder_multiplier += 0.25
-            elif mod == "TRAVELING":
+            elif mod == Mod.TRAVELING:
                 if not self.update["topOfInning"]:
                     fielder_multiplier += 0.05
-            elif mod == "SINKING_SHIP":
+            elif mod == Mod.SINKING_SHIP:
                 roster_size = len(self.pitching_team.lineup) + len(self.pitching_team.rotation)
                 fielder_multiplier += (14 - roster_size) * 0.01
-            # elif mod == "AFFINITY_FOR_CROWS" and self.weather == Weather.BIRDS:
+            # elif mod == Mod.AFFINITY_FOR_CROWS and self.weather == Weather.BIRDS:
             #     fielder_multiplier += 0.5
-            elif mod == "SHELLED":
+            elif mod == Mod.SHELLED:
                 # lol, lmao
                 # is it this, or is it "mul = 0", I wonder
                 fielder_multiplier -= 1.0
             # Chunky and Smooth should be irrelevant here. also hopefully On Fire
-            # elif mod == "CHUNKY" and self.weather == Weather.PEANUTS:
+            # elif mod == Mod.CHUNKY and self.weather == Weather.PEANUTS:
             #     # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
             #     #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
             #     if relevant_attr in ["musclitude", "divinity", "ground_friction"]:
             #         fielder_multiplier += 1.0
-            # elif mod == "SMOOTH" and self.weather == Weather.PEANUTS:
+            # elif mod == Mod.SMOOTH and self.weather == Weather.PEANUTS:
             #     # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted stuff in
             #     #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
             #     if relevant_attr in [
@@ -2530,7 +2533,7 @@ class Resim:
             #         "laserlikeness",
             #     ]:
             #         fielder_multiplier += 1.0
-            # elif mod == "ON_FIRE":
+            # elif mod == Mod.ON_FIRE:
             #     # todo: figure out how the heck "on fire" works
             #     pass
         return fielder_multiplier
