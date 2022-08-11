@@ -299,6 +299,26 @@ class StadiumData:
         return mod in self.mods
 
     @staticmethod
+    def from_dict(data):
+        return StadiumData(
+            id=data["id"],
+            mods=set(data["mods"]),
+            name=data["name"],
+            nickname=data["nickname"],
+            mysticism=data["mysticism"],
+            viscosity=data["viscosity"],
+            elongation=data["elongation"],
+            filthiness=data["filthiness"],
+            obtuseness=data["obtuseness"],
+            forwardness=data["forwardness"],
+            grandiosity=data["grandiosity"],
+            ominousness=data["ominousness"],
+            fortification=data["fortification"],
+            inconvenience=data["inconvenience"],
+            hype=data["hype"],
+        )
+
+    @staticmethod
     def null():
         return StadiumData(
             id=None,
@@ -447,7 +467,7 @@ class GameData:
             key,
             f"{CHRONICLER_URI}/v2/entities?type=team&at={timestamp}&count=1000",
         )
-        self.teams = {e["entityId"]: e["data"] for e in resp["items"]}
+        self.teams = {e["entityId"]: TeamData(e["data"]) for e in resp["items"]}
 
     def fetch_players(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
@@ -456,7 +476,7 @@ class GameData:
             key,
             f"{CHRONICLER_URI}/v2/entities?type=player&at={timestamp}&count=2000",
         )
-        self.players = {e["entityId"]: e["data"] for e in resp["items"]}
+        self.players = {e["entityId"]: PlayerData(e["data"]) for e in resp["items"]}
 
     def fetch_stadiums(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
@@ -465,7 +485,7 @@ class GameData:
             key,
             f"{CHRONICLER_URI}/v2/entities?type=stadium&at={timestamp}&count=1000",
         )
-        self.stadiums = {e["entityId"]: e["data"] for e in resp["items"]}
+        self.stadiums = {e["entityId"]: StadiumData.from_dict(e["data"]) for e in resp["items"]}
 
     def fetch_player_after(self, player_id, timestamp):
         key = f"player_{player_id}_after_{timestamp}"
@@ -474,7 +494,7 @@ class GameData:
             f"{CHRONICLER_URI}/v2/versions?type=player&id={player_id}&after={timestamp}&count=1&order=asc",
         )
         for item in resp["items"]:
-            self.players[item["entityId"]] = item["data"]
+            self.players[item["entityId"]] = PlayerData(item["data"])
 
     def fetch_game(self, game_id):
         key = f"game_updates_{game_id}"
@@ -501,33 +521,14 @@ class GameData:
             update["weather"] = Weather(update["weather"])
         return update
 
-    def get_player(self, player_id) -> PlayerData:
-        return PlayerData(self.players[player_id])
-
     def has_player(self, player_id) -> bool:
         return player_id in self.players
 
+    def get_player(self, player_id) -> PlayerData:
+        return self.players[player_id]
+
     def get_team(self, team_id) -> TeamData:
-        return TeamData(self.teams[team_id])
+        return self.teams[team_id]
 
     def get_stadium(self, stadium_id) -> StadiumData:
-        if not stadium_id:
-            return StadiumData.null()
-        data = self.stadiums[stadium_id]
-        return StadiumData(
-            id=data["id"],
-            mods=set(data["mods"]),
-            name=data["name"],
-            nickname=data["nickname"],
-            mysticism=data["mysticism"],
-            viscosity=data["viscosity"],
-            elongation=data["elongation"],
-            filthiness=data["filthiness"],
-            obtuseness=data["obtuseness"],
-            forwardness=data["forwardness"],
-            grandiosity=data["grandiosity"],
-            ominousness=data["ominousness"],
-            fortification=data["fortification"],
-            inconvenience=data["inconvenience"],
-            hype=data["hype"],
-        )
+        return self.stadiums[stadium_id] if stadium_id else StadiumData.null()
