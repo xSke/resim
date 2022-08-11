@@ -2120,14 +2120,14 @@ class Resim:
             self.update,
             0,
             0,
-            self.get_batter_multiplier(relevant_batter),  # hmmmmmm
+            self.get_batter_multiplier(relevant_batter),
             self.get_pitcher_multiplier(),
             self.is_strike,
             self.strike_roll,
             self.strike_threshold,
             fielder_roll,
             fielder,
-            self.get_fielder_multiplier(fielder) if fielder else 1,  # uhhhhhhhhh
+            self.get_fielder_multiplier(fielder) if fielder else 1,
             relevant_runner,
             relevant_runner_multiplier,
             runner_on_first,
@@ -2418,7 +2418,6 @@ class Resim:
     def get_batter_multiplier(self, relevant_batter=None, relevant_attr=None):
         # todo: retire in favor of get_multiplier() in formulas.py? this is only being used for logging right now...
         batter = relevant_batter or self.batter
-        # attr = relevant_attr
 
         batter_multiplier = 1
         for mod in itertools.chain(batter.mods, self.batting_team.mods):
@@ -2445,27 +2444,35 @@ class Resim:
             elif mod == Mod.CHUNKY and self.weather == Weather.PEANUTS:
                 # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
                 #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
-                if relevant_attr in ["musclitude", "divinity", "ground_friction"]:
+                # gfric boost hasn't been "tested" necessarily
+                if relevant_attr in ["musclitude", "divinity"]:
                     batter_multiplier += 1.0
+                elif relevant_attr == "ground_friction":
+                    batter_multiplier += 0.5
             elif mod == Mod.SMOOTH and self.weather == Weather.PEANUTS:
                 # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted everything in
                 #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
-                if relevant_attr in [
-                    "musclitude",
-                    "continuation",
-                    "ground_friction",
-                    "laserlikeness",
-                ]:
-                    batter_multiplier += 1.0
+                # the musc boost here has been "tested in the data", the others have not
+                if relevant_attr == "musclitude":
+                    batter_multiplier += 0.15
+                elif relevant_attr == "continuation":
+                    batter_multiplier += 0.50
+                elif relevant_attr == "ground_friction":
+                    batter_multiplier += 0.50
+                elif relevant_attr == "laserlikeness":
+                    batter_multiplier += 0.80
             elif mod == Mod.ON_FIRE:
-                # todo: figure out how the heck "on fire" works
-                pass
+                # still some room for error here (might include gf too)
+                if relevant_attr == "thwackability":
+                    batter_multiplier += 4 if self.season >= 13 else 3
+                if relevant_attr == "moxie":
+                    batter_multiplier += 2 if self.season >= 13 else 1
         return batter_multiplier
 
     def get_pitcher_multiplier(self, relevant_attr=None):
         # todo: retire in favor of get_multiplier() in formulas.py? this is only being used for logging right now...
         pitcher_multiplier = 1
-        # attr = relevant_attr
+
         # growth or traveling do not work for pitchers as of s14
         for mod in itertools.chain(self.pitcher.mods, self.pitching_team.mods):
             mod = Mod.coerce(mod)
@@ -2489,7 +2496,6 @@ class Resim:
         if not relevant_fielder:
             return 1
         fielder = relevant_fielder
-        # attr = relevant_attr
 
         fielder_multiplier = 1
         for mod in itertools.chain(fielder.mods, self.pitching_team.mods):
@@ -2517,25 +2523,6 @@ class Resim:
                 # lol, lmao
                 # is it this, or is it "mul = 0", I wonder
                 fielder_multiplier -= 1.0
-            # Chunky and Smooth should be irrelevant here. also hopefully On Fire
-            # elif mod == Mod.CHUNKY and self.weather == Weather.PEANUTS:
-            #     # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
-            #     #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
-            #     if relevant_attr in ["musclitude", "divinity", "ground_friction"]:
-            #         fielder_multiplier += 1.0
-            # elif mod == Mod.SMOOTH and self.weather == Weather.PEANUTS:
-            #     # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted stuff in
-            #     #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
-            #     if relevant_attr in [
-            #         "musclitude",
-            #         "continuation",
-            #         "ground_friction",
-            #         "laserlikeness",
-            #     ]:
-            #         fielder_multiplier += 1.0
-            # elif mod == Mod.ON_FIRE:
-            #     # todo: figure out how the heck "on fire" works
-            #     pass
         return fielder_multiplier
 
     def generate_player(self):
