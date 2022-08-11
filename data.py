@@ -273,6 +273,9 @@ class TeamData:
     def has_mod(self, mod) -> bool:
         return mod in self.mods
 
+    def update_mods(self):
+        self.mods = get_mods(self.data)
+
 
 @dataclass
 class StadiumData:
@@ -387,6 +390,9 @@ class PlayerData:
 
     def has_mod(self, mod) -> bool:
         return mod in self.mods
+
+    def update_mods(self):
+        self.mods = get_mods(self.data)
 
     def has_any(self, *mods) -> bool:
         for mod in mods:
