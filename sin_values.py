@@ -36,10 +36,6 @@ def __test_python_values():
 """
 
 
-def __static_sin_phase(frequency: int, day: int) -> float:
-    return SIN_PHASES[frequency][day]
-
-
 # Computed on July 25, 2022 using Node v16.9.1 with
 # Ubuntu 20.04.3 LTS (GNU/Linux 5.4.0-77-generic x86_64)
 SIN_PHASES = {

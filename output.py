@@ -1,6 +1,5 @@
 import os
 from csv import DictWriter
-from data import calculate_vibes
 
 
 class SaveCsv:
@@ -170,14 +169,14 @@ class SaveCsv:
             "runner_on_second_name": runner_on_second.name if runner_on_second is not None else "",
             "runner_on_third_name": runner_on_third.name if runner_on_third is not None else "",
             "runner_on_third_hh_name": runner_on_third_hh.name if runner_on_third_hh is not None else "",
-            "batter_vibes": calculate_vibes(batter.data, update["day"]),
-            "pitcher_vibes": calculate_vibes(pitcher.data, update["day"]),
-            "fielder_vibes": calculate_vibes(fielder.data, update["day"]) if fielder is not None else 0,
-            "runner_vibes": calculate_vibes(runner.data, update["day"]) if runner is not None else 0,
-            "runner_on_first_vibes": calculate_vibes(runner_on_first.data, update["day"]) if runner_on_first is not None else 0,
-            "runner_on_second_vibes": calculate_vibes(runner_on_second.data, update["day"]) if runner_on_second is not None else 0,
-            "runner_on_third_vibes": calculate_vibes(runner_on_third.data, update["day"]) if runner_on_third is not None else 0,
-            "runner_on_third_hh_vibes": calculate_vibes(runner_on_third_hh.data, update["day"]) if runner_on_third_hh is not None else 0,
+            "batter_vibes": batter.raw_vibes(update["day"]),
+            "pitcher_vibes": pitcher.raw_vibes(update["day"]),
+            "fielder_vibes": fielder.raw_vibes(update["day"]) if fielder is not None else 0,
+            "runner_vibes": runner.raw_vibes(update["day"]) if runner is not None else 0,
+            "runner_on_first_vibes": runner_on_first.raw_vibes(update["day"]) if runner_on_first is not None else 0,
+            "runner_on_second_vibes": runner_on_second.raw_vibes(update["day"]) if runner_on_second is not None else 0,
+            "runner_on_third_vibes": runner_on_third.raw_vibes(update["day"]) if runner_on_third is not None else 0,
+            "runner_on_third_hh_vibes": runner_on_third_hh.raw_vibes(update["day"]) if runner_on_third_hh is not None else 0,
             "batter_mods": ";".join(batter.mods),
             "batting_team_mods": ";".join(batting_team.mods),
             "pitcher_mods": ";".join(pitcher.mods),

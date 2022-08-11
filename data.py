@@ -5,7 +5,7 @@ import requests
 from typing import Any, List, Dict, Optional, Set
 from datetime import datetime, timedelta
 from enum import IntEnum, unique
-from sin_values import __static_sin_phase
+from sin_values import SIN_PHASES
 
 
 def offset_timestamp(timestamp: str, delta_secs: float) -> str:
@@ -340,10 +340,21 @@ class PlayerData:
                 return True
         return False
 
-    def vibes(self, day):
+    def vibes(self, day) -> float:
         if self.has_mod("SCATTERED"):
             return 0
-        return calculate_vibes(self.data, day)
+        return self.raw_vibes(day)
+
+    def raw_vibes(self, day) -> float:
+        frequency = 6 + round(10 * self.data["buoyancy"])
+        # Pull from pre-computed sin values
+        sin_phase = SIN_PHASES[frequency][day]
+        # Original formula:
+        # sin_phase = math.sin(math.pi * ((2 / frequency) * day + 0.5))
+
+        pressurization = self.data["pressurization"]
+        cinnamon = self.data["cinnamon"] or 0
+        return 0.5 * ((sin_phase - 1) * pressurization + (sin_phase + 1) * cinnamon)
 
 
 CHRONICLER_URI = "https://api.sibr.dev/chronicler"
@@ -458,15 +469,3 @@ class GameData:
             inconvenience=data["inconvenience"],
             hype=data["hype"],
         )
-
-
-def calculate_vibes(player, day) -> float:
-    frequency = 6 + round(10 * player["buoyancy"])
-    # Pull from pre-computed sin values
-    sin_phase = __static_sin_phase(frequency, day)
-    # Original formula:
-    # sin_phase = math.sin(math.pi * ((2 / frequency) * day + 0.5))
-
-    pressurization = player["pressurization"]
-    cinnamon = player["cinnamon"] or 0
-    return 0.5 * ((sin_phase - 1) * pressurization + (sin_phase + 1) * cinnamon)
