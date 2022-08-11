@@ -7,6 +7,7 @@ from data import EventType, GameData, Weather, get_feed_between
 from output import SaveCsv
 from rng import Rng
 from dataclasses import dataclass
+from enum import Enum, unique
 from typing import List
 from formulas import (
     get_contact_strike_threshold,
@@ -18,6 +19,34 @@ from formulas import (
     get_swing_ball_threshold,
     get_swing_strike_threshold,
 )
+
+
+@unique
+class Csv(Enum):
+    """
+    Tracks the .csv files we can log rolls for in Resim.
+    """
+
+    STRIKES = "strikes"
+    FOULS = "fouls"
+    TRIPLES = "triples"
+    DOUBLES = "doubles"
+    SWING_ON_BALL = "swing-on-ball"
+    SWING_ON_STRIKE = "swing-on-strike"
+    CONTACT = "contact"
+    HR = "hr"
+    STEAL_ATTEMPT = "steal_attempt"
+    STEAL_SUCCESS = "steal_success"
+    OUT = "out"
+    FLY = "fly"
+    PARTY = "party"
+    BIRD_MESSAGE = "bird-message"
+    CONSUMERS = "consumers"
+    HITADVANCE = "hitadvance"
+    FLYOUT = "flyout"
+    GROUNDOUT = "groundout"
+    GROUNDOUT_FORMULAS = "groundout_formulas"
+    HAUNTED = "haunted"
 
 
 class Resim:
@@ -41,32 +70,7 @@ class Resim:
         if run_name:
             os.makedirs("roll_data", exist_ok=True)
             run_name = run_name.replace(":", "_")
-
-            self.csvs = {
-                csv_name: SaveCsv(run_name, csv_name)
-                for csv_name in [
-                    "strikes",
-                    "fouls",
-                    "triples",
-                    "doubles",
-                    "swing-on-ball",
-                    "swing-on-strike",
-                    "contact",
-                    "hr",
-                    "steal_attempt",
-                    "steal_success",
-                    "out",
-                    "fly",
-                    "party",
-                    "bird-message",
-                    "consumers",
-                    "hitadvance",
-                    "flyout",
-                    "groundout",
-                    "groundout_formulas",
-                    "haunted",
-                ]
-            }
+            self.csvs = {csv: SaveCsv(run_name, csv.value) for csv in Csv}
         else:
             self.csvs = {}
         self.roll_log: List[LoggedRoll] = []
@@ -699,13 +703,13 @@ class Resim:
 
     def handle_ball(self):
         value = self.throw_pitch("ball")
-        self.log_roll("strikes", "Ball", value, False)
+        self.log_roll(Csv.STRIKES, "Ball", value, False)
 
         if not self.is_flinching():
             swing_roll = self.roll_swing(False)
             if swing_roll < 0.05:
                 self.print("!!! very low swing roll on ball")
-            self.log_roll("swing-on-ball", "Ball", swing_roll, False)
+            self.log_roll(Csv.SWING_ON_BALL, "Ball", swing_roll, False)
 
         if self.ty == EventType.WALK and self.batting_team.has_mod("BASE_INSTINCTS"):
             self.roll("base instincts")
@@ -719,24 +723,24 @@ class Resim:
             self.throw_pitch()
             swing_roll = self.roll_swing(True)
             self.log_roll(
-                "swing-on-strike" if self.is_strike else "swing-on-ball",
+                Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
                 "StrikeSwinging",
                 swing_roll,
                 True,
             )
 
             contact_roll = self.roll_contact(False)
-            self.log_roll("contact", "StrikeSwinging", contact_roll, False)
+            self.log_roll(Csv.CONTACT, "StrikeSwinging", contact_roll, False)
         elif ", looking" in self.desc or "strikes out looking." in self.desc:
             value = self.throw_pitch("strike")
-            self.log_roll("strikes", "StrikeLooking", value, True)
+            self.log_roll(Csv.STRIKES, "StrikeLooking", value, True)
 
             if not self.is_flinching():
                 swing_roll = self.roll_swing(False)
-                self.log_roll("swing-on-strike", "StrikeLooking", swing_roll, False)
+                self.log_roll(Csv.SWING_ON_STRIKE, "StrikeLooking", swing_roll, False)
         elif ", flinching" in self.desc:
             value = self.throw_pitch("strike")
-            self.log_roll("strikes", "StrikeFlinching", value, True)
+            self.log_roll(Csv.STRIKES, "StrikeFlinching", value, True)
         pass
 
     def try_roll_salmon(self):
@@ -770,13 +774,13 @@ class Resim:
         self.throw_pitch()
         swing_roll = self.roll_swing(True)
         self.log_roll(
-            "swing-on-strike" if self.is_strike else "swing-on-ball",
+            Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
             "Out",
             swing_roll,
             True,
         )
         contact_roll = self.roll_contact(True)
-        self.log_roll("contact", "Out", contact_roll, True)
+        self.log_roll(Csv.CONTACT, "Out", contact_roll, True)
         self.roll_foul(False)
 
         is_fc_dp = "into a double play!" in self.desc or "reaches on fielder's choice" in self.desc
@@ -788,7 +792,7 @@ class Resim:
             fly_fielder_roll, fly_fielder = self.roll_fielder(check_name=not is_fc_dp)
             fly_roll = self.roll("fly")
             self.log_roll(
-                "fly",
+                Csv.FLY,
                 "Flyout",
                 fly_roll,
                 True,
@@ -796,7 +800,7 @@ class Resim:
                 fielder=self.get_fielder_for_roll(out_fielder_roll),
             )
             self.log_roll(
-                "out",
+                Csv.OUT,
                 "Flyout",
                 out_roll,
                 False,
@@ -811,7 +815,7 @@ class Resim:
             fly_roll = self.roll("fly")
             ground_fielder_roll, ground_fielder = self.roll_fielder(check_name=not is_fc_dp)
             self.log_roll(
-                "fly",
+                Csv.FLY,
                 "GroundOut",
                 fly_roll,
                 False,
@@ -819,7 +823,7 @@ class Resim:
                 fielder=self.get_fielder_for_roll(out_fielder_roll),
             )
             self.log_roll(
-                "out",
+                Csv.OUT,
                 "GroundOut",
                 out_roll,
                 False,
@@ -932,7 +936,7 @@ class Resim:
                 # since it's possible for both
                 if self.update["basesOccupied"] == [2, 2] and base == 2 and roll_outcome:
                     rolls_advance.append(self.roll("holding hands"))
-            self.log_roll("flyout", "flyout", rolls_advance, False, fielder=fielder)
+            self.log_roll(Csv.FLYOUT, "flyout", rolls_advance, False, fielder=fielder)
 
         elif self.ty == EventType.GROUND_OUT:
             # All groundout baserunner situations and the number of extra rolls used
@@ -994,7 +998,7 @@ class Resim:
 
             # DP rolls
             if 0 in self.update["basesOccupied"]:
-                self.log_roll("groundout_formulas", "DP", extra_rolls[0], event_type == "DP", fielder=fielder)
+                self.log_roll(Csv.GROUNDOUT_FORMULAS, "DP", extra_rolls[0], event_type == "DP", fielder=fielder)
 
             # Martyr/Sacrifice rolls
             if (
@@ -1024,7 +1028,7 @@ class Resim:
                     )
                 )
 
-                self.log_roll("groundout_formulas", "Sac", extra_rolls[1], passed, fielder=fielder)
+                self.log_roll(Csv.GROUNDOUT_FORMULAS, "Sac", extra_rolls[1], passed, fielder=fielder)
 
             # Advance from 1st base
             if (
@@ -1035,7 +1039,7 @@ class Resim:
                 runner = self.data.get_player(self.update["baseRunners"][1])
                 passed = self.next_update["basesOccupied"] == [1]
                 self.log_roll(
-                    "groundout_formulas", "advance", extra_rolls[3], passed, fielder=fielder, relevant_runner=runner
+                    Csv.GROUNDOUT_FORMULAS, "advance", extra_rolls[3], passed, fielder=fielder, relevant_runner=runner
                 )
 
             # Advance from 2nd base
@@ -1043,7 +1047,7 @@ class Resim:
                 runner = self.data.get_player(self.update["baseRunners"][1])
                 passed = self.next_update["basesOccupied"] in [[2], [2, 2]]
                 self.log_roll(
-                    "groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
+                    Csv.GROUNDOUT_FORMULAS, "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
                 )
 
             # Advance from 3rd base
@@ -1056,14 +1060,14 @@ class Resim:
                 runner = self.data.get_player(self.update["baseRunners"][0])
                 passed = self.next_update["basesOccupied"] in [[0], [1]]
                 self.log_roll(
-                    "groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
+                    Csv.GROUNDOUT_FORMULAS, "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
                 )
             # [2,1] situation
             if self.update["basesOccupied"] in [[2, 1]]:
                 runner = self.data.get_player(self.update["baseRunners"][0])
                 passed = self.next_update["basesOccupied"] in [[1], [2]]
                 self.log_roll(
-                    "groundout_formulas", "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner
+                    Csv.GROUNDOUT_FORMULAS, "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner
                 )
             # [2,2] situation
             if self.update["basesOccupied"] in [[2, 2]]:
@@ -1074,17 +1078,27 @@ class Resim:
                     passed = self.next_update["basesOccupied"] in [[]]
                     runner = self.data.get_player(self.update["baseRunners"][0])
                     self.log_roll(
-                        "groundout_formulas", "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner
+                        Csv.GROUNDOUT_FORMULAS,
+                        "advance",
+                        extra_rolls[1],
+                        passed,
+                        fielder=fielder,
+                        relevant_runner=runner,
                     )
                     runner = self.data.get_player(self.update["baseRunners"][1])
                     self.log_roll(
-                        "groundout_formulas", "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
+                        Csv.GROUNDOUT_FORMULAS,
+                        "advance",
+                        extra_rolls[2],
+                        passed,
+                        fielder=fielder,
+                        relevant_runner=runner,
                     )
 
             # Here's a csv for looking at *any* groundout
             # No Implied pass/fail, and contains ALL extra rolls
             # Use selections in notebooks to look at different cases!
-            self.log_roll("groundout", "groundout", extra_rolls, False, fielder=fielder)
+            self.log_roll(Csv.GROUNDOUT, "groundout", extra_rolls, False, fielder=fielder)
 
             # FLOWCHART:
             # -Always roll for DP. Always. Ignore the roll if no runner on first.
@@ -1173,7 +1187,7 @@ class Resim:
             fielder = self.get_fielder_for_roll(defender_roll)
             if base == 1:
                 self.log_roll(
-                    "hitadvance",
+                    Csv.HITADVANCE,
                     "second",
                     roll,
                     roll_outcome,
@@ -1183,7 +1197,7 @@ class Resim:
                 )
             elif base == 2:
                 self.log_roll(
-                    "hitadvance",
+                    Csv.HITADVANCE,
                     "third",
                     roll,
                     roll_outcome,
@@ -1197,21 +1211,21 @@ class Resim:
             self.throw_pitch()
             swing_roll = self.roll_swing(True)
             self.log_roll(
-                "swing-on-strike" if self.is_strike else "swing-on-ball",
+                Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
                 "HR",
                 swing_roll,
                 True,
             )
 
             contact_roll = self.roll_contact(True)
-            self.log_roll("contact", "HomeRun", contact_roll, True)
+            self.log_roll(Csv.CONTACT, "HomeRun", contact_roll, True)
 
             self.roll_foul(False)
             fielder_roll = self.roll("out fielder")
             out_roll = self.roll("out")
 
             self.log_roll(
-                "out",
+                Csv.OUT,
                 "HR",
                 out_roll,
                 True,
@@ -1220,7 +1234,7 @@ class Resim:
             )
 
             hr_roll = self.roll_hr(True)
-            self.log_roll("hr", "HomeRun", hr_roll, True)
+            self.log_roll(Csv.HR, "HomeRun", hr_roll, True)
         else:
             # not sure why we need this
             self.roll("magmatic")
@@ -1232,14 +1246,14 @@ class Resim:
         self.throw_pitch()
         swing_roll = self.roll_swing(True)
         self.log_roll(
-            "swing-on-strike" if self.is_strike else "swing-on-ball",
+            Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
             "BaseHit",
             swing_roll,
             True,
         )
 
         contact_roll = self.roll_contact(True)
-        self.log_roll("contact", "BaseHit", contact_roll, True)
+        self.log_roll(Csv.CONTACT, "BaseHit", contact_roll, True)
 
         self.roll_foul(False)
 
@@ -1247,7 +1261,7 @@ class Resim:
         out_roll = self.roll("out")
 
         self.log_roll(
-            "out",
+            Csv.OUT,
             "BaseHit",
             out_roll,
             True,
@@ -1256,7 +1270,7 @@ class Resim:
         )
 
         hr_roll = self.roll_hr(False)
-        self.log_roll("hr", "BaseHit", hr_roll, False)
+        self.log_roll(Csv.HR, "BaseHit", hr_roll, False)
 
         defender_roll = self.roll("hit fielder")
 
@@ -1273,7 +1287,7 @@ class Resim:
 
         if hit_bases < 3:
             self.log_roll(
-                "doubles",
+                Csv.DOUBLES,
                 f"Hit{hit_bases}",
                 double_roll,
                 hit_bases == 2,
@@ -1282,7 +1296,7 @@ class Resim:
             )
 
         self.log_roll(
-            "triples",
+            Csv.TRIPLES,
             f"Hit{hit_bases}",
             triple_roll,
             hit_bases == 3,
@@ -1325,33 +1339,33 @@ class Resim:
             elif not known_outcome and foul_roll < threshold:
                 self.print(f"!!! too low foul roll ({foul_roll} < {threshold})")
         outcomestr = "Foul" if known_outcome else "Fair"
-        self.log_roll("fouls", outcomestr, foul_roll, known_outcome)
+        self.log_roll(Csv.FOULS, outcomestr, foul_roll, known_outcome)
 
     def handle_foul(self):
         self.throw_pitch()
 
         swing_roll = self.roll_swing(True)
         self.log_roll(
-            "swing-on-strike" if self.is_strike else "swing-on-ball",
+            Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
             "Foul",
             swing_roll,
             True,
         )
 
         contact_roll = self.roll_contact(True)
-        self.log_roll("contact", "Foul", contact_roll, True)
+        self.log_roll(Csv.CONTACT, "Foul", contact_roll, True)
 
         self.roll_foul(True)
 
     def handle_batter_up(self):
         if self.batter and self.batter.has_mod("HAUNTED"):
             haunt_roll = self.roll("haunted")
-            self.log_roll("haunted", "NoHaunt", haunt_roll, False)
+            self.log_roll(Csv.HAUNTED, "NoHaunt", haunt_roll, False)
 
         # if the haunting is successful the batter won't be the haunted player lol
         if "is Inhabiting" in self.event["description"]:
             haunt_roll = self.roll("haunted")
-            self.log_roll("haunted", "YesHaunt", haunt_roll, True)
+            self.log_roll(Csv.HAUNTED, "YesHaunt", haunt_roll, True)
 
             self.roll("haunter selection")
 
@@ -1486,10 +1500,10 @@ class Resim:
 
             if self.ty == EventType.BIRDS_CIRCLE:
                 # the birds circle...
-                self.log_roll("bird-message", "Circle", bird_roll, True)
+                self.log_roll(Csv.BIRD_MESSAGE, "Circle", bird_roll, True)
                 return True
             elif not has_shelled_player:
-                self.log_roll("bird-message", "NoCircle", bird_roll, False)
+                self.log_roll(Csv.BIRD_MESSAGE, "NoCircle", bird_roll, False)
 
             # threshold is at 0.0125 at 0.5 fort
             bird_threshold = 0.0125 - 0.02 * (self.stadium.fortification - 0.5)
@@ -1784,12 +1798,12 @@ class Resim:
                     attacked_player_id = self.event["playerTags"][0]
                     is_on_team = attacked_player_id in (team.lineup + team.rotation)
                     if is_on_team:
-                        self.log_roll("consumers", "Attack", attack_roll, True, attacked_team=team)
+                        self.log_roll(Csv.CONSUMERS, "Attack", attack_roll, True, attacked_team=team)
 
                         attacked_player = self.data.get_player(attacked_player_id)
 
                         target_roll = self.roll("target")
-                        self.log_roll("consumers", attacked_player.name, target_roll, True)
+                        self.log_roll(Csv.CONSUMERS, attacked_player.name, target_roll, True)
 
                         roster = [self.data.get_player(p) for p in team.lineup + team.rotation]
                         densities = [p.data["eDensity"] for p in roster]
@@ -1819,15 +1833,15 @@ class Resim:
 
                         return True
                     else:
-                        self.log_roll("consumers", "Miss", attack_roll, False)
+                        self.log_roll(Csv.CONSUMERS, "Miss", attack_roll, False)
                 else:
-                    self.log_roll("consumers", "Miss", attack_roll, False, attacked_team=team)
+                    self.log_roll(Csv.CONSUMERS, "Miss", attack_roll, False, attacked_team=team)
 
     def handle_party(self):
         # lol. turns out it just rolls party all the time and throws out the roll if the team isn't partying
         party_roll = self.roll("party time")
         if self.ty == EventType.PARTY:
-            self.log_roll("party", "Party", party_roll, True)
+            self.log_roll(Csv.PARTY, "Party", party_roll, True)
             team_roll = self.roll("target team")  # <0.5 for home, >0.5 for away
             self.roll("target player")
             for _ in range(25):
@@ -1992,7 +2006,7 @@ class Resim:
 
                 was_success = self.ty == EventType.STOLEN_BASE and base + 1 == base_stolen
                 self.log_roll(
-                    "steal_attempt",
+                    Csv.STEAL_ATTEMPT,
                     f"StealAttempt{base}",
                     steal_roll,
                     was_success,
@@ -2007,7 +2021,7 @@ class Resim:
                     was_caught = "caught stealing" in self.desc
 
                     self.log_roll(
-                        "steal_success",
+                        Csv.STEAL_SUCCESS,
                         f"StealSuccess{base}",
                         success_roll,
                         not was_caught,
@@ -2059,7 +2073,7 @@ class Resim:
 
     def log_roll(
         self,
-        csv_name: str,
+        csv: Csv,
         event_type: str,
         roll: float,
         passed: bool,
@@ -2071,7 +2085,6 @@ class Resim:
     ):
         if not self.csvs:
             return
-        roll_csv = self.csvs[csv_name]
         relevant_runner_multiplier = self.get_runner_multiplier(relevant_runner)
         runner_1st = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 0]
         runner_2nd = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 1]
@@ -2096,7 +2109,7 @@ class Resim:
             runner_on_third_hh_multiplier = self.get_runner_multiplier(runner_on_third_hh)
         else:
             runner_on_third_hh, runner_on_third_hh_multiplier = None, 1
-        roll_csv.write(
+        self.csvs[csv].write(
             event_type,
             roll,
             passed,
