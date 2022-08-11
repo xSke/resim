@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import os
 import json
 import requests
-from typing import Any, List, Dict, Optional
+from typing import Any, List, Dict, Optional, Set
 from datetime import datetime, timedelta
 from enum import IntEnum, unique
 from sin_values import __static_sin_phase
@@ -37,8 +37,8 @@ def get_cached(key, url):
     return data
 
 
-def get_mods(entity):
-    return (
+def get_mods(entity) -> Set[str]:
+    return set(
         entity.get("permAttr", [])
         + entity.get("seasAttr", [])
         + entity.get("weekAttr", [])
@@ -260,9 +260,9 @@ class Weather(IntEnum):
 class TeamData:
     data: Dict[str, Any]
     id: str = field(init=False)
-    mods: List[str] = field(init=False, default_factory=list)
-    lineup: List[str] = field(init=False, default_factory=list)
-    rotation: List[str] = field(init=False, default_factory=list)
+    mods: Set[str] = field(init=False)
+    lineup: List[str] = field(init=False)
+    rotation: List[str] = field(init=False)
 
     def __post_init__(self):
         self.id = self.data["id"]
@@ -277,7 +277,7 @@ class TeamData:
 @dataclass
 class StadiumData:
     id: Optional[str]
-    mods: List[str]
+    mods: Set[str]
     name: str
     nickname: str
     mysticism: float
@@ -299,7 +299,7 @@ class StadiumData:
     def null():
         return StadiumData(
             id=None,
-            mods=[],
+            mods=set(),
             name="Null Stadium",
             nickname="Null Stadium",
             mysticism=0.5,
@@ -320,7 +320,7 @@ class StadiumData:
 class PlayerData:
     data: Dict[str, Any]
     id: str = field(init=False)
-    mods: List[str] = field(init=False, default_factory=list)
+    mods: Set[str] = field(init=False)
     raw_name: str = field(init=False)
     name: str = field(init=False)
 
@@ -443,7 +443,7 @@ class GameData:
         data = self.stadiums[stadium_id]
         return StadiumData(
             id=data["id"],
-            mods=data["mods"],
+            mods=set(data["mods"]),
             name=data["name"],
             nickname=data["nickname"],
             mysticism=data["mysticism"],
