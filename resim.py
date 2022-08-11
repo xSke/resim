@@ -1800,12 +1800,10 @@ class Resim:
                             acc += density
                             if acc > target_roll * total_density:
                                 break
-                        self.print("(rolled target: {})".format(target.name))
+                        self.print(f"(rolled target: {target.naem})")
                         if target.id != attacked_player.id:
                             self.error(
-                                "incorrect consumer target (rolled {}, expected {})".format(
-                                    target.name, attacked_player.name
-                                )
+                                f"incorrect consumer target (rolled {target.name}, expected {attacked_player.name})"
                             )
 
                         for _ in range(25):
