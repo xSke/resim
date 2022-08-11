@@ -93,12 +93,14 @@ class Resim:
             jands = self.data.get_team("a37f9158-7f82-46bc-908c-c9e2dda7c33b")
             if not jands.has_mod("OVERPERFORMING"):
                 jands.data["permAttr"].append("OVERPERFORMING")
+                jands.update_mods()
 
         # another workaround for bad data
         if self.game_id == "c608b5db-29ad-4216-a703-8f0627057523":
             caleb_novak = self.data.get_player("0eddd056-9d72-4804-bd60-53144b785d5c")
             if caleb_novak.has_mod("ELSEWHERE"):
                 caleb_novak.data["permAttr"].remove("ELSEWHERE")
+                caleb_novak.update_mods()
 
         self.print()
         if self.update:
@@ -1935,6 +1937,7 @@ class Resim:
                 # should probably move this logic into a function somehow
                 self.batting_team.lineup.remove(runner_id)
                 runner.data["permAttr"].append("REDACTED")
+                runner.update_mods()
 
                 # and just as a cherry on top let's hack this so we don't roll for steal as well
                 self.update["basesOccupied"].remove(1)
@@ -2208,6 +2211,7 @@ class Resim:
             and self.ty != EventType.BATTER_UP
         ):
             self.batter.data["gameAttr"].append("OVERPERFORMING")
+            self.batter.update_mods()
 
     def apply_event_changes(self, event):
         # maybe move this function to data.py?
@@ -2226,10 +2230,12 @@ class Resim:
                 player = self.data.get_player(event["playerTags"][0])
                 if meta["mod"] not in player.data[position]:
                     player.data[position].append(meta["mod"])
+                    player.update_mods()
             else:
                 team = self.data.get_team(event["teamTags"][0])
                 if meta["mod"] not in team.data[position]:
                     team.data[position].append(meta["mod"])
+                    team.update_mods()
 
         # player or team mod removed
         if event["type"] in [
@@ -2245,6 +2251,7 @@ class Resim:
                     self.print(f"!!! warn: trying to remove mod {meta['mod']} but can't find it")
                 else:
                     player.data[position].remove(meta["mod"])
+                    player.update_mods()
             else:
                 team = self.data.get_team(event["teamTags"][0])
 
@@ -2252,6 +2259,7 @@ class Resim:
                     self.print(f"!!! warn: trying to remove mod {meta['mod']} but can't find it")
                 else:
                     team.data[position].remove(meta["mod"])
+                    team.update_mods()
 
         # mod replaced
         if event["type"] in [EventType.CHANGED_MODIFIER]:
@@ -2261,10 +2269,12 @@ class Resim:
                 player = self.data.get_player(event["playerTags"][0])
                 player.data[position].remove(meta["from"])
                 player.data[position].append(meta["to"])
+                player.update_mods()
             else:
                 team = self.data.get_team(event["teamTags"][0])
                 team.data[position].remove(meta["from"])
                 team.data[position].append(meta["to"])
+                team.update_mods()
 
         # timed mods wore off
         if event["type"] in [EventType.MOD_EXPIRES]:
@@ -2277,11 +2287,13 @@ class Resim:
                         self.print(f"!!! warn: trying to remove mod {mod} but can't find it")
                     else:
                         player.data[position].remove(mod)
+                        player.update_mods()
 
             else:
                 for mod in meta["mods"]:
                     team = self.data.get_team(event["teamTags"][0])
                     team.data[position].remove(mod)
+                    team.update_mods()
 
         # echo mods added/removed
         if event["type"] in [
@@ -2293,6 +2305,7 @@ class Resim:
                 player.data[mod_positions[mod["type"]]].append(mod["mod"])
             for mod in meta.get("removes", []):
                 player.data[mod_positions[mod["type"]]].remove(mod["mod"])
+            player.update_mods()
 
         # cases where the tagged player needs to be refetched (party, consumer, incin replacement)
         if event["type"] in [
@@ -2343,6 +2356,7 @@ class Resim:
                     if source == ["RECEIVER"]:
                         if mod in player.data["seasAttr"]:
                             player.data["seasAttr"].remove(mod)
+            player.update_mods()
 
         # roster swap
         if event["type"] == EventType.PLAYER_TRADED:
