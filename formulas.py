@@ -1,4 +1,4 @@
-from data import PlayerData, TeamData, StadiumData, Weather
+from data import Mod, PlayerData, TeamData, StadiumData, Weather
 import itertools
 from dataclasses import dataclass
 
@@ -16,21 +16,22 @@ class StatRelevantData:
 def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str, meta: StatRelevantData):
     multiplier = 1
     for mod in itertools.chain(player.mods, team.mods):
-        if mod == "OVERPERFORMING":
+        mod = Mod.coerce(mod)
+        if mod == Mod.OVERPERFORMING:
             multiplier += 0.2
-        elif mod == "UNDERPERFORMING":
+        elif mod == Mod.UNDERPERFORMING:
             multiplier -= 0.2
-        elif mod == "GROWTH":
+        elif mod == Mod.GROWTH:
             # todo: do we ever want this for other positions?
             if attr not in ["patheticism", "thwackability", "ruthlessness"]:
                 multiplier += min(0.05, 0.05 * (meta.day / 99))
-        elif mod == "HIGH_PRESSURE":
+        elif mod == Mod.HIGH_PRESSURE:
             # checks for flooding weather and baserunners
             if meta.weather == Weather.FLOODING and meta.runner_count > 0:
                 # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
                 # "should we really boost the pitcher when the *other* team's batters are on base" yes.
                 multiplier += 0.25
-        elif mod == "TRAVELING":
+        elif mod == Mod.TRAVELING:
             if (meta.top_of_inning and position == "batter") or (not meta.top_of_inning and position == "pitcher"):
                 if attr not in ["patheticism", "thwackability", "ruthlessness"]:
                     multiplier += 0.05
@@ -38,14 +39,14 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             # todo: do we ever want this?
             # elif not top_of_inning and position in ["fielder", "pitcher"]:
             # multiplier += 0.05
-        elif mod == "SINKING_SHIP":
+        elif mod == Mod.SINKING_SHIP:
             roster_size = len(team.lineup) + len(team.rotation)
 
             if attr not in []:
                 multiplier += (14 - roster_size) * 0.01
-        elif mod == "AFFINITY_FOR_CROWS" and meta.weather == Weather.BIRDS:
+        elif mod == Mod.AFFINITY_FOR_CROWS and meta.weather == Weather.BIRDS:
             multiplier += 0.5
-        elif mod == "CHUNKY" and meta.weather == Weather.PEANUTS:
+        elif mod == Mod.CHUNKY and meta.weather == Weather.PEANUTS:
             # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
             #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
             # gfric boost hasn't been "tested" necessarily
@@ -53,7 +54,7 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
                 multiplier += 1.0
             elif attr == "ground_friction":
                 multiplier += 0.5
-        elif mod == "SMOOTH" and meta.weather == Weather.PEANUTS:
+        elif mod == Mod.SMOOTH and meta.weather == Weather.PEANUTS:
             # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted everything in
             #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
             # the musc boost here has been "tested in the data", the others have not
@@ -65,16 +66,16 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
                 multiplier += 0.50
             elif attr == "laserlikeness":
                 multiplier += 0.80
-        elif mod == "ON_FIRE":
+        elif mod == Mod.ON_FIRE:
             # still some room for error here (might include gf too)
             if attr == "thwackability":
                 multiplier += 4 if meta.season >= 13 else 3
             if attr == "moxie":
                 multiplier += 2 if meta.season >= 13 else 1
-        elif mod == "MINIMALIST":
+        elif mod == Mod.MINIMALIST:
             if meta.is_maximum_blaseball:
                 multiplier -= 0.75
-        elif mod == "MAXIMALIST":
+        elif mod == Mod.MAXIMALIST:
             # not "seen in the data" yet
             if meta.is_maximum_blaseball:
                 multiplier += 2.50

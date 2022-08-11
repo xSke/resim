@@ -4,7 +4,7 @@ import json
 import requests
 from typing import Any, List, Dict, Optional, Set
 from datetime import datetime, timedelta
-from enum import IntEnum, unique
+from enum import Enum, IntEnum, auto, unique
 from sin_values import SIN_PHASES
 
 
@@ -45,6 +45,62 @@ def get_mods(entity) -> Set[str]:
         + entity.get("gameAttr", [])
         + entity.get("itemAttr", [])
     )
+
+
+@unique
+class Mod(Enum):
+    def _generate_next_value_(name, start, count, last_values):
+        """Ensure Mod values match names"""
+        return name
+
+    ACIDIC = auto()
+    AFFINITY_FOR_CROWS = auto()
+    BASE_INSTINCTS = auto()
+    BIG_BUCKET = auto()
+    BIRD_SEED = auto()
+    CHUNKY = auto()
+    COFFEE_PERIL = auto()
+    DEBT_THREE = auto()
+    ECHO = auto()
+    ECHO_CHAMBER = auto()
+    EGO1 = auto()
+    ELECTRIC = auto()
+    ELSEWHERE = auto()
+    FIRE_EATER = auto()
+    FIREPROOF = auto()
+    FLINCH = auto()
+    FLOOD_PUMPS = auto()
+    GRIND_RAIL = auto()
+    GROWTH = auto()
+    HAUNTED = auto()
+    HIGH_PRESSURE = auto()
+    HONEY_ROASTED = auto()
+    INHABITING = auto()
+    LOVE = auto()
+    MARKED = auto()
+    MAXIMALIST = auto()
+    MINIMALIST = auto()
+    O_NO = auto()
+    ON_FIRE = auto()
+    OVERPERFORMING = auto()
+    PARTY_TIME = auto()
+    PEANUT_MISTER = auto()
+    PERK = auto()
+    PSYCHOACOUSTICS = auto()
+    REVERBERATING = auto()
+    SCATTERED = auto()
+    SECRET_BASE = auto()
+    SHELLED = auto()
+    SINKING_SHIP = auto()
+    SMITHY = auto()
+    SMOOTH = auto()
+    SWIM_BLADDER = auto()
+    TRAVELING = auto()
+    UNDERPERFORMING = auto()
+
+    @classmethod
+    def coerce(cls, value):
+        return cls(value) if value in cls.__members__ else None
 
 
 def get_feed_between(start, end):
@@ -270,8 +326,8 @@ class TeamData:
         self.lineup = self.data["lineup"]
         self.rotation = self.data["rotation"]
 
-    def has_mod(self, mod) -> bool:
-        return mod in self.mods
+    def has_mod(self, mod: Mod) -> bool:
+        return mod.value in self.mods
 
     def update_mods(self):
         self.mods = get_mods(self.data)
@@ -295,8 +351,8 @@ class StadiumData:
     inconvenience: float
     hype: float
 
-    def has_mod(self, mod) -> bool:
-        return mod in self.mods
+    def has_mod(self, mod: Mod) -> bool:
+        return mod.value in self.mods
 
     @staticmethod
     def from_dict(data):
@@ -410,20 +466,17 @@ class PlayerData:
         unscattered_name = self.data.get("state", {}).get("unscatteredName")
         return unscattered_name or self.data["name"]
 
-    def has_mod(self, mod) -> bool:
-        return mod in self.mods
+    def has_mod(self, mod: Mod) -> bool:
+        return mod.value in self.mods
 
     def update_mods(self):
         self.mods = get_mods(self.data)
 
-    def has_any(self, *mods) -> bool:
-        for mod in mods:
-            if mod in self.mods:
-                return True
-        return False
+    def has_any(self, *mods: Mod) -> bool:
+        return any(self.has_mod(mod) for mod in mods)
 
     def vibes(self, day) -> float:
-        if self.has_mod("SCATTERED"):
+        if self.has_mod(Mod.SCATTERED):
             return 0
         return self.raw_vibes(day)
 
