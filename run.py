@@ -124,11 +124,11 @@ def main():
     print("Counting events...")
     total_events = sum(
         len(get_feed_between(start_time, end_time))
-        for _, _, _, start_time, end_time in tqdm(FRAGMENTS, unit="fragments")
+        for _, _, _, start_time, end_time in tqdm(FRAGMENTS, unit=" fragments")
     )
 
     print("Running resim...")
-    with tqdm(total=total_events, unit="events") as progress:
+    with tqdm(total=total_events, unit=" events", unit_scale=True) as progress:
         if args.no_multiprocessing:
 
             def progress_callback():
