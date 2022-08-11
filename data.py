@@ -49,6 +49,11 @@ def get_mods(entity) -> Set[str]:
 
 @unique
 class Mod(Enum):
+    """
+    Modifications which are being used within Resim.
+    Not an exhaustive list! Add here when necessary.
+    """
+
     def _generate_next_value_(name, start, count, last_values):
         """Ensure Mod values match names"""
         return name
