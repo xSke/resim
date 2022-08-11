@@ -362,7 +362,7 @@ class PlayerData:
     coldness: float = field(init=False)
     baseThirst: float = field(init=False)
     continuation: float = field(init=False)
-    groundFriction: float = field(init=False)
+    ground_friction: float = field(init=False)
     indulgence: float = field(init=False)
     laserlikeness: float = field(init=False)
     anticapitalism: float = field(init=False)
@@ -394,7 +394,7 @@ class PlayerData:
         self.coldness = self.data["coldness"]
         self.baseThirst = self.data["baseThirst"]
         self.continuation = self.data["continuation"]
-        self.groundFriction = self.data["groundFriction"]
+        self.ground_friction = self.data["groundFriction"]
         self.indulgence = self.data["indulgence"]
         self.laserlikeness = self.data["laserlikeness"]
         self.anticapitalism = self.data["anticapitalism"]
