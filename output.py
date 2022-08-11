@@ -217,7 +217,7 @@ class SaveCsv:
         # fmt: on
 
         if self.csv is None:
-            self.csv = DictWriter(self.file, fieldnames=list(row.keys()))
+            self.csv = DictWriter(self.file, fieldnames=list(row.keys()), extrasaction="ignore")
             self.csv.writeheader()
 
         self.csv.writerow(row)
