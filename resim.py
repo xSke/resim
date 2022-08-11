@@ -277,10 +277,10 @@ class Resim:
                 # Shakespearianism, Suppression, Unthwackability, Coldness, Overpowerment, Ruthlessness,
                 # Base Thirst, Laserlikeness, Ground Friction, Continuation, Indulgence,
                 # Tragicness, Buoyancy, Thwackability, Moxie, Divinity, Musclitude, Patheticism, Martyrdom, Cinnamon
-                for player_id in team.data["lineup"]:
+                for player_id in team.lineup:
                     for _ in range(25):
                         self.roll("stat")
-                for player_id in team.data["rotation"]:
+                for player_id in team.rotation:
                     for _ in range(25):
                         self.roll("stat")
             # skip party/consumer stat change
@@ -403,10 +403,7 @@ class Resim:
             if self.ty == EventType.GAME_END and self.weather.is_coffee():
                 # end of coffee game redaction
                 rosters = (
-                    self.home_team.data["lineup"]
-                    + self.home_team.data["rotation"]
-                    + self.away_team.data["lineup"]
-                    + self.away_team.data["rotation"]
+                    self.home_team.lineup + self.home_team.rotation + self.away_team.lineup + self.away_team.rotation
                 )
                 for player_id in rosters:
                     player = self.data.get_player(player_id)
@@ -762,7 +759,7 @@ class Resim:
         return self.batter.has_mod("FLINCH") and self.strikes == 0
 
     def get_fielder_for_roll(self, fielder_roll: float):
-        candidates = [self.data.get_player(player) for player in self.pitching_team.data["lineup"]]
+        candidates = [self.data.get_player(player) for player in self.pitching_team.lineup]
         candidates = [c for c in candidates if not c.has_mod("ELSEWHERE")]
 
         return candidates[math.floor(fielder_roll * len(candidates))]
@@ -838,7 +835,7 @@ class Resim:
     def roll_fielder(self, check_name=True):
         eligible_fielders = []
         fielder_idx = None
-        for fielder_id in self.pitching_team.data["lineup"]:
+        for fielder_id in self.pitching_team.lineup:
             fielder = self.data.get_player(fielder_id)
             if fielder.has_mod("ELSEWHERE"):
                 continue
@@ -1381,7 +1378,7 @@ class Resim:
                     self.roll("target")
                     return True
 
-            fire_eater_eligible = self.pitching_team.data["lineup"] + [
+            fire_eater_eligible = self.pitching_team.lineup + [
                 self.batter.id,
                 self.pitcher.id,
             ]
@@ -1471,10 +1468,10 @@ class Resim:
 
             has_shelled_player = False
             for player_id in (
-                self.pitching_team.data["lineup"]
-                + self.pitching_team.data["rotation"]
-                + self.batting_team.data["lineup"]
-                + self.batting_team.data["rotation"]
+                self.pitching_team.lineup
+                + self.pitching_team.rotation
+                + self.batting_team.lineup
+                + self.batting_team.rotation
             ):
                 # if low roll and shelled player present, roll again
                 # in s14 this doesn't seem to check (inactive) pitchers
@@ -1527,14 +1524,14 @@ class Resim:
                 if self.ty in [EventType.ECHO_MESSAGE, EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
                     eligible_players = []
                     if self.pitcher.has_mod("ECHO"):
-                        eligible_players.extend(self.batting_team.data["rotation"])
+                        eligible_players.extend(self.batting_team.rotation)
                         eligible_players = [self.batter.id] + eligible_players
 
                     else:
-                        eligible_players.extend(self.pitching_team.data["lineup"])
+                        eligible_players.extend(self.pitching_team.lineup)
 
                         if (self.season, self.day) > (13, 74):
-                            eligible_players.extend(self.pitching_team.data["rotation"])
+                            eligible_players.extend(self.pitching_team.rotation)
                             eligible_players.remove(self.pitcher.id)
 
                         eligible_players = [self.pitcher.id] + eligible_players
@@ -1565,7 +1562,7 @@ class Resim:
                     for _ in range(2):
                         self.roll("reverb shuffle?")
 
-                    for _ in range(len(self.pitching_team.data["rotation"])):
+                    for _ in range(len(self.pitching_team.rotation)):
                         self.roll("reverb shuffle?")
 
                 return True
@@ -1579,7 +1576,7 @@ class Resim:
                 self.roll("echo?")
 
                 if self.ty in [EventType.ECHO_MESSAGE, EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
-                    eligible_players = self.batting_team.data["lineup"] + self.batting_team.data["rotation"]
+                    eligible_players = self.batting_team.lineup + self.batting_team.rotation
                     eligible_players.remove(self.batter.id)
                     self.handle_echo_target_selection(eligible_players)
 
@@ -1702,7 +1699,7 @@ class Resim:
         if self.update["homeBatter"] and self.update["topOfInning"] and self.ty not in plate_types:
             return
 
-        players = team.data["lineup"] + team.data["rotation"]
+        players = team.lineup + team.rotation
         did_elsewhere_return = False
         for player_id in players:
             player = self.data.get_player(player_id)
@@ -1783,7 +1780,7 @@ class Resim:
 
                 if self.ty == EventType.CONSUMERS_ATTACK:
                     attacked_player_id = self.event["playerTags"][0]
-                    is_on_team = attacked_player_id in (team.data["lineup"] + team.data["rotation"])
+                    is_on_team = attacked_player_id in (team.lineup + team.rotation)
                     if is_on_team:
                         self.log_roll("consumers", "Attack", attack_roll, True, attacked_team=team)
 
@@ -1792,7 +1789,7 @@ class Resim:
                         target_roll = self.roll("target")
                         self.log_roll("consumers", attacked_player.name, target_roll, True)
 
-                        roster = [self.data.get_player(p) for p in team.data["lineup"] + team.data["rotation"]]
+                        roster = [self.data.get_player(p) for p in team.lineup + team.rotation]
                         densities = [p.data["eDensity"] for p in roster]
                         total_density = sum(densities)
 
@@ -1815,10 +1812,10 @@ class Resim:
                             if attacked_player.data["soul"] == 1:
                                 # lost their last soul, redact :<
                                 self.print(f"!!! {attacked_player.name} lost last soul, " f"redacting")
-                                if attacked_player_id in team.data["lineup"]:
-                                    team.data["lineup"].remove(attacked_player_id)
-                                if attacked_player_id in team.data["rotation"]:
-                                    team.data["rotation"].remove(attacked_player_id)
+                                if attacked_player_id in team.lineup:
+                                    team.lineup.remove(attacked_player_id)
+                                if attacked_player_id in team.rotation:
+                                    team.rotation.remove(attacked_player_id)
 
                         return True
                     else:
@@ -1896,7 +1893,7 @@ class Resim:
             # (null leagueTeamId) and that *does* have an exit roll on the "wrong side"
             # so maybe it just checks "if present on opposite team" rather than "is not present on current team"? or
             # it's special handling for null team
-            pitching_lineup = self.pitching_team.data["lineup"]
+            pitching_lineup = self.pitching_team.lineup
             secret_runner = self.data.get_player(secret_runner_id)
             if secret_runner_id in pitching_lineup:
                 self.print("can't exit secret base on wrong team", secret_runner.name)
@@ -1936,8 +1933,7 @@ class Resim:
 
                 # remove baserunner from roster so fielder math works.
                 # should probably move this logic into a function somehow
-                lineup = self.batting_team.data["lineup"]
-                lineup.remove(runner_id)
+                self.batting_team.lineup.remove(runner_id)
                 runner.data["permAttr"].append("REDACTED")
 
                 # and just as a cherry on top let's hack this so we don't roll for steal as well
@@ -2330,10 +2326,10 @@ class Resim:
             team_id = meta["teamId"]
             player_id = meta["playerId"]
             team = self.data.get_team(team_id)
-            if player_id in team.data["lineup"]:
-                team.data["lineup"].remove(player_id)
-            if player_id in team.data["rotation"]:
-                team.data["rotation"].remove(player_id)
+            if player_id in team.lineup:
+                team.lineup.remove(player_id)
+            if player_id in team.rotation:
+                team.rotation.remove(player_id)
 
         # mod changed from one to other
         if event["type"] == EventType.MODIFICATION_CHANGE:
@@ -2352,15 +2348,15 @@ class Resim:
         if event["type"] == EventType.PLAYER_TRADED:
             a_team = self.data.get_team(meta["aTeamId"])
             b_team = self.data.get_team(meta["bTeamId"])
-            a_location = ["lineup", "rotation"][meta["aLocation"]]
-            b_location = ["lineup", "rotation"][meta["bLocation"]]
             a_player = meta["aPlayerId"]
             b_player = meta["bPlayerId"]
-            a_idx = a_team.data[a_location].index(a_player)
-            b_idx = b_team.data[b_location].index(b_player)
+            a_location = a_team.rotation if meta["aLocation"] else a_team.lineup
+            b_location = b_team.rotation if meta["bLocation"] else b_team.lineup
+            a_idx = a_location.index(a_player)
+            b_idx = b_location.index(b_player)
 
-            b_team.data[b_location][b_idx] = a_player
-            a_team.data[a_location][a_idx] = b_player
+            b_location[b_idx] = a_player
+            a_location[a_idx] = b_player
 
     def find_start_of_inning_score(self, game_id, inning):
         for play in range(1000):
@@ -2417,7 +2413,7 @@ class Resim:
                 if self.update["topOfInning"]:
                     batter_multiplier += 0.05
             elif mod == "SINKING_SHIP":
-                roster_size = len(self.batting_team.data["lineup"]) + len(self.batting_team.data["rotation"])
+                roster_size = len(self.batting_team.lineup) + len(self.batting_team.rotation)
                 batter_multiplier += (14 - roster_size) * 0.01
             elif mod == "AFFINITY_FOR_CROWS" and self.weather == Weather.BIRDS:
                 batter_multiplier += 0.5
@@ -2452,7 +2448,7 @@ class Resim:
             elif mod == "UNDERPERFORMING":
                 pitcher_multiplier -= 0.2
             elif mod == "SINKING_SHIP":
-                roster_size = len(self.pitching_team.data["lineup"]) + len(self.pitching_team.data["rotation"])
+                roster_size = len(self.pitching_team.lineup) + len(self.pitching_team.rotation)
                 pitcher_multiplier += (14 - roster_size) * 0.01
             elif mod == "AFFINITY_FOR_CROWS" and self.weather == Weather.BIRDS:
                 pitcher_multiplier += 0.5
@@ -2486,7 +2482,7 @@ class Resim:
                 if not self.update["topOfInning"]:
                     fielder_multiplier += 0.05
             elif mod == "SINKING_SHIP":
-                roster_size = len(self.pitching_team.data["lineup"]) + len(self.pitching_team.data["rotation"])
+                roster_size = len(self.pitching_team.lineup) + len(self.pitching_team.rotation)
                 fielder_multiplier += (14 - roster_size) * 0.01
             # elif mod == "AFFINITY_FOR_CROWS" and self.weather == Weather.BIRDS:
             #     fielder_multiplier += 0.5

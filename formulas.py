@@ -39,7 +39,7 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             # elif not top_of_inning and position in ["fielder", "pitcher"]:
             # multiplier += 0.05
         elif mod == "SINKING_SHIP":
-            roster_size = len(team.data["lineup"]) + len(team.data["rotation"])
+            roster_size = len(team.lineup) + len(team.rotation)
 
             if attr not in []:
                 multiplier += (14 - roster_size) * 0.01

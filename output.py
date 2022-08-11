@@ -201,8 +201,8 @@ class SaveCsv:
             "home_score": update["homeScore"],
             "away_score": update["awayScore"],
             "inning": update["inning"],
-            "batting_team_roster_size": len(batting_team.data["lineup"]) + len(batting_team.data["rotation"]),
-            "pitching_team_roster_size": len(pitching_team.data["lineup"]) + len(pitching_team.data["rotation"]),
+            "batting_team_roster_size": len(batting_team.lineup) + len(batting_team.rotation),
+            "pitching_team_roster_size": len(pitching_team.lineup) + len(pitching_team.rotation),
             "baserunner_count": update["baserunnerCount"],
             "baserunners": str(update["basesOccupied"]),
             "baserunners_next": str(baserunners_next),
@@ -212,8 +212,8 @@ class SaveCsv:
             "fielder_roll": fielder_roll,
             "batter_consecutive_hits": batter.data["consecutiveHits"],
             "team_level": attacked_team.data["level"] if (attacked_team and "level" in attacked_team.data) else None,
-            "team_eDensity": attacked_team.data["eDensity"] if (attacked_team and "level" in attacked_team.data) else None,
-            "team_name": attacked_team.data["nickname"] if (attacked_team and "level" in attacked_team.data) else None,
+            "team_eDensity": attacked_team.data["eDensity"] if (attacked_team and "eDensity" in attacked_team.data) else None,
+            "team_name": attacked_team.data["nickname"] if (attacked_team and "nickname" in attacked_team.data) else None,
         }
         # fmt: on
 

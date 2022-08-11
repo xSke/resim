@@ -261,10 +261,14 @@ class TeamData:
     data: Dict[str, Any]
     id: str = field(init=False)
     mods: List[str] = field(init=False, default_factory=list)
+    lineup: List[str] = field(init=False, default_factory=list)
+    rotation: List[str] = field(init=False, default_factory=list)
 
     def __post_init__(self):
         self.id = self.data["id"]
         self.mods = get_mods(self.data)
+        self.lineup = self.data["lineup"]
+        self.rotation = self.data["rotation"]
 
     def has_mod(self, mod) -> bool:
         return mod in self.mods
