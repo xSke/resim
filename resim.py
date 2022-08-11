@@ -50,7 +50,7 @@ class Csv(Enum):
 
 
 class Resim:
-    def __init__(self, rng, out_file, run_name, raise_on_errors=True):
+    def __init__(self, rng, out_file, run_name, raise_on_errors=True, csvs_to_log=[]):
         self.rng = rng
         self.out_file = out_file
         self.data = GameData()
@@ -67,7 +67,8 @@ class Resim:
         if run_name:
             os.makedirs("roll_data", exist_ok=True)
             run_name = run_name.replace(":", "_")
-            self.csvs = {csv: SaveCsv(run_name, csv.value) for csv in Csv}
+            csvs_to_log = csvs_to_log or list(Csv)
+            self.csvs = {csv: SaveCsv(run_name, csv.value) for csv in Csv if csv in csvs_to_log}
         else:
             self.csvs = {}
         self.roll_log: List[LoggedRoll] = []
@@ -2082,7 +2083,7 @@ class Resim:
         fielder=None,
         attacked_team=None,
     ):
-        if not self.csvs:
+        if csv not in self.csvs:
             return
         relevant_runner_multiplier = self.get_runner_multiplier(relevant_runner)
         runner_1st = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 0]

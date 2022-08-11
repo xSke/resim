@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 from tqdm import tqdm
 
 from data import get_feed_between
-from resim import Resim
+from resim import Csv, Resim
 from rng import Rng
 
 # (season1indexed, day1indexed): (s0, s1), rng offset, event offset, start timestamp, end timestamp
@@ -254,12 +254,27 @@ def parse_args():
     parser.add_argument("--start_time", default="")
     parser.add_argument("--jump_hours", type=int, default=0)
     parser.add_argument("--rolls", nargs="?", type=int, default=-1)
+    parser.add_argument(
+        "--csv",
+        nargs="+",
+        default=[],
+        metavar="CSV",
+        help="Only log these CSV types. Default is logging all CSV types. Use --csv-list to see possible CSVs.",
+    )
+    parser.add_argument("--csv-list", default=False, action="store_true", help="List the CSVs which can be included")
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.csv = [Csv(Csv.__members__.get(csv, csv)) for csv in args.csv]
+    return args
 
 
 def main():
     args = parse_args()
+    if args.csv_list:
+        print("Current CSV options:")
+        for csv in Csv:
+            print(f"  {csv.name}")
+        return
     out_file = io.StringIO()
 
     fragment_key = None
@@ -313,7 +328,7 @@ def main():
         rng = Rng(rng_state, rng_offset)
         rng.step(step)
         with (RngCountContext(rng) as rng_counter, tqdm(total=total_events, unit="events") as _):
-            resim = Resim(rng, None, start_time, raise_on_errors=False)
+            resim = Resim(rng, None, run_name=start_time, raise_on_errors=False, csvs_to_log=args.csv)
             resim.run(start_time, end_time, progress_callback=None)
             rolls = rng_counter.count
             tqdm.write(f"rolls used: {rolls}")
@@ -325,7 +340,7 @@ def main():
     print(f"to state {rng.get_state_str()}")
     s0, s1, offset = rng.get_state()
     with (RngCountContext(rng) as rng_counter, tqdm(total=total_events, unit="events") as _):
-        resim = Resim(rng, out_file, start_time, raise_on_errors=False)
+        resim = Resim(rng, out_file, run_name=start_time, raise_on_errors=False, csvs_to_log=args.csv)
         resim.run(start_time, end_time, progress_callback=None)
         tqdm.write(f"rolls used: {rng_counter.count}/{rolls}")
         tqdm.write(f"state at end: {rng.get_state_str()}")
@@ -372,7 +387,7 @@ def main():
     out_file.close()
     out_file = io.StringIO()
     with (RngCountContext(rng) as rng_counter, tqdm(total=total_events, unit="events") as _):
-        resim = Resim(rng, out_file, start_time, raise_on_errors=False)
+        resim = Resim(rng, out_file, run_name=start_time, raise_on_errors=False, csvs_to_log=args.csv)
         resim.run(start_time, end_time, progress_callback=None)
         tqdm.write(f"rolls used: {rng_counter.count}/{rolls}")
         tqdm.write(f"state at end: {rng.get_state_str()}")
