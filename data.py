@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import os
 import json
 import requests
@@ -320,12 +320,13 @@ class Weather(IntEnum):
 @dataclass
 class TeamData:
     data: Dict[str, Any]
-    id: str = field(init=False)
-    mods: Set[str] = field(init=False)
-    lineup: List[str] = field(init=False)
-    rotation: List[str] = field(init=False)
+    id: str
+    mods: Set[str]
+    lineup: List[str]
+    rotation: List[str]
 
-    def __post_init__(self):
+    def __init__(self, data: Dict[str, Any]):
+        self.data = data
         self.id = self.data["id"]
         self.mods = get_mods(self.data)
         self.lineup = self.data["lineup"]
@@ -403,38 +404,39 @@ class StadiumData:
 @dataclass
 class PlayerData:
     data: Dict[str, Any]
-    id: str = field(init=False)
-    mods: Set[str] = field(init=False)
-    raw_name: str = field(init=False)
+    id: str
+    mods: Set[str]
+    raw_name: str
     # Player attributes
-    buoyancy: float = field(init=False)
-    divinity: float = field(init=False)
-    martyrdom: float = field(init=False)
-    moxie: float = field(init=False)
-    musclitude: float = field(init=False)
-    patheticism: float = field(init=False)
-    thwackability: float = field(init=False)
-    tragicness: float = field(init=False)
-    ruthlessness: float = field(init=False)
-    overpowerment: float = field(init=False)
-    unthwackability: float = field(init=False)
-    shakespearianism: float = field(init=False)
-    suppression: float = field(init=False)
-    coldness: float = field(init=False)
-    baseThirst: float = field(init=False)
-    continuation: float = field(init=False)
-    ground_friction: float = field(init=False)
-    indulgence: float = field(init=False)
-    laserlikeness: float = field(init=False)
-    anticapitalism: float = field(init=False)
-    chasiness: float = field(init=False)
-    omniscience: float = field(init=False)
-    tenaciousness: float = field(init=False)
-    watchfulness: float = field(init=False)
-    pressurization: float = field(init=False)
-    cinnamon: float = field(init=False)
+    buoyancy: float
+    divinity: float
+    martyrdom: float
+    moxie: float
+    musclitude: float
+    patheticism: float
+    thwackability: float
+    tragicness: float
+    ruthlessness: float
+    overpowerment: float
+    unthwackability: float
+    shakespearianism: float
+    suppression: float
+    coldness: float
+    baseThirst: float
+    continuation: float
+    ground_friction: float
+    indulgence: float
+    laserlikeness: float
+    anticapitalism: float
+    chasiness: float
+    omniscience: float
+    tenaciousness: float
+    watchfulness: float
+    pressurization: float
+    cinnamon: float
 
-    def __post_init__(self):
+    def __init__(self, data: Dict[str, Any]):
+        self.data = data
         self.id = self.data["id"]
         self.mods = get_mods(self.data)
         self.raw_name = self.data["name"]
