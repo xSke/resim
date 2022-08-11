@@ -323,6 +323,33 @@ class PlayerData:
     mods: Set[str] = field(init=False)
     raw_name: str = field(init=False)
     name: str = field(init=False)
+    # Player stats
+    buoyancy: float = field(init=False)
+    divinity: float = field(init=False)
+    martyrdom: float = field(init=False)
+    moxie: float = field(init=False)
+    musclitude: float = field(init=False)
+    patheticism: float = field(init=False)
+    thwackability: float = field(init=False)
+    tragicness: float = field(init=False)
+    ruthlessness: float = field(init=False)
+    overpowerment: float = field(init=False)
+    unthwackability: float = field(init=False)
+    shakespearianism: float = field(init=False)
+    suppression: float = field(init=False)
+    coldness: float = field(init=False)
+    baseThirst: float = field(init=False)
+    continuation: float = field(init=False)
+    groundFriction: float = field(init=False)
+    indulgence: float = field(init=False)
+    laserlikeness: float = field(init=False)
+    anticapitalism: float = field(init=False)
+    chasiness: float = field(init=False)
+    omniscience: float = field(init=False)
+    tenaciousness: float = field(init=False)
+    watchfulness: float = field(init=False)
+    pressurization: float = field(init=False)
+    cinnamon: float = field(init=False)
 
     def __post_init__(self):
         self.id = self.data["id"]
@@ -330,6 +357,33 @@ class PlayerData:
         self.raw_name = self.data["name"]
         unscattered_name = self.data.get("state", {}).get("unscatteredName")
         self.name = unscattered_name or self.data["name"]
+        # Player stats
+        self.buoyancy = self.data["buoyancy"]
+        self.divinity = self.data["divinity"]
+        self.martyrdom = self.data["martyrdom"]
+        self.moxie = self.data["moxie"]
+        self.musclitude = self.data["musclitude"]
+        self.patheticism = self.data["patheticism"]
+        self.thwackability = self.data["thwackability"]
+        self.tragicness = self.data["tragicness"]
+        self.ruthlessness = self.data["ruthlessness"]
+        self.overpowerment = self.data["overpowerment"]
+        self.unthwackability = self.data["unthwackability"]
+        self.shakespearianism = self.data["shakespearianism"]
+        self.suppression = self.data["suppression"]
+        self.coldness = self.data["coldness"]
+        self.baseThirst = self.data["baseThirst"]
+        self.continuation = self.data["continuation"]
+        self.groundFriction = self.data["groundFriction"]
+        self.indulgence = self.data["indulgence"]
+        self.laserlikeness = self.data["laserlikeness"]
+        self.anticapitalism = self.data["anticapitalism"]
+        self.chasiness = self.data["chasiness"]
+        self.omniscience = self.data["omniscience"]
+        self.tenaciousness = self.data["tenaciousness"]
+        self.watchfulness = self.data["watchfulness"]
+        self.pressurization = self.data["pressurization"]
+        self.cinnamon = self.data.get("cinnamon") or 0
 
     def has_mod(self, mod) -> bool:
         return mod in self.mods
@@ -346,14 +400,14 @@ class PlayerData:
         return self.raw_vibes(day)
 
     def raw_vibes(self, day) -> float:
-        frequency = 6 + round(10 * self.data["buoyancy"])
+        frequency = 6 + round(10 * self.buoyancy)
         # Pull from pre-computed sin values
         sin_phase = SIN_PHASES[frequency][day]
         # Original formula:
         # sin_phase = math.sin(math.pi * ((2 / frequency) * day + 0.5))
 
-        pressurization = self.data["pressurization"]
-        cinnamon = self.data["cinnamon"] or 0
+        pressurization = self.pressurization
+        cinnamon = self.cinnamon or 0
         return 0.5 * ((sin_phase - 1) * pressurization + (sin_phase + 1) * cinnamon)
 
 
