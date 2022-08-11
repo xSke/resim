@@ -326,7 +326,7 @@ class PlayerData:
     mods: Set[str] = field(init=False)
     raw_name: str = field(init=False)
     name: str = field(init=False)
-    # Player stats
+    # Player attributes
     buoyancy: float = field(init=False)
     divinity: float = field(init=False)
     martyrdom: float = field(init=False)
@@ -360,7 +360,7 @@ class PlayerData:
         self.raw_name = self.data["name"]
         unscattered_name = self.data.get("state", {}).get("unscatteredName")
         self.name = unscattered_name or self.data["name"]
-        # Player stats
+        # Player attributes
         self.buoyancy = self.data["buoyancy"]
         self.divinity = self.data["divinity"]
         self.martyrdom = self.data["martyrdom"]
