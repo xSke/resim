@@ -325,7 +325,6 @@ class PlayerData:
     id: str = field(init=False)
     mods: Set[str] = field(init=False)
     raw_name: str = field(init=False)
-    name: str = field(init=False)
     # Player attributes
     buoyancy: float = field(init=False)
     divinity: float = field(init=False)
@@ -358,8 +357,6 @@ class PlayerData:
         self.id = self.data["id"]
         self.mods = get_mods(self.data)
         self.raw_name = self.data["name"]
-        unscattered_name = self.data.get("state", {}).get("unscatteredName")
-        self.name = unscattered_name or self.data["name"]
         # Player attributes
         self.buoyancy = self.data["buoyancy"]
         self.divinity = self.data["divinity"]
@@ -387,6 +384,11 @@ class PlayerData:
         self.watchfulness = self.data["watchfulness"]
         self.pressurization = self.data["pressurization"]
         self.cinnamon = self.data.get("cinnamon") or 0
+
+    @property
+    def name(self):
+        unscattered_name = self.data.get("state", {}).get("unscatteredName")
+        return unscattered_name or self.data["name"]
 
     def has_mod(self, mod) -> bool:
         return mod in self.mods

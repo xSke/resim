@@ -2195,11 +2195,11 @@ class Resim:
         # handle player name unscattering etc, not perfect but helps a lot
         if self.batter and self.pitcher:
             if update["topOfInning"]:
-                self.batter.data["name"] = self.update["awayBatterName"]
-                self.pitcher.data["name"] = self.update["homePitcherName"]
+                self.batter.raw_name = self.update["awayBatterName"]
+                self.pitcher.raw_name = self.update["homePitcherName"]
             else:
-                self.batter.data["name"] = self.update["homeBatterName"]
-                self.pitcher.data["name"] = self.update["awayPitcherName"]
+                self.batter.raw_name = self.update["homeBatterName"]
+                self.pitcher.raw_name = self.update["awayPitcherName"]
 
         # hardcoding another fix - if we missed the "perks up" event apply it "manually". but not to ghosts
         if (
@@ -2332,7 +2332,7 @@ class Resim:
         if event["type"] == EventType.ADDED_MOD and "was Scattered..." in desc:
             new_name = desc.split(" was Scattered")[0]
             player = self.data.get_player(event["playerTags"][0])
-            player.data["name"] = new_name
+            player.raw_name = new_name
 
         # player removed from roster
         if event["type"] == EventType.PLAYER_REMOVED_FROM_TEAM:
