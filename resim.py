@@ -53,9 +53,6 @@ class Resim:
     def __init__(self, rng, out_file, run_name, raise_on_errors=True):
         self.rng = rng
         self.out_file = out_file
-        if out_file is None:
-            # I am being too clever here, in hopes that this is faster
-            self.print = lambda *a, **k: None
         self.data = GameData()
         self.fetched_days = set()
         self.raise_on_errors = raise_on_errors
@@ -76,6 +73,8 @@ class Resim:
         self.roll_log: List[LoggedRoll] = []
 
     def print(self, *args, **kwargs):
+        if self.out_file is None:
+            return
         print(*args, **kwargs, file=self.out_file)
 
     def error(self, *args, **kwargs):
