@@ -7,7 +7,7 @@ from tqdm import tqdm
 from typing import Optional
 
 from data import get_feed_between
-from resim import Resim
+from resim import Csv, Resim
 from rng import Rng
 
 # (s0, s1), rng offset, event offset, start timestamp, end timestamp
@@ -102,8 +102,18 @@ def parse_args():
     parser.add_argument("--silent", default=False, action="store_true")
     parser.add_argument("--no-multiprocessing", "-no", default=False, action="store_true")
     parser.add_argument("--jobs", "-j", default=None)
+    parser.add_argument(
+        "--csv",
+        nargs="+",
+        default=[],
+        metavar="CSV",
+        help="Only log these CSV types. Default is logging all CSV types. Use --csv-list to see possible CSVs.",
+    )
+    parser.add_argument("--csv-list", default=False, action="store_true", help="List the CSVs which can be included")
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.csv = [Csv(Csv.__members__.get(csv, csv)) for csv in args.csv]
+    return args
 
 
 def get_out_file(silent, out_file_name, start_time):
@@ -119,6 +129,11 @@ def get_out_file(silent, out_file_name, start_time):
 
 def main():
     args = parse_args()
+    if args.csv_list:
+        print("Current CSV options:")
+        for csv in Csv:
+            print(f"  {csv.name}")
+        return
 
     print("Counting events...")
     total_events = sum(
@@ -128,7 +143,7 @@ def main():
 
     print("Running resim...")
     with tqdm(total=total_events, unit=" events", unit_scale=True) as progress:
-        all_pool_args = [((args.silent, args.outfile), fragment) for fragment in FRAGMENTS]
+        all_pool_args = [((args.silent, args.outfile, args.csv), fragment) for fragment in FRAGMENTS]
         if args.no_multiprocessing:
             for pool_args in all_pool_args:
                 run_fragment(pool_args, progress_callback=lambda: progress.update())
@@ -155,11 +170,11 @@ def init_pool_worker(init_args):
 
 
 def run_fragment(pool_args, progress_callback=None):
-    (silent, out_file_name), (rng_state, rng_offset, step, start_time, end_time) = pool_args
+    (silent, out_file_name, csvs_to_log), (rng_state, rng_offset, step, start_time, end_time) = pool_args
     out_file = get_out_file(silent, out_file_name, start_time)
     rng = Rng(rng_state, rng_offset)
     rng.step(step)
-    resim = Resim(rng, out_file, start_time, False)
+    resim = Resim(rng, out_file, run_name=start_time, raise_on_errors=False, csvs_to_log=csvs_to_log)
 
     unreported_progress = 0
 
