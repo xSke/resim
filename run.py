@@ -1,11 +1,10 @@
-import os.path
-import sys
 from argparse import ArgumentParser
 from multiprocessing import Pool, Queue
+from os.path import splitext
 from queue import Empty
-from typing import Optional
-
+from sys import stdout
 from tqdm import tqdm
+from typing import Optional
 
 from data import get_feed_between
 from resim import Resim
@@ -93,7 +92,7 @@ FRAGMENTS = [
     ((11741473536472310906, 13138857156664992063), 50, 0, "2021-04-09T21:00:00Z", "2021-04-10T20:50:43.708Z"),
 ]
 
-progress_queue: Optional[Queue] = None
+PROGRESS_QUEUE: Optional[Queue] = None
 
 
 def parse_args():
@@ -110,10 +109,10 @@ def parse_args():
 def get_out_file(silent, out_file_name, start_time):
     if silent:
         return None
-    elif out_file_name == "-":
-        return sys.stdout
+    if out_file_name == "-":
+        return stdout
 
-    basic_filename, extension = os.path.splitext(out_file_name)
+    basic_filename, extension = splitext(out_file_name)
     filename = f"{basic_filename}-{start_time.replace(':', '_')}{extension}"
     return open(filename, "w")
 
@@ -129,25 +128,19 @@ def main():
 
     print("Running resim...")
     with tqdm(total=total_events, unit=" events", unit_scale=True) as progress:
+        all_pool_args = [((args.silent, args.outfile), fragment) for fragment in FRAGMENTS]
         if args.no_multiprocessing:
-
-            def progress_callback():
-                progress.update()
-
-            for fragment in FRAGMENTS:
-                run_fragment(((args.silent, args.outfile), fragment), progress_callback=progress_callback)
+            for pool_args in all_pool_args:
+                run_fragment(pool_args, progress_callback=lambda: progress.update())
         else:
-            global progress_queue  # not really necessary but it gets rid of the shadowing warning in pycharm
-            progress_queue = Queue()
-
+            global PROGRESS_QUEUE  # not really necessary but it gets rid of the shadowing warning in pycharm
+            PROGRESS_QUEUE = Queue()
             processes = int(args.jobs) if args.jobs else None
-            with Pool(processes=processes, initializer=init_pool_worker, initargs=(progress_queue,)) as pool:
-                fragments_and_args = [((args.silent, args.outfile), fragment) for fragment in FRAGMENTS]
-                result = pool.map_async(run_fragment, fragments_and_args)
-
+            with Pool(processes=processes, initializer=init_pool_worker, initargs=(PROGRESS_QUEUE,)) as pool:
+                result = pool.map_async(run_fragment, all_pool_args)
                 while not result.ready():
                     try:
-                        new_progress = progress_queue.get(timeout=1)
+                        new_progress = PROGRESS_QUEUE.get(timeout=1)
                     except Empty:
                         pass  # Check loop condition and wait again
                     else:
@@ -157,8 +150,8 @@ def main():
 
 
 def init_pool_worker(init_args):
-    global progress_queue
-    progress_queue = init_args
+    global PROGRESS_QUEUE
+    PROGRESS_QUEUE = init_args
 
 
 def run_fragment(pool_args, progress_callback=None):
@@ -175,8 +168,8 @@ def run_fragment(pool_args, progress_callback=None):
         def progress_callback():
             nonlocal unreported_progress
             unreported_progress += 1
-            if progress_queue and unreported_progress > 100:
-                progress_queue.put(unreported_progress)
+            if PROGRESS_QUEUE and unreported_progress > 100:
+                PROGRESS_QUEUE.put(unreported_progress)
                 unreported_progress = 0
 
     resim.run(start_time, end_time, progress_callback)
@@ -184,8 +177,8 @@ def run_fragment(pool_args, progress_callback=None):
     if out_file:
         out_file.close()
 
-    if progress_queue:
-        progress_queue.put(unreported_progress)
+    if PROGRESS_QUEUE:
+        PROGRESS_QUEUE.put(unreported_progress)
 
 
 if __name__ == "__main__":
