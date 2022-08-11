@@ -1952,8 +1952,8 @@ class Resim:
                 self.roll("trick 1 name")
 
                 score_1_roll = self.roll("trick 1 score")
-                lo1 = runner.data["pressurization"] * 200
-                hi1 = runner.data["cinnamon"] * 1500 + 500
+                lo1 = runner.pressurization * 200
+                hi1 = runner.cinnamon * 1500 + 500
                 score_1 = int((hi1 - lo1) * score_1_roll + lo1)
                 self.print(f"(score: {score_1})")
 
@@ -1962,8 +1962,8 @@ class Resim:
                 if "lose their balance and bail!" not in self.desc:
                     self.roll("trick 2 name")
                     score_2_roll = self.roll("trick 2 score")
-                    lo2 = runner.data["pressurization"] * 500
-                    hi2 = runner.data["cinnamon"] * 3000 + 1000
+                    lo2 = runner.pressurization * 500
+                    hi2 = runner.cinnamon * 3000 + 1000
                     score_2 = int((hi2 - lo2) * score_2_roll + lo2)
                     self.print(f"(score: {score_2})")
 

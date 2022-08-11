@@ -96,8 +96,8 @@ def get_strike_threshold(
     is_flinching: bool,
 ):
     vibes = pitcher.vibes(meta.day)
-    ruth = pitcher.data["ruthlessness"] * get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)
-    musc = batter.data["musclitude"] * get_multiplier(batter, batting_team, "batter", "musclitude", meta)
+    ruth = pitcher.ruthlessness * get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)
+    musc = batter.musclitude * get_multiplier(batter, batting_team, "batter", "musclitude", meta)
     fwd = stadium.forwardness
 
     constant = 0.2 if not is_flinching else 0.4
@@ -120,26 +120,22 @@ def get_swing_strike_threshold(
     batter_vibes = batter.vibes(meta.day)
     pitcher_vibes = pitcher.vibes(meta.day)
 
-    div = (
-        batter.data["divinity"]
-        * get_multiplier(batter, batting_team, "batter", "divinity", meta)
-        * (1 + 0.2 * batter_vibes)
-    )
+    div = batter.divinity * get_multiplier(batter, batting_team, "batter", "divinity", meta) * (1 + 0.2 * batter_vibes)
     musc = (
-        batter.data["musclitude"]
+        batter.musclitude
         * get_multiplier(batter, batting_team, "batter", "musclitude", meta)
         * (1 + 0.2 * batter_vibes)
     )
     thwack = (
-        batter.data["thwackability"]
+        batter.thwackability
         * get_multiplier(batter, batting_team, "batter", "thwackability", meta)
         * (1 + 0.2 * batter_vibes)
     )
-    invpath = (1 - batter.data["patheticism"] / get_multiplier(batter, batting_team, "batter", "patheticism", meta)) * (
+    invpath = (1 - batter.patheticism / get_multiplier(batter, batting_team, "batter", "patheticism", meta)) * (
         1 + 0.2 * batter_vibes
     )
     ruth = (
-        pitcher.data["ruthlessness"]
+        pitcher.ruthlessness
         * get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)
         * (1 + 0.2 * pitcher_vibes)
     )
@@ -161,12 +157,10 @@ def get_swing_ball_threshold(
     batter_vibes = batter.vibes(meta.day)
     pitcher_vibes = pitcher.vibes(meta.day)
 
-    moxie = (
-        batter.data["moxie"] * get_multiplier(batter, batting_team, "batter", "moxie", meta) * (1 + 0.2 * batter_vibes)
-    )
-    path = batter.data["patheticism"] / get_multiplier(batter, batting_team, "batter", "patheticism", meta)
+    moxie = batter.moxie * get_multiplier(batter, batting_team, "batter", "moxie", meta) * (1 + 0.2 * batter_vibes)
+    path = batter.patheticism / get_multiplier(batter, batting_team, "batter", "patheticism", meta)
     ruth = (
-        pitcher.data["ruthlessness"]
+        pitcher.ruthlessness
         * get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)
         * (1 + 0.2 * pitcher_vibes)
     )
@@ -191,16 +185,16 @@ def get_contact_strike_threshold(
     batter_vibes = batter.vibes(meta.day)
     pitcher_vibes = pitcher.vibes(meta.day)
 
-    div = batter.data["divinity"] * get_multiplier(batter, batting_team, "batter", "divinity", meta)
-    musc = batter.data["musclitude"] * get_multiplier(batter, batting_team, "batter", "musclitude", meta)
-    thwack = batter.data["thwackability"] * get_multiplier(batter, batting_team, "batter", "thwackability", meta)
-    path = batter.data["patheticism"] / get_multiplier(batter, batting_team, "batter", "patheticism", meta)
+    div = batter.divinity * get_multiplier(batter, batting_team, "batter", "divinity", meta)
+    musc = batter.musclitude * get_multiplier(batter, batting_team, "batter", "musclitude", meta)
+    thwack = batter.thwackability * get_multiplier(batter, batting_team, "batter", "thwackability", meta)
+    path = batter.patheticism / get_multiplier(batter, batting_team, "batter", "patheticism", meta)
     combined_batting = (div + musc + thwack - path) / 2 * (1 + 0.2 * batter_vibes)
     if combined_batting < 0:
         return float("nan")  # hi caleb
 
     ruth = (
-        pitcher.data["ruthlessness"]
+        pitcher.ruthlessness
         * get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)
         * (1 + 0.2 * pitcher_vibes)
     )
@@ -233,13 +227,13 @@ def get_contact_ball_threshold(
     pitcher_vibes = pitcher.vibes(meta.day)
 
     invpath = max(
-        (1 - batter.data["patheticism"] / get_multiplier(batter, batting_team, "batter", "patheticism", meta))
+        (1 - batter.patheticism / get_multiplier(batter, batting_team, "batter", "patheticism", meta))
         * (1 + 0.2 * batter_vibes),
         0,
     )
 
     ruth = (
-        pitcher.data["ruthlessness"]
+        pitcher.ruthlessness
         * get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)
         * (1 + 0.2 * pitcher_vibes)
     )
@@ -264,17 +258,11 @@ def get_foul_threshold(batter: PlayerData, batting_team: TeamData, stadium: Stad
     vibes = batter.vibes(meta.day)
     fwd = stadium.forwardness
     obt = stadium.obtuseness
-    musc = (
-        batter.data["musclitude"]
-        * get_multiplier(batter, batting_team, "batter", "musclitude", meta)
-        * (1 + 0.2 * vibes)
-    )
+    musc = batter.musclitude * get_multiplier(batter, batting_team, "batter", "musclitude", meta) * (1 + 0.2 * vibes)
     thwack = (
-        batter.data["thwackability"]
-        * get_multiplier(batter, batting_team, "batter", "thwackability", meta)
-        * (1 + 0.2 * vibes)
+        batter.thwackability * get_multiplier(batter, batting_team, "batter", "thwackability", meta) * (1 + 0.2 * vibes)
     )
-    div = batter.data["divinity"] * get_multiplier(batter, batting_team, "batter", "divinity", meta) * (1 + 0.2 * vibes)
+    div = batter.divinity * get_multiplier(batter, batting_team, "batter", "divinity", meta) * (1 + 0.2 * vibes)
     batter_sum = (musc + thwack + div) / 3
 
     threshold = 0.25 + 0.1 * fwd - 0.1 * obt + 0.1 * batter_sum
@@ -292,18 +280,14 @@ def get_hr_threshold(
     batter_vibes = batter.vibes(meta.day)
     pitcher_vibes = pitcher.vibes(meta.day)
 
-    div = (
-        batter.data["divinity"]
-        * get_multiplier(batter, batting_team, "batter", "divinity", meta)
-        * (1 + 0.2 * batter_vibes)
-    )
+    div = batter.divinity * get_multiplier(batter, batting_team, "batter", "divinity", meta) * (1 + 0.2 * batter_vibes)
     opw = (
-        pitcher.data["overpowerment"]
+        pitcher.overpowerment
         * get_multiplier(pitcher, pitching_team, "pitcher", "overpowerment", meta)
         * (1 + 0.2 * pitcher_vibes)
     )
     supp = (
-        pitcher.data["suppression"]
+        pitcher.suppression
         * get_multiplier(pitcher, pitching_team, "pitcher", "suppression", meta)
         * (1 + 0.2 * pitcher_vibes)
     )
