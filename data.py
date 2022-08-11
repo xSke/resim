@@ -471,7 +471,7 @@ class PlayerData:
     @property
     def name(self):
         unscattered_name = self.data.get("state", {}).get("unscatteredName")
-        return unscattered_name or self.data["name"]
+        return unscattered_name or self.raw_name
 
     def has_mod(self, mod: Mod) -> bool:
         return mod.value in self.mods
