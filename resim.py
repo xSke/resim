@@ -497,6 +497,7 @@ class Resim:
                 "7fda4e9c-a20e-4163-aba3-6ad1663a747f": 1,
                 "b35f095d-9bc9-4a1c-822a-3749a7b83bcb": 1,
                 "a327e425-aaf4-4199-8292-bba0ec4a226a": 2,
+                "9e28de60-f139-43fd-ad75-f9ef757a53b6": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -974,7 +975,7 @@ class Resim:
                 ((2, 1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.67 out at 2nd
                 ((2, 1, 0), (2, 1)): 5,  # !DP roll (fail), !martyr roll (pass), advancex3 (unused);NOT DP!
                 ((2, 1, 0), (2, 1, 0)): 2,  # !DP roll (fail), !martyr roll (fail)
-                ((2, 1, 2, 0), (2, 0)): 3,  # ?DP roll (fail), ?martyr roll(fail), ???
+                ((2, 1, 2, 0), (2, 0)): 2,  # ?DP roll (fail), ?martyr roll(fail)
             }
 
             event_type = "Out"
@@ -1999,7 +2000,12 @@ class Resim:
             base_stolen = 3
 
         for i, base in enumerate(bases):
-            if base + 1 not in bases:
+            if base + 1 not in bases or (
+                # This is weird, but adding an extra roll here seems like the only way to get S15D75 to line up.
+                # https://reblase.sibr.dev/game/9d224696-6775-42c0-8259-b4de84f850a8#b65483bc-a07f-88e3-9e30-6ff9365f865b
+                bases == [2, 0, 1]
+                and base == 0
+            ):
                 runner = self.data.get_player(self.update["baseRunners"][i])
 
                 steal_roll = self.roll(f"steal ({base})")
@@ -2032,7 +2038,7 @@ class Resim:
                     )
                     return True
 
-            if bases == [2, 2] or bases == [2, 1, 2]:
+            if bases == [2, 2] or bases == [2, 1, 2] or bases == [1, 0, 1]:
                 # don't roll twice when holding hands
                 break
 
