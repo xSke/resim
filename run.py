@@ -1,3 +1,4 @@
+import json
 from argparse import ArgumentParser
 from multiprocessing import Pool, Queue
 from os.path import splitext
@@ -139,11 +140,7 @@ def main():
             print(f"  {csv.name}")
         return
 
-    print("Counting events...")
-    total_events = sum(
-        len(get_feed_between(start_time, end_time))
-        for _, _, _, start_time, end_time in tqdm(FRAGMENTS, unit=" fragments")
-    )
+    total_events = get_total_events()
 
     print("Running resim...")
     with tqdm(total=total_events, unit=" events", unit_scale=True) as progress:
@@ -166,6 +163,28 @@ def main():
                         progress.update(new_progress)
                 result.get()  # reraise any exception from the processes
     print("Finished")
+
+
+def get_total_events():
+    # Using json as a "hash" because it's easy and the value we're hashing isn't too huge.
+    # Note python's builtin `hash()` can't be used because it's not stable between runs
+    fragments_hash = json.dumps(FRAGMENTS)
+    try:
+        with open("cache/event_count.json") as f:
+            event_count_cache = json.load(f)
+    except FileNotFoundError:
+        pass
+    else:
+        if event_count_cache["fragments_hash"] == fragments_hash:
+            return event_count_cache["total_events"]
+    print("Counting events...")
+    total_events = sum(
+        len(get_feed_between(start_time, end_time))
+        for _, _, _, start_time, end_time in tqdm(FRAGMENTS, unit=" fragments")
+    )
+    with open("cache/event_count.json", "w") as f:
+        json.dump({"fragments_hash": fragments_hash, "total_events": total_events}, f)
+    return total_events
 
 
 def init_pool_worker(init_args):
