@@ -24,7 +24,6 @@
 - Steal attempts formula
 - Steal success formula
 - Echo/feedback activation
-- Fill out coverage for seasons we already have data for (s12/13 "done")
 
 ## Done (for now) (ignoring weird modifiers)
 - Strike zone formula
@@ -48,3 +47,4 @@
 - Haunted rates
 - Consumer target selection
 - consumer attack activation rates
+- Fill out coverage for seasons we already have data for (missing S12D1-30, S13D24, S14D26&27, S15D1-10, S15D112&113, and a few minutes of S12D88)
