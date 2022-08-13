@@ -3,7 +3,7 @@ import os
 import sys
 import itertools
 
-from data import EventType, GameData, Mod, Weather, get_feed_between
+from data import EventType, GameData, Mod, NullUpdate, Weather, get_feed_between
 from output import SaveCsv
 from rng import Rng
 from dataclasses import dataclass
@@ -56,13 +56,26 @@ class Resim:
         self.data = GameData()
         self.fetched_days = set()
         self.raise_on_errors = raise_on_errors
-        self.update = None
+        self.update = NullUpdate()
+        self.next_update = NullUpdate()
 
         self.is_strike = None
         self.strike_roll = None
         self.strike_threshold = None
+        self.strikes = 0
+        self.max_strikes = 3
+        self.balls = 0
+        self.max_balls = 4
         self.game_id = None
         self.play = None
+        self.weather = Weather.VOID
+        self.batter = self.data.get_player(None)
+        self.pitcher = self.data.get_player(None)
+        self.batting_team = self.data.get_team(None)
+        self.pitching_team = self.data.get_team(None)
+        self.home_team = self.data.get_team(None)
+        self.away_team = self.data.get_team(None)
+        self.stadium = self.data.get_stadium(None)
 
         if run_name:
             os.makedirs("roll_data", exist_ok=True)
@@ -107,15 +120,14 @@ class Resim:
                 caleb_novak.update_mods()
 
         self.print()
-        if self.update:
-            self.print(
-                "===== {} {}/{} {}".format(
-                    event["created"],
-                    self.update["id"],
-                    self.update["playCount"],
-                    self.weather.name,
-                )
+        self.print(
+            "===== {} {}/{} {}".format(
+                event["created"],
+                self.update["id"],
+                self.update["playCount"],
+                self.weather.name,
             )
+        )
         self.print(f"===== {self.ty.value} {self.desc}")
         self.print(f"===== rng pos: {self.rng.get_state_str()}")
 
@@ -2192,13 +2204,13 @@ class Resim:
         if not pitcher_id and next_update:
             pitcher_id = next_update["homePitcher"] if next_update["topOfInning"] else next_update["awayPitcher"]
 
-        self.batter = self.data.get_player(batter_id) if batter_id else None
-        self.pitcher = self.data.get_player(pitcher_id) if pitcher_id else None
+        self.batter = self.data.get_player(batter_id)
+        self.pitcher = self.data.get_player(pitcher_id)
 
         home_pitcher_id = update["homePitcher"] or next_update["homePitcher"]
         away_pitcher_id = update["awayPitcher"] or next_update["awayPitcher"]
-        self.home_pitcher = self.data.get_player(home_pitcher_id) if home_pitcher_id else None
-        self.away_pitcher = self.data.get_player(away_pitcher_id) if away_pitcher_id else None
+        self.home_pitcher = self.data.get_player(home_pitcher_id)
+        self.away_pitcher = self.data.get_player(away_pitcher_id)
 
         self.stadium = self.data.get_stadium(update["stadiumId"])
 
