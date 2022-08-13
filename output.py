@@ -6,8 +6,8 @@ class SaveCsv:
     def __init__(self, run_name: str, category_name: str):
         self.final_filename = f"roll_data/{run_name}-{category_name}.csv"
         self.partial_filename = f"{self.final_filename}.partial"
-        self.file = open(self.partial_filename, "w", newline="", encoding="utf-8")
         # Created when first row is written
+        self.file = None
         self.csv = None
 
     def write(
@@ -217,12 +217,15 @@ class SaveCsv:
         # fmt: on
 
         if self.csv is None:
+            self.file = open(self.partial_filename, "w", newline="", encoding="utf-8")
             self.csv = DictWriter(self.file, fieldnames=list(row.keys()), extrasaction="ignore")
             self.csv.writeheader()
 
         self.csv.writerow(row)
 
     def close(self):
+        if not self.file:
+            return
         self.file.close()
         self.file = None
         self.csv = None
