@@ -1,5 +1,6 @@
 import json
 from argparse import ArgumentParser
+from enum import Enum, auto
 from multiprocessing import Pool, Queue
 from os.path import splitext
 from queue import Empty
@@ -96,6 +97,12 @@ FRAGMENTS = [
 PROGRESS_QUEUE: Optional[Queue] = None
 
 
+class ProgressEventType(Enum):
+    EVENTS = auto()
+    FRAGMENT_START = auto()
+    FRAGMENT_FINISH = auto()
+
+
 def parse_args():
     parser = ArgumentParser("resim")
 
@@ -148,15 +155,36 @@ def main():
             global PROGRESS_QUEUE  # not really necessary but it gets rid of the shadowing warning in pycharm
             PROGRESS_QUEUE = Queue()
             processes = int(args.jobs) if args.jobs else None
+            fragments_waiting = len(all_pool_args)
+            fragments_processing = 0
+            fragments_finished = 0
+
+            def update_progress_postfix():
+                progress.set_postfix_str(
+                    f"Fragments W:{fragments_waiting}|P:{fragments_processing}|F:{fragments_finished}"
+                )
+
+            update_progress_postfix()
             with Pool(processes=processes, initializer=init_pool_worker, initargs=(PROGRESS_QUEUE,)) as pool:
                 result = pool.map_async(run_fragment, all_pool_args)
                 while not result.ready():
                     try:
-                        new_progress = PROGRESS_QUEUE.get(timeout=1)
+                        (progress_event_type, data) = PROGRESS_QUEUE.get(timeout=1)
                     except Empty:
                         pass  # Check loop condition and wait again
                     else:
-                        progress.update(new_progress)
+                        if progress_event_type == ProgressEventType.EVENTS:
+                            progress.update(data)
+                        elif progress_event_type == ProgressEventType.FRAGMENT_START:
+                            fragments_waiting -= 1
+                            fragments_processing += 1
+                            update_progress_postfix()
+                        elif progress_event_type == ProgressEventType.FRAGMENT_FINISH:
+                            fragments_processing -= 1
+                            fragments_finished += 1
+                            update_progress_postfix()
+                        else:
+                            raise ValueError("Unknown ProgressEventType")
                 result.get()  # reraise any exception from the processes
     print("Finished")
 
@@ -189,6 +217,8 @@ def init_pool_worker(init_args):
 
 
 def run_fragment(pool_args, progress_callback=None):
+    if PROGRESS_QUEUE:
+        PROGRESS_QUEUE.put((ProgressEventType.FRAGMENT_START, None))
     (silent, out_file_name, csvs_to_log), (rng_state, rng_offset, step, start_time, end_time) = pool_args
     out_file = get_out_file(silent, out_file_name, start_time)
     rng = Rng(rng_state, rng_offset)
@@ -203,7 +233,7 @@ def run_fragment(pool_args, progress_callback=None):
             nonlocal unreported_progress
             unreported_progress += 1
             if PROGRESS_QUEUE and unreported_progress > 100:
-                PROGRESS_QUEUE.put(unreported_progress)
+                PROGRESS_QUEUE.put((ProgressEventType.EVENTS, unreported_progress))
                 unreported_progress = 0
 
     resim.run(start_time, end_time, progress_callback)
@@ -212,7 +242,8 @@ def run_fragment(pool_args, progress_callback=None):
         out_file.close()
 
     if PROGRESS_QUEUE:
-        PROGRESS_QUEUE.put(unreported_progress)
+        PROGRESS_QUEUE.put((ProgressEventType.EVENTS, unreported_progress))
+        PROGRESS_QUEUE.put((ProgressEventType.FRAGMENT_FINISH, None))
 
 
 if __name__ == "__main__":
