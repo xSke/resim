@@ -5,6 +5,7 @@ import json
 import matplotlib.pyplot as plt
 from dateutil import parser
 
+
 def load_data(season=None):
     for file in glob.glob("cache/feed_range_*.json"):
         with open(file) as f:
@@ -15,7 +16,6 @@ def load_data(season=None):
 
 
 def main():
-
     def game_extractor(e):
         return e["gameTags"][0]
 
@@ -26,11 +26,11 @@ def main():
     lines = {}
     for _, events in event_groups:
         events = list(events)  # realize iterator
-        line,  = ax.plot(
+        (line,) = ax.plot(
             [(parser.isoparse(e["created"]) - first_day).total_seconds() for e in events],
             [e["metadata"]["play"] for e in events],
-            marker='o',
-            picker=True
+            marker="o",
+            picker=True,
         )
         lines[line] = events
 
@@ -42,9 +42,10 @@ def main():
         nonlocal lines
         pass
 
-    fig.canvas.mpl_connect('pick_event', onpick1)
+    fig.canvas.mpl_connect("pick_event", onpick1)
 
     plt.show()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
