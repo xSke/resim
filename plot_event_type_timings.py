@@ -9,6 +9,7 @@ from dateutil import parser
 
 from data import EventType
 
+
 def load_data(season=None):
     for file in glob.glob("cache/feed_range_*.json"):
         with open(file) as f:
@@ -16,6 +17,7 @@ def load_data(season=None):
                 metadata = event.get("metadata") or {}  # needs to be or!
                 if (season is None or event["season"] == season) and "play" in metadata and not "parent" in metadata:
                     yield event
+
 
 def main():
     def game_extractor(e):
@@ -38,12 +40,12 @@ def main():
 
     ax.violinplot(timings.values(), positions=range(len(x_labels)))
     ax.set_xticks(range(len(x_labels)))
-    ax.set_xticklabels([EventType(l).name for l in x_labels], rotation='vertical')
+    ax.set_xticklabels([EventType(l).name for l in x_labels], rotation="vertical")
     ax.set_ylabel("Time Visible (s)")
     ax.set_xlabel("Event type")
     ax.grid(visible=True, which="major", axis="x")
     plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
