@@ -1,3 +1,4 @@
+import collections
 from dataclasses import dataclass
 import os
 import json
@@ -317,6 +318,25 @@ class Weather(IntEnum):
         return self.value in [self.FEEDBACK, self.REVERB]
 
 
+class Blood(IntEnum):
+    UNKNOWN_BLOOD = -1
+    A = 0
+    AA = 1
+    AAA = 2
+    ACIDIC = 3
+    BASIC = 4
+    O = 5
+    O_NO = 6
+    H2O = 7
+    ELECTRIC = 8
+    LOVE = 9
+    FIRE = 10
+    PSYCHIC = 11
+    GRASS = 12
+    BALL = 13
+    STRIKE = 14
+
+
 @dataclass
 class TeamData:
     data: Dict[str, Any]
@@ -337,6 +357,16 @@ class TeamData:
 
     def update_mods(self):
         self.mods = get_mods(self.data)
+
+    @staticmethod
+    def null():
+        return TeamData(
+            {
+                "id": None,
+                "lineup": [],
+                "rotation": [],
+            }
+        )
 
 
 @dataclass
@@ -434,6 +464,7 @@ class PlayerData:
     watchfulness: float
     pressurization: float
     cinnamon: float
+    blood: Blood
 
     def __init__(self, data: Dict[str, Any]):
         self.data = data
@@ -467,6 +498,7 @@ class PlayerData:
         self.watchfulness = self.data["watchfulness"]
         self.pressurization = self.data["pressurization"]
         self.cinnamon = self.data.get("cinnamon") or 0
+        self.blood = self.data.get("blood") or Blood.UNKNOWN_BLOOD
 
     @property
     def name(self):
@@ -498,8 +530,52 @@ class PlayerData:
         cinnamon = self.cinnamon or 0
         return 0.5 * ((sin_phase - 1) * pressurization + (sin_phase + 1) * cinnamon)
 
+    @staticmethod
+    def null():
+        return PlayerData(
+            {
+                "id": None,
+                "name": "Null Player",
+                "buoyancy": 0.5,
+                "divinity": 0.5,
+                "martyrdom": 0.5,
+                "moxie": 0.5,
+                "musclitude": 0.5,
+                "patheticism": 0.5,
+                "thwackability": 0.5,
+                "tragicness": 0.5,
+                "ruthlessness": 0.5,
+                "overpowerment": 0.5,
+                "unthwackability": 0.5,
+                "shakespearianism": 0.5,
+                "suppression": 0.5,
+                "coldness": 0.5,
+                "baseThirst": 0.5,
+                "continuation": 0.5,
+                "groundFriction": 0.5,
+                "indulgence": 0.5,
+                "laserlikeness": 0.5,
+                "anticapitalism": 0.5,
+                "chasiness": 0.5,
+                "omniscience": 0.5,
+                "tenaciousness": 0.5,
+                "watchfulness": 0.5,
+                "pressurization": 0.5,
+                "cinnamon": 0.5,
+                "blood": Blood.UNKNOWN_BLOOD,
+            }
+        )
+
 
 CHRONICLER_URI = "https://api.sibr.dev/chronicler"
+
+
+class NullUpdate(collections.defaultdict):
+    def __init__(self):
+        super().__init__(int, {"basesOccupied": [], "baseRunners": [], "weather": Weather.VOID})
+
+    def __bool__(self):
+        return False
 
 
 class GameData:
@@ -576,19 +652,18 @@ class GameData:
     def get_update(self, game_id, play):
         if game_id not in self.games:
             self.fetch_game(game_id)
-        update = self.plays.get((game_id, play))
-        if update:
-            update["weather"] = Weather(update["weather"])
+        update = self.plays.get((game_id, play), NullUpdate())
+        update["weather"] = Weather(update["weather"])
         return update
 
     def has_player(self, player_id) -> bool:
         return player_id in self.players
 
     def get_player(self, player_id) -> PlayerData:
-        return self.players[player_id]
+        return self.players[player_id] if player_id else PlayerData.null()
 
     def get_team(self, team_id) -> TeamData:
-        return self.teams[team_id]
+        return self.teams[team_id] if team_id else TeamData.null()
 
     def get_stadium(self, stadium_id) -> StadiumData:
         return self.stadiums[stadium_id] if stadium_id else StadiumData.null()
