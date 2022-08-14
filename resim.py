@@ -66,6 +66,8 @@ class Resim:
         self.max_strikes = 3
         self.balls = 0
         self.max_balls = 4
+        self.outs = 0
+        self.max_outs = 3
         self.game_id = None
         self.play = None
         self.weather = Weather.VOID
@@ -120,6 +122,8 @@ class Resim:
                 caleb_novak.update_mods()
 
         self.print()
+        if not self.update:
+            self.print("!!! missing update data")
         self.print(
             "===== {} {}/{} {}".format(
                 event["created"],
@@ -2183,7 +2187,13 @@ class Resim:
         update = self.data.get_update(self.game_id, self.play)
         next_update = self.data.get_update(self.game_id, self.play + 1)
         if not update and not next_update:
-            return
+            if self.play <= 0:
+                return
+            prev_update = self.data.get_update(self.game_id, self.play - 1)
+            if not prev_update:
+                return
+            # use the previous values as a guess, but be able to distinguish that there's missing data
+            update = NullUpdate(prev_update)
         if not update:
             update = next_update
 

@@ -209,7 +209,7 @@ class SaveCsv:
             "strike_roll": strike_roll,
             "strike_threshold": strike_threshold,
             "fielder_roll": fielder_roll,
-            "batter_consecutive_hits": batter.data["consecutiveHits"],
+            "batter_consecutive_hits": batter.consecutive_hits,
             "team_level": attacked_team.data["level"] if (attacked_team and "level" in attacked_team.data) else None,
             "team_eDensity": attacked_team.data["eDensity"] if (attacked_team and "eDensity" in attacked_team.data) else None,
             "team_name": attacked_team.data["nickname"] if (attacked_team and "nickname" in attacked_team.data) else None,
