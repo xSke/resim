@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import os
 import json
 import requests
-from typing import Any, List, Dict, Optional, Set
+from typing import Any, List, Dict, Iterable, Mapping, Optional, Set, Union
 from datetime import datetime, timedelta
 from enum import Enum, IntEnum, auto, unique
 from sin_values import SIN_PHASES
@@ -363,8 +363,10 @@ class TeamData:
         return TeamData(
             {
                 "id": None,
-                "lineup": [],
-                "rotation": [],
+                # Using [None] rather than [] means things like fielder selection
+                # won't get an index error
+                "lineup": [None],
+                "rotation": [None],
             }
         )
 
@@ -497,8 +499,9 @@ class PlayerData:
         self.tenaciousness = self.data["tenaciousness"]
         self.watchfulness = self.data["watchfulness"]
         self.pressurization = self.data["pressurization"]
-        self.cinnamon = self.data.get("cinnamon") or 0
-        self.blood = self.data.get("blood") or Blood.UNKNOWN_BLOOD
+        self.cinnamon = self.data.get("cinnamon", 0)
+        self.blood = self.data.get("blood", Blood.UNKNOWN_BLOOD)
+        self.consecutive_hits = self.data.get("consecutiveHits", 0)
 
     @property
     def name(self):
@@ -571,8 +574,10 @@ CHRONICLER_URI = "https://api.sibr.dev/chronicler"
 
 
 class NullUpdate(collections.defaultdict):
-    def __init__(self):
-        super().__init__(int, {"basesOccupied": [], "baseRunners": [], "weather": Weather.VOID})
+    def __init__(self, values: Optional[Union[Iterable, Mapping]] = None):
+        if values is None:
+            values = {"basesOccupied": [], "baseRunners": [], "weather": Weather.VOID}
+        super().__init__(int, values)
 
     def __bool__(self):
         return False
