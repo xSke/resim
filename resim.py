@@ -784,9 +784,10 @@ class Resim:
                 self.print("!!! very low swing roll on ball")
             self.log_roll(Csv.SWING_ON_BALL, "Ball", swing_roll, False)
 
+        self.damage(self.pitcher, "pitcher")
         if self.ty == EventType.WALK:
             self.damage(self.batter, "batter")
-        self.damage(self.pitcher, "pitcher")
+
         if "scores!" in self.desc:
             scorer = self.data.get_player(self.update["baseRunners"][-1])
             self.damage(scorer, "batter")
@@ -920,6 +921,9 @@ class Resim:
         elif not is_fc_dp:
             self.try_roll_batter_debt(named_fielder)
 
+        # some of these are "in between" the advancement rolls when applicable
+        # not entirely sure where, so leaving them out here for now
+        # the order of these three (relatively) *is* correct though, definitely pitcher-batter-fielder.
         self.damage(self.pitcher, "pitcher")
         if not is_fc_dp:
             self.damage(self.batter, "fielder")
@@ -1171,10 +1175,10 @@ class Resim:
             # not sure why we need this
             self.roll("magmatic")
 
-        self.damage(self.batter, "batter")
         for runner_id in self.update["baseRunners"]:
             runner = self.data.get_player(runner_id)
             self.damage(runner, "batter")
+        self.damage(self.batter, "batter")
 
         if self.stadium.has_mod(Mod.BIG_BUCKET):
             self.roll("big buckets")
@@ -1242,8 +1246,8 @@ class Resim:
             fielder=self.get_fielder_for_roll(defender_roll),
         )
 
-        self.damage(self.batter, "batter")
         self.damage(self.pitcher, "pitcher")
+        self.damage(self.batter, "batter")
 
         # tentative: damage every runner at least once?
         for runner_id in self.update["baseRunners"]:
