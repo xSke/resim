@@ -103,7 +103,13 @@ def get_strike_threshold(
 
     constant = 0.2 if not is_flinching else 0.4
 
-    ruth_factor, roll_cap = {11: (0.35, 0.9), 12: (0.3, 0.85), 13: (0.3, 0.85), 14: (0.285, 0.86)}[meta.season]
+    ruth_factor, roll_cap = {
+        11: (0.35, 0.9),
+        12: (0.3, 0.85),
+        13: (0.3, 0.85),
+        14: (0.285, 0.86),
+        15: (0.285, 0.86),  # todo: we don't know
+    }[meta.season]
 
     threshold = constant + ruth_factor * (ruth * (1 + 0.2 * vibes)) + 0.2 * fwd + 0.1 * musc
     threshold = min(threshold, roll_cap)
@@ -210,6 +216,7 @@ def get_contact_strike_threshold(
         12: (0.8, 0.16, 0.9),
         13: (0.8, 0.16, 0.9),
         14: (0.78, 0.17, 0.925),
+        15: (0.78, 0.17, 0.925),  # todo: we don't know
     }[meta.season]
 
     threshold = constant - 0.08 * ruth + 0.16 * ballpark_sum + batting_factor * (combined_batting**1.2)
@@ -249,6 +256,7 @@ def get_contact_ball_threshold(
         12: (0.35, 0.4, 1),
         13: (0.4, 0.35, 1),
         14: (0.4, 0.35, 1),
+        15: (0.4, 0.35, 1),  # todo: we don't know
     }[meta.season]
 
     threshold = constant - 0.1 * ruth + path_factor * (invpath**1.5) + 0.14 * ballpark_sum

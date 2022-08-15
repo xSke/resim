@@ -68,8 +68,8 @@ def inner(window):
 
 
 def main():
-    start_timestamp = "2021-04-06T01:01:00.249Z"
-    end_timestamp = "2021-04-06T01:30:00.000Z"
+    start_timestamp = "2021-04-14T16:01:37.236Z"
+    end_timestamp = "2021-04-14T16:22:37.236Z"
 
     out_file = StringIO()
 

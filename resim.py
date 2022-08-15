@@ -3,7 +3,7 @@ import os
 import sys
 import itertools
 
-from data import EventType, GameData, Mod, NullUpdate, Weather, get_feed_between
+from data import EventType, GameData, Mod, NullUpdate, PlayerData, Weather, get_feed_between
 from output import SaveCsv
 from rng import Rng
 from dataclasses import dataclass
@@ -78,6 +78,7 @@ class Resim:
         self.home_team = self.data.get_team(None)
         self.away_team = self.data.get_team(None)
         self.stadium = self.data.get_stadium(None)
+        self.pending_attractor = None
 
         if run_name:
             os.makedirs("roll_data", exist_ok=True)
@@ -241,11 +242,13 @@ class Resim:
 
         self.handle_batter_reverb()
 
-        if self.was_attractor_placed_in_secret_base_async():
-            self.roll("attractor pitching stars")
-            self.roll("attractor batting stars")
-            self.roll("attractor baserunning stars")
-            self.roll("attractor defense stars")
+        if self.pending_attractor:
+            if self.pending_attractor and self.pending_attractor.has_mod(Mod.REDACTED):
+                self.roll("attractor pitching stars")
+                self.roll("attractor batting stars")
+                self.roll("attractor baserunning stars")
+                self.roll("attractor defense stars")
+            self.pending_attractor = None
 
     def handle_misc(self):
         if self.ty in [
@@ -286,6 +289,10 @@ class Resim:
         ]:
             if self.ty == EventType.SUN2 and "catches some rays" in self.desc:
                 self.roll("sun dialed target")
+
+            if self.ty == EventType.BLACK_HOLE:
+                if "is compressed by gamma" in self.desc:
+                    self.roll("unholey target")
             # skipping sun 2 / black hole proc
             return True
         if self.ty in [
@@ -408,6 +415,14 @@ class Resim:
             if current_home_score != last_inning_home_score:
                 self.roll("reset runs (home)")
 
+            if self.season >= 15:
+                self.roll("reset items? idk?")
+
+            if "was restored!" in self.desc or "was repaired." in self.desc:
+                self.roll("restore item??")
+                self.roll("restore item??")
+                self.roll("restore item??")
+
             return True
         if self.ty in [
             EventType.GAME_END,
@@ -514,6 +529,16 @@ class Resim:
                 "b35f095d-9bc9-4a1c-822a-3749a7b83bcb": 1,
                 "a327e425-aaf4-4199-8292-bba0ec4a226a": 2,
                 "9e28de60-f139-43fd-ad75-f9ef757a53b6": 1,
+                "5deffffd-97bd-44b3-bb5d-6a03e91065b0": 1,
+                "4ba94e98-eaea-459b-a952-b975506e16f2": 1,
+                "d03ad239-25ee-41bf-a1d3-6e087f302171": 1,
+                "26f71b68-caaa-4c58-bd19-818297133c60": 1,
+                "ff3a87e4-7dfd-4871-bcce-94647f1e4278": 1,
+                "a46c8074-5b30-4781-b104-7abf4ea5bdea": 1,
+                "4f71abbd-50f7-4368-94ae-ad6c53a880eb": 1,
+                "b2bb8e5c-358f-448b-bbf3-7c8c33148107": 2,
+                "8cf809f0-a8ad-450d-bfe2-a7700634c77f": 1,
+                "5c9ff17f-07f4-41dc-8a12-b4ece963d265": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -573,6 +598,19 @@ class Resim:
             return True
         if self.ty == EventType.TEAM_JOINED_LEAGUE:
             return True
+        if self.ty in [
+            EventType.ITEM_BREAKS,
+            EventType.ITEM_DAMAGE,
+            EventType.PLAYER_GAINED_ITEM,
+            EventType.PLAYER_LOST_ITEM,
+            EventType.BROKEN_ITEM_REPAIRED,
+            EventType.DAMAGED_ITEM_REPAIRED,
+        ]:
+            if self.ty in [EventType.ITEM_BREAKS, EventType.ITEM_DAMAGE] and "CONSUMERS" not in self.desc:
+                self.roll("which item")
+            return True
+        if self.ty == EventType.PLAYER_SWAP:
+            return True
 
     def handle_bird_ambush(self):
         if self.weather == Weather.BIRDS:
@@ -582,6 +620,8 @@ class Resim:
                 self.roll("bird ambush")
                 if self.ty == EventType.FRIEND_OF_CROWS:
                     self.handle_batter_reverb()  # i guess???
+
+                    self.damage(self.batter, "batter")  # todo: who?
                     return True
 
     def handle_charm(self):
@@ -604,12 +644,17 @@ class Resim:
         if batter_charm_eligible or pitcher_charm_eligible:
             self.roll("charm")
             if " charms " in self.desc:
+                self.damage(self.batter, "batter")
+                self.damage(self.batter, "batter")
+                self.damage(self.batter, "batter")
+                self.damage(self.batter, "batter")
+
                 self.handle_batter_reverb()  # apparently don mitchell can do this.
                 return True
             if " charmed " in self.desc:
-                # self.roll("charm proc")
-                # self.roll("charm proc")
-                # self.roll("charm proc")
+                self.damage(self.batter, "batter")
+                self.damage(self.batter, "batter")
+                self.damage(self.batter, "batter")
                 return True
 
     def handle_electric(self):
@@ -648,6 +693,13 @@ class Resim:
         self.roll("mild")
         if self.ty == EventType.MILD_PITCH:
             # skipping mild proc
+
+            for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
+                runner = self.data.get_player(runner_id)
+                self.damage(runner, "runner")
+                if base == 2:
+                    self.damage(runner, "runner")
+
             return True
 
     def roll_hr(self, is_hr):
@@ -674,7 +726,11 @@ class Resim:
                 self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
             )
 
-        if not (self.batting_team.has_mod(Mod.O_NO) and self.strikes == self.max_strikes - 1):
+        can_swing = True
+        if self.batting_team.has_mod(Mod.O_NO) and self.strikes == self.max_strikes - 1:
+            can_swing = False
+
+        if can_swing:
             if did_swing and roll > threshold:
                 self.print(
                     "!!! warn: swing on {} roll too high ({} > {})".format(
@@ -728,6 +784,13 @@ class Resim:
                 self.print("!!! very low swing roll on ball")
             self.log_roll(Csv.SWING_ON_BALL, "Ball", swing_roll, False)
 
+        if self.ty == EventType.WALK:
+            self.damage(self.batter, "batter")
+        self.damage(self.pitcher, "pitcher")
+        if "scores!" in self.desc:
+            scorer = self.data.get_player(self.update["baseRunners"][-1])
+            self.damage(scorer, "batter")
+
         if self.ty == EventType.WALK and self.batting_team.has_mod(Mod.BASE_INSTINCTS):
             self.roll("base instincts")
 
@@ -738,13 +801,14 @@ class Resim:
     def handle_strike(self):
         if ", swinging" in self.desc or "strikes out swinging." in self.desc:
             self.throw_pitch()
-            swing_roll = self.roll_swing(True)
-            self.log_roll(
-                Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
-                "StrikeSwinging",
-                swing_roll,
-                True,
-            )
+            if not self.is_flinching():
+                swing_roll = self.roll_swing(True)
+                self.log_roll(
+                    Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
+                    "StrikeSwinging",
+                    swing_roll,
+                    True,
+                )
 
             contact_roll = self.roll_contact(False)
             self.log_roll(Csv.CONTACT, "StrikeSwinging", contact_roll, False)
@@ -758,7 +822,8 @@ class Resim:
         elif ", flinching" in self.desc:
             value = self.throw_pitch("strike")
             self.log_roll(Csv.STRIKES, "StrikeFlinching", value, True)
-        pass
+
+        self.damage(self.pitcher, "pitcher")
 
     def try_roll_salmon(self):
         # don't reroll if we *just* reset
@@ -789,20 +854,21 @@ class Resim:
 
     def handle_out(self):
         self.throw_pitch()
-        swing_roll = self.roll_swing(True)
-        self.log_roll(
-            Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
-            "Out",
-            swing_roll,
-            True,
-        )
+        if not self.is_flinching():
+            swing_roll = self.roll_swing(True)
+            self.log_roll(
+                Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
+                "Out",
+                swing_roll,
+                True,
+            )
         contact_roll = self.roll_contact(True)
         self.log_roll(Csv.CONTACT, "Out", contact_roll, True)
         self.roll_foul(False)
 
         is_fc_dp = "into a double play!" in self.desc or "reaches on fielder's choice" in self.desc
 
-        fielder = None
+        named_fielder = None
         if self.ty == EventType.FLY_OUT:  # flyout
             out_fielder_roll = self.roll("out fielder")
             out_roll = self.roll("out")
@@ -824,7 +890,7 @@ class Resim:
                 fielder_roll=out_fielder_roll,
                 fielder=self.get_fielder_for_roll(out_fielder_roll),
             )
-            fielder = fly_fielder
+            named_fielder = fly_fielder
         elif self.ty == EventType.GROUND_OUT:  # ground out
             out_fielder_roll = self.roll("out fielder")
             out_roll = self.roll("out")
@@ -847,13 +913,22 @@ class Resim:
                 fielder_roll=out_fielder_roll,
                 fielder=self.get_fielder_for_roll(out_fielder_roll),
             )
-            fielder = ground_fielder
+            named_fielder = ground_fielder
 
         if self.outs < self.max_outs - 1:
-            self.handle_out_advances(fielder)
+            self.handle_out_advances(named_fielder)
+        elif not is_fc_dp:
+            self.try_roll_batter_debt(named_fielder)
 
-        if not is_fc_dp and self.batter.has_mod(Mod.DEBT_THREE) and fielder and not fielder.has_mod(Mod.COFFEE_PERIL):
-            self.roll("debt")
+        self.damage(self.pitcher, "pitcher")
+        if not is_fc_dp:
+            self.damage(self.batter, "fielder")
+        if named_fielder and not is_fc_dp:
+            self.damage(named_fielder, "fielder")
+
+    def try_roll_batter_debt(self, fielder):
+        if self.batter.has_mod(Mod.DEBT_THREE) and fielder and not fielder.has_mod(Mod.COFFEE_PERIL):
+            self.roll("batter debt")
 
     def roll_fielder(self, check_name=True):
         eligible_fielders = []
@@ -912,280 +987,14 @@ class Resim:
         if self.event["created"] == "2021-04-07T08:02:52.078Z":
             return
 
-        bases_before = make_base_map(self.update)
-        bases_after = make_base_map(self.next_update)
-
-        if self.ty == EventType.FLY_OUT:
-            # flyouts are NOT nice and simple
-            # -If there are baserunners:
-            #     -Roll advancement
-            #         -Check roll against most advanced runner
-            #         -If fail, end.
-            #         -If pass and no other baserunners, end.
-            #         -If pass and there are other baserunners...
-            #         -If most advanced runner was on 2nd aka initial state was [1, 0], end. <--- This is the weird part
-            #         -Roll advancement again
-            #             -Check roll against second most advanced runner
-            #             -end <--- also kind of weird
-
-            # rolls_advance = []
-            # if self.update(['basesOccupied']):
-            #     base =
-            #     rolls_advance.append(self.roll(f"adv ({base}, {roll_outcome})"))
-            # rolls_advance.append()
-
-            rolls_advance = []
-            for runner_id, base, roll_outcome in calculate_advances(bases_before, bases_after, 0):
-                rolls_advance.append(self.roll(f"adv ({base}, {roll_outcome})"))
-
-                # todo: check to make sure this doesn't break later stuff
-                if self.update["basesOccupied"] == [2, 2] and base == 2 and not roll_outcome and "scores!" in self.desc:
-                    rolls_advance.append(self.roll("holding hands case 2"))
-
-                # or are they? [2,0] -> [2,0] = 1 roll?
-                # [1, 0] -> [2, 0] = 1 roll?
-                # but a [2, 0] -> [0] score is 2, so it's not like it never rolls twice (unless it's special cased...)
-                if not roll_outcome or base == 1:
-                    break
-
-                # our code doesn't handle each baserunner twice so i'm cheating here
-                # rerolling for the "second" player on third's advance if the first successfully advanced,
-                # since it's possible for both
-                if self.update["basesOccupied"] == [2, 2] and base == 2 and roll_outcome:
-                    rolls_advance.append(self.roll("holding hands"))
-            self.log_roll(Csv.FLYOUT, "flyout", rolls_advance, False, fielder=fielder)
-
-        elif self.ty == EventType.GROUND_OUT:
-            # All groundout baserunner situations and the number of extra rolls used
-            # "!" means this roll is solved, "?" means good hunch and we should confirm
-            # DP can end the inning!
-            # DP always has an out at 1st
-            # Successful DP always have 2 rolls (DP check + where check)
-            extras = {
-                (tuple(), tuple()): 0,
-                ((0,), tuple()): 2,  # !DP roll (pass), DP where (unused)
-                ((0,), (0,)): 2,  # !DP roll (fail), !martyr roll (fail)
-                ((0,), (1,)): 3,  # !DP roll (fail), !martyr roll (pass) + advance (unused)
-                ((1,), (1,)): 2,  # !unused, !advance (fail)
-                ((1,), (2,)): 2,  # !unused, !advance (pass)
-                ((2,), tuple()): 2,  # !unused, !advance (pass)
-                ((2,), (2,)): 2,  # !unused, !advance (fail)
-                ((1, 0), tuple()): 2,  # !DP roll (pass), DP where (unused)
-                ((1, 0), (1,)): 2,  # !DP roll (pass), !roll<0.50 out at 3rd
-                ((1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.50 out at 2nd
-                ((1, 0), (1, 0)): 2,  # !DP roll (fail), !martyr roll (fail)
-                ((1, 0), (2, 1)): 4,  # !DP roll (fail), !martyr roll (pass), advancex2 (unused)
-                ((2, 0), tuple()): 2,  # !DP roll (pass), DP where (unused)
-                ((2, 0), (0,)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (pass), !1st advance (fail)
-                ((2, 0), (1,)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (pass), !1st advance (pass)
-                ((2, 0), (2, 1)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (fail), advance (unused)
-                ((2, 1), (1,)): 3,  # !unused, !3rd advance (pass), !2nd advance (fail)
-                ((2, 1), (2,)): 3,  # !unused, !3rd advance (pass), !2nd advance (pass)
-                ((2, 1), (2, 1)): 3,  # !unused, !3rd advance (fail), !2nd advance (fail)
-                ((2, 1), (2, 2)): 3,  # !unused, !3rd advance (fail), !2nd advance (pass)
-                ((2, 2), tuple()): 3,  # !unused, !3rd advance (pass), !3rd advance (pass)
-                ((2, 2), (2,)): 3,  # !unused !3rd advance (fail/pass), !3rd advance (pass/fail)
-                ((2, 2), (2, 2)): 3,  # !unused, !3rd advance (fail), !3rd advance (fail)
-                ((2, 1, 0), tuple()): 2,  # !DP roll (pass), DP where (unused)
-                ((2, 1, 0), (1,)): 2,  # !DP roll (pass), !0.33<roll<0.67 out at 3rd
-                ((2, 1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.67 out at 2nd
-                ((2, 1, 0), (2, 1)): 5,  # !DP roll (fail), !martyr roll (pass), advancex3 (unused);NOT DP!
-                ((2, 1, 0), (2, 1, 0)): 2,  # !DP roll (fail), !martyr roll (fail)
-                ((2, 1, 2, 0), (2, 0)): 2,  # ?DP roll (fail), ?martyr roll(fail)
-            }
-
-            event_type = "Out"
-            if "reaches on fielder's choice" in self.desc:
-                # !DP roll (fail), !martyr roll (fail)
-                extras[((2, 0), (0,))] = 2  # what
-                event_type = "FC"
-
-            if "into a double play!" in self.desc:
-                # !DP roll (pass), !roll<0.33 out at home
-                extras[((2, 1, 0), (2, 1))] = 2
-                event_type = "DP"
-
-            extra_roll_desc = extras[
-                (
-                    tuple(self.update["basesOccupied"]),
-                    tuple(self.next_update["basesOccupied"]),
-                )
-            ]
-            extra_rolls = [self.roll("extra") for _ in range(extra_roll_desc)]
-
-            # DP rolls
-            if 0 in self.update["basesOccupied"]:
-                self.log_roll(Csv.GROUNDOUT_FORMULAS, "DP", extra_rolls[0], event_type == "DP", fielder=fielder)
-
-            # Martyr/Sacrifice rolls
-            if (
-                ((self.update["basesOccupied"] in [[0]]) and (self.next_update["basesOccupied"] in [[0], [1]]))
-                or (
-                    (self.update["basesOccupied"] in [[1, 0]])
-                    and (self.next_update["basesOccupied"] in [[1, 0], [2, 1]])
-                )
-                or (
-                    (self.update["basesOccupied"] in [[2, 0]])
-                    and (self.next_update["basesOccupied"] in [[0], [1], [2, 1]])
-                )
-                or (
-                    (self.update["basesOccupied"] in [[2, 1, 0]])
-                    and (self.next_update["basesOccupied"] in [[2, 1], [2, 1, 0]])
-                    and (event_type != "DP")
-                )
-            ):
-
-                passed = (
-                    ((self.update["basesOccupied"] in [[0]]) and (self.next_update["basesOccupied"] in [[1]]))
-                    or ((self.update["basesOccupied"] in [[1, 0]]) and (self.next_update["basesOccupied"] in [[2, 1]]))
-                    or ((self.update["basesOccupied"] in [[2, 0]]) and (len(extra_rolls) == 4))
-                    or (
-                        (self.update["basesOccupied"] in [[2, 1, 0]])
-                        and (self.next_update["basesOccupied"] in [[2, 1]])
-                    )
-                )
-
-                self.log_roll(Csv.GROUNDOUT_FORMULAS, "Sac", extra_rolls[1], passed, fielder=fielder)
-
-            # Advance from 1st base
-            if (
-                (self.update["basesOccupied"] in [[2, 0]])
-                and (self.next_update["basesOccupied"] in [[0], [1]])
-                and (len(extra_rolls) == 4)
-            ):
-                runner = self.data.get_player(self.update["baseRunners"][1])
-                passed = self.next_update["basesOccupied"] == [1]
-                self.log_roll(
-                    Csv.GROUNDOUT_FORMULAS, "advance", extra_rolls[3], passed, fielder=fielder, relevant_runner=runner
-                )
-
-            # Advance from 2nd base
-            if self.update["basesOccupied"] in [[2, 1]]:
-                runner = self.data.get_player(self.update["baseRunners"][1])
-                passed = self.next_update["basesOccupied"] in [[2], [2, 2]]
-                self.log_roll(
-                    Csv.GROUNDOUT_FORMULAS, "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
-                )
-
-            # Advance from 3rd base
-            # [2,0] situation
-            if (
-                (self.update["basesOccupied"] in [[2, 0]])
-                and (self.next_update["basesOccupied"] in [[0], [1], [2, 1]])
-                and (len(extra_rolls) == 4)
-            ):
-                runner = self.data.get_player(self.update["baseRunners"][0])
-                passed = self.next_update["basesOccupied"] in [[0], [1]]
-                self.log_roll(
-                    Csv.GROUNDOUT_FORMULAS, "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
-                )
-            # [2,1] situation
-            if self.update["basesOccupied"] in [[2, 1]]:
-                runner = self.data.get_player(self.update["baseRunners"][0])
-                passed = self.next_update["basesOccupied"] in [[1], [2]]
-                self.log_roll(
-                    Csv.GROUNDOUT_FORMULAS, "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner
-                )
-            # [2,2] situation
-            if self.update["basesOccupied"] in [[2, 2]]:
-                if self.next_update["basesOccupied"] in [
-                    [],
-                    [2, 2],
-                ]:  # Can't tell with [2] final state! Need to check actual runners
-                    passed = self.next_update["basesOccupied"] in [[]]
-                    runner = self.data.get_player(self.update["baseRunners"][0])
-                    self.log_roll(
-                        Csv.GROUNDOUT_FORMULAS,
-                        "advance",
-                        extra_rolls[1],
-                        passed,
-                        fielder=fielder,
-                        relevant_runner=runner,
-                    )
-                    runner = self.data.get_player(self.update["baseRunners"][1])
-                    self.log_roll(
-                        Csv.GROUNDOUT_FORMULAS,
-                        "advance",
-                        extra_rolls[2],
-                        passed,
-                        fielder=fielder,
-                        relevant_runner=runner,
-                    )
-
-            # Here's a csv for looking at *any* groundout
-            # No Implied pass/fail, and contains ALL extra rolls
-            # Use selections in notebooks to look at different cases!
-            self.log_roll(Csv.GROUNDOUT, "groundout", extra_rolls, False, fielder=fielder)
-
-            # FLOWCHART:
-            # -Always roll for DP. Always. Ignore the roll if no runner on first.
-            # -If runner on first (DP is possible):
-            #     -Roll Where.
-            #     -If DP pass:
-            #         -If this ends the inning, DONE
-            #         -If only forced runner is on first: Doesn't matter
-            #         -Elif two forced runners:
-            #             -Roll < 1/2 -> Out at third
-            #             -Roll > 1/2 -> Out at second
-            #         -Elif three forced runners:
-            #             -Roll < 1/3 -> Out at home
-            #             -Roll > 1/3, < 2/3 -> Out at third
-            #             -Roll > 2/3 -> Out at second
-            #         -Advance all other runners
-            #     -Elif DP fail:
-            #         -Roll Sacrifice
-            #         -If Sacrifice fail:
-            #             -Most advanced runner is out.
-            #             -Advance everyone else
-            #         -Elif Sacrifice pass:
-            #             -Roll Advancement for every baserunner
-            #             -For each runner:
-            #                  -If not forced:
-            #                      -Check advancement roll. Rolls apply in basesOccupied order
-            #                       aka most advanced first ([2,1,2,0] untested!!!)
-            #                  -Elif forced:
-            #                      -If initial baserunners were [2,0] AND 3rd base PASSED advancement (:ballclark:):
-            #                          -Check advancement roll for 1st base.
-            #                      -Elif any other baserunner configuration:
-            #                          -Advance
-            # -Elif no runner on first:
-            #      -For each runner:
-            #         -If not forced:
-            #             -Check advancement roll. Rolls apply in basesOccupied order
-            #              aka most advanced first ([2,1,2,0] untested!!!)
-            #         -Elif forced:
-            #             -If initial baserunners were [2,0] AND 3rd base PASSED advancement (:ballclark:):
-            #                 -Check advancement roll for 1st base.
-            #             -Elif any other baserunner configuration:
-            #                 -Advance
-            #
-            # todo: make this not use a lookup table
-            # Requires a LOT more knowledge about each situation
-            # adv_eligible_runners = dict(bases_before)
-            # if 0 in bases_before:
-            #     # do force play
-            #     self.roll("fc")
-            #     if "hit a ground out to" not in self.desc:
-            #         # it's either fc or dp, roll for which
-            #         self.roll("dp")
-
-            #     for base in range(5):
-            #         if base in bases_before:
-            #             self.print(f"base {base} force advance")
-            #             del adv_eligible_runners[base]
-            #         else:
-            #             self.print(f"base {base} is clear, stopping")
-            #             break
-
-            # self.print("after force:", adv_eligible_runners)
-            # # do "regular" adv for rest
-            # for runner_id, base, roll_outcome in calculate_advances(adv_eligible_runners, bases_after, 0):
-            #     self.roll(f"adv ({base}, {roll_outcome})")
-
-            #     if base == 1:
-            #         self.print("extra adv 1?")
-            #     if base == 2:
-            #         self.roll("extra adv 2?")
+        def did_advance(base, runner_id):
+            if runner_id not in self.update["baseRunners"]:
+                return False
+            if runner_id not in self.next_update["baseRunners"]:
+                return True
+            new_runner_idx = self.next_update["baseRunners"].index(runner_id)
+            new_runner_base = self.next_update["basesOccupied"][new_runner_idx]
+            return new_runner_base != base
 
         self.print(
             "OUT {} {} -> {}".format(
@@ -1194,6 +1003,111 @@ class Resim:
                 self.next_update["basesOccupied"],
             )
         )
+
+        if self.ty == EventType.FLY_OUT:
+            self.try_roll_batter_debt(fielder)
+
+            is_third_free = 2 not in self.update["basesOccupied"]
+            for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
+                runner = self.data.get_player(runner_id)
+
+                # yes, *not* checking self.next_update
+                # this is my explanation for why [1, 0] -> [2, 1] never happens
+                # (it still thinks second is occupied even when they move)
+                is_next_free = (base + 1) not in self.update["basesOccupied"]
+                if base == 1 and is_third_free:
+                    is_next_free = True
+
+                roll_outcome = did_advance(base, runner_id)
+                if is_next_free:
+                    adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})")
+                    self.log_roll(
+                        Csv.FLYOUT, "advance", adv_roll, roll_outcome, fielder=fielder, relevant_runner=runner
+                    )
+
+                    if roll_outcome:
+                        self.damage(runner, "batter")
+
+                        # the logic does properly "remove" the runner when scoring from third, though
+                        if base == 2:
+                            is_third_free = True
+                            self.damage(runner, "batter")
+                    else:
+                        break
+
+        elif self.ty == EventType.GROUND_OUT:
+            if len(self.update["basesOccupied"]) > 0:
+                dp_roll = self.roll("dp?")
+
+                if 0 in self.update["basesOccupied"]:
+                    is_dp = "into a double play!" in self.desc
+                    self.log_roll(Csv.GROUNDOUT_FORMULAS, "DP", dp_roll, is_dp, fielder=fielder)
+
+                    if is_dp:
+                        self.roll("dp where")  # (index into basesOccupied)
+
+                        # todo: is this the selected runner instead?
+                        self.damage(self.batter, "batter")
+
+                        if 2 in self.update["basesOccupied"] and self.outs < self.max_outs - 2:
+                            self.damage(self.batter, "batter")  # this is probably a runner too
+                            self.damage(self.batter, "batter")  # this is probably a runner too
+                        elif 1 in self.update["basesOccupied"] and self.outs < self.max_outs - 2:
+                            self.damage(self.batter, "batter")  # this is probably a runner too
+
+                        return
+
+                    fc_roll = self.roll("martyr?")  # high = fc
+                    is_fc = "on fielder's choice" in self.desc
+                    self.log_roll(Csv.GROUNDOUT_FORMULAS, "Sac", fc_roll, not is_fc, fielder=fielder)
+
+                    if is_fc:
+                        if 2 in self.update["basesOccupied"]:
+                            third_id = self.update["baseRunners"][0]
+                            third = self.data.get_player(third_id)
+                            self.damage(third, "batter")
+                            self.damage(third, "batter")
+                        elif 1 in self.update["basesOccupied"]:
+                            third_id = self.update["baseRunners"][0]
+                            third = self.data.get_player(third_id)
+                            self.damage(third, "batter")
+                        return
+
+            self.try_roll_batter_debt(fielder)
+
+            forced_bases = 0
+            while forced_bases in self.update["basesOccupied"]:
+                forced_bases += 1
+
+            for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
+                runner = self.data.get_player(runner_id)
+
+                was_forced = base < forced_bases
+                roll_outcome = did_advance(base, runner_id) if not was_forced else None
+
+                adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})")
+
+                if roll_outcome and base == 2 and not was_forced:
+                    # when a runner scores from third, it "ignores" forcing logic
+                    # ie. [2, 0] -> [0] is possible! (first *isn't* forced to second. even if they probably should)
+                    forced_bases = 0
+
+                if roll_outcome is not None:
+                    self.log_roll(
+                        Csv.GROUNDOUT_FORMULAS,
+                        "advance",
+                        adv_roll,
+                        roll_outcome,
+                        fielder=fielder,
+                        relevant_runner=runner,
+                    )
+
+                if roll_outcome or was_forced:
+                    self.damage(runner, "batter")
+
+                    if base == 2:
+                        self.damage(runner, "batter")
+
 
     def handle_hit_advances(self, bases_hit, defender_roll):
         bases_before = make_base_map(self.update)
@@ -1226,13 +1140,14 @@ class Resim:
     def handle_hr(self):
         if " is Magmatic!" not in self.desc:
             self.throw_pitch()
-            swing_roll = self.roll_swing(True)
-            self.log_roll(
-                Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
-                "HR",
-                swing_roll,
-                True,
-            )
+            if not self.is_flinching():
+                swing_roll = self.roll_swing(True)
+                self.log_roll(
+                    Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
+                    "HR",
+                    swing_roll,
+                    True,
+                )
 
             contact_roll = self.roll_contact(True)
             self.log_roll(Csv.CONTACT, "HomeRun", contact_roll, True)
@@ -1256,18 +1171,24 @@ class Resim:
             # not sure why we need this
             self.roll("magmatic")
 
+        self.damage(self.batter, "batter")
+        for runner_id in self.update["baseRunners"]:
+            runner = self.data.get_player(runner_id)
+            self.damage(runner, "batter")
+
         if self.stadium.has_mod(Mod.BIG_BUCKET):
             self.roll("big buckets")
 
     def handle_base_hit(self):
         self.throw_pitch()
-        swing_roll = self.roll_swing(True)
-        self.log_roll(
-            Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
-            "BaseHit",
-            swing_roll,
-            True,
-        )
+        if not self.is_flinching():
+            swing_roll = self.roll_swing(True)
+            self.log_roll(
+                Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
+                "BaseHit",
+                swing_roll,
+                True,
+            )
 
         contact_roll = self.roll_contact(True)
         self.log_roll(Csv.CONTACT, "BaseHit", contact_roll, True)
@@ -1321,7 +1242,22 @@ class Resim:
             fielder=self.get_fielder_for_roll(defender_roll),
         )
 
+        self.damage(self.batter, "batter")
+        self.damage(self.pitcher, "pitcher")
+
+        # tentative: damage every runner at least once?
+        for runner_id in self.update["baseRunners"]:
+            runner = self.data.get_player(runner_id)
+            self.damage(runner, "batter")
+
+            if runner_id not in self.next_update["baseRunners"]:
+                # and damage scoring?
+                self.damage(runner, "batter")
+
         self.handle_hit_advances(hit_bases, defender_roll)
+
+        if self.event["created"] == "2021-04-14T08:08:28.240Z":
+            self.roll("???") # yeah idk either
 
     def get_stat_meta(self):
         is_maximum_blaseball = (
@@ -1361,18 +1297,22 @@ class Resim:
     def handle_foul(self):
         self.throw_pitch()
 
-        swing_roll = self.roll_swing(True)
-        self.log_roll(
-            Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
-            "Foul",
-            swing_roll,
-            True,
-        )
+        if not self.is_flinching():
+            swing_roll = self.roll_swing(True)
+            self.log_roll(
+                Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
+                "Foul",
+                swing_roll,
+                True,
+            )
 
         contact_roll = self.roll_contact(True)
         self.log_roll(Csv.CONTACT, "Foul", contact_roll, True)
 
         self.roll_foul(True)
+
+        self.damage(self.pitcher, "pitcher")
+        self.damage(self.batter, "batter")
 
     def handle_batter_up(self):
         if self.batter and self.batter.has_mod(Mod.HAUNTED):
@@ -1427,7 +1367,8 @@ class Resim:
                         return True
                     break
         elif self.weather == Weather.GLITTER:
-            self.roll("glitter")
+            # this is handled inside the ballpark proc block(?????)
+            pass
 
         elif self.weather == Weather.BLOODDRAIN:
             self.roll("blooddrain")
@@ -1542,6 +1483,12 @@ class Resim:
                 self.roll("target")
                 self.roll("player 1 fate")
                 self.roll("player 2 fate")
+
+                # i think it would be extremely funny if these are item damage rolls
+                # imagine getting feedbacked to charleston *and* you lose your shoes.
+                if self.event["created"] == "2021-04-14T00:19:59.567Z":
+                    self.roll("feedback???")
+                    self.roll("feedback???")
                 return True
 
             if self.ty == EventType.FEEDBACK_BLOCKED:
@@ -1591,11 +1538,18 @@ class Resim:
                 if "were shuffled in the Reverb!" in self.desc:
                     for _ in range(16):
                         self.roll("reverb shuffle?")
+                elif "several players shuffled" in self.desc:
+                    # 2021-04-15T01:08:22.391Z
+                    for _ in range(9):
+                        self.roll("reverb shuffle?")
                 else:
                     for _ in range(2):
                         self.roll("reverb shuffle?")
 
                     for _ in range(len(self.pitching_team.rotation)):
+                        self.roll("reverb shuffle?")
+
+                    if self.event["created"] == "2021-04-14T02:17:09.483Z":
                         self.roll("reverb shuffle?")
 
                 return True
@@ -1615,6 +1569,14 @@ class Resim:
 
                     if self.ty in [EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
                         self.roll("echo target 2?")
+                    return True
+            if self.pitcher.has_mod(Mod.ECHO):
+                self.roll("echo?")
+
+                if self.ty in [EventType.ECHO_MESSAGE, EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
+                    eligible_players = self.pitching_team.lineup + self.pitching_team.rotation
+                    eligible_players.remove(self.pitcher.id)
+                    self.handle_echo_target_selection(eligible_players)
                     return True
 
         elif self.weather == Weather.BLACK_HOLE:
@@ -1706,7 +1668,11 @@ class Resim:
                 # handle flood
                 for runner_id in self.update["baseRunners"]:
                     runner = self.data.get_player(runner_id)
-                    if not runner.has_any(Mod.EGO1, Mod.SWIM_BLADDER):
+
+                    exempt_mods = [Mod.EGO1, Mod.SWIM_BLADDER]
+                    if self.season >= 15:
+                        exempt_mods += [Mod.EGO2, Mod.EGO3, Mod.EGO4]
+                    if not runner.has_any(*exempt_mods):
                         self.roll(f"sweep ({runner.name})")
 
                 if self.stadium.id and not self.stadium.has_mod(Mod.FLOOD_PUMPS):
@@ -1753,11 +1719,12 @@ class Resim:
                 unscatter_roll = self.roll(f"unscatter ({player.raw_name})")
 
                 # todo: find actual threshold
-                threshold = 0.0005
-                if self.season == 14:
-                    threshold = 0.0004
-                if self.season == 12:
-                    threshold = 0.00061
+                threshold = {
+                    12: 0.00061,
+                    13: 0.0005,
+                    14: 0.0004,
+                    15: 0.0004,
+                }[self.season]
 
                 if unscatter_roll < threshold:
                     self.roll(f"unscatter letter ({player.raw_name})")
@@ -1777,22 +1744,6 @@ class Resim:
             for _ in range(scatter_times):
                 # todo: figure out what these are
                 self.roll("scatter letter")
-
-    def was_attractor_placed_in_secret_base_async(self):
-        update_one_after_next = self.data.get_update(self.game_id, self.play + 2)
-
-        # [rob voice] ugh. this line sucks
-        # basically "do we observe an attractor enter a secret base on the tick *after* this one". because it does it
-        # weird and async or something
-        if (
-            self.next_update
-            and not self.next_update["secretBaserunner"]
-            and update_one_after_next
-            and update_one_after_next["secretBaserunner"]
-            and "enters the Secret Base" not in update_one_after_next["lastUpdate"]
-        ):
-            attractor = self.data.get_player(update_one_after_next["secretBaserunner"])
-            return attractor
 
     def handle_consumers(self):
         # deploy some time around s14 earlsiesta added this roll - unsure exactly when but it'll be somewhere between
@@ -1837,6 +1788,12 @@ class Resim:
                                 f"incorrect consumer target (rolled {target.name}, expected {attacked_player.name})"
                             )
 
+                        for item in attacked_player.data.get("items", []):
+                            if item["health"] > 0:
+                                # pick item to break maybe? or something??
+                                self.roll("???")
+                                return True
+
                         for _ in range(25):
                             self.roll("stat change")
 
@@ -1864,6 +1821,10 @@ class Resim:
             for _ in range(25):
                 self.roll("stat")
 
+            if self.event["created"] in ["2021-04-12T17:25:29.667Z"]:
+                # either s16+/damage or just afterparty, investigate once we get lateseason
+                self.roll("extra party?")
+
             return True
 
         # we have a positive case at 0.005210187516443421 (2021-03-19T14:22:26.078Z)
@@ -1890,6 +1851,33 @@ class Resim:
         if self.stadium.has_mod(Mod.SMITHY):
             self.roll("smithy")
 
+        # WHY DOES GLITTER ROLL HERE
+        if self.weather == Weather.GLITTER:
+            self.roll("glitter")
+
+            if self.ty == EventType.GLITTER_CRATE_DROP:
+                self.roll("receiving team")
+                self.roll("receiving player")
+
+                glitter_lengths = {
+                    "2021-04-13T23:09:03.266Z": 11, # Inflatable Sunglasses
+                    "2021-04-13T23:15:49.175Z": 5,  # Cap
+                    "2021-04-14T03:02:56.577Z": 5,  # Cap
+                    "2021-04-14T03:08:02.423Z": 4,  # Sunglasses
+                    "2021-04-14T11:03:16.318Z": 4,  # Sunglasses
+                    "2021-04-14T11:11:16.266Z": 11, # Bat of Vanity
+                    "2021-04-14T15:11:14.466Z": 5,  # Bat
+                    "2021-04-14T21:13:25.144Z": 4,  # Necklace
+                    "2021-04-15T07:04:22.275Z": 5,  # Shoes
+                    "2021-04-15T07:08:27.800Z": 10, # Leg Glove
+                    "2021-04-15T07:09:02.365Z": 12, # Cryogenic Shoes
+                    "2021-04-15T07:11:27.306Z": 5,  # Ring
+                    "2021-04-15T09:21:46.071Z": 9,  # Golden Bat
+                }
+                for _ in range(glitter_lengths[self.event["created"]]):
+                    self.roll("item")
+                return True
+
         if self.stadium.has_mod(Mod.SECRET_BASE):
             if self.handle_secret_base():
                 return True
@@ -1907,14 +1895,16 @@ class Resim:
         secret_runner_id = self.update["secretBaserunner"]
         bases = self.update["basesOccupied"]
 
-        # if an attractor appeared between this tick and next, and this isn't a "real" enter...
-        did_attractor_enter_this_tick = (
-            not self.update["secretBaserunner"]
-            and self.next_update["secretBaserunner"]
-            and self.ty != EventType.ENTER_SECRET_BASE
-        )
-        if did_attractor_enter_this_tick:
-            secret_runner_id = self.next_update["secretBaserunner"]
+        # todo: refactor this block, it might be vestigial
+        if self.season == 14:
+            # if an attractor appeared between this tick and next, and this isn't a "real" enter...
+            did_attractor_enter_this_tick = (
+                not self.update["secretBaserunner"]
+                and self.next_update["secretBaserunner"]
+                and self.ty != EventType.ENTER_SECRET_BASE
+            )
+            if did_attractor_enter_this_tick:
+                secret_runner_id = self.next_update["secretBaserunner"]
 
         secret_base_enter_eligible = 1 in bases and not secret_runner_id
         secret_base_exit_eligible = 1 not in bases and secret_runner_id
@@ -1935,14 +1925,18 @@ class Resim:
         # so we need to do this play count/next check nonsense to get the right roll order
         attractor_eligible = not secret_runner_id
         if attractor_eligible:
-            self.roll("secret base attract")
+            attract_roll = self.roll("secret base attract")
+            if attract_roll < 0.0002:  # guessing at threshold
+                update_one_after_next = self.data.get_update(self.game_id, self.play + 2)
+                attractor_id = self.next_update.get("secretBaserunner") or update_one_after_next.get("secretBaserunner")
+                if attractor_id:
+                    self.roll("choose attractor")
+                    self.pending_attractor = self.data.get_player(attractor_id)
+                else:
+                    self.print("!!! warn: should add attractor but could not find any")
 
-            attractor = self.was_attractor_placed_in_secret_base_async()
-            if attractor:
-                # todo: some of these rolls seem to be done async
-                self.print(f"!!! attractor placed in secret base:{attractor.name}")
-                self.roll("choose attractor")
                 return
+
 
         if secret_base_exit_eligible:
             self.roll("secret base exit")
@@ -2052,6 +2046,11 @@ class Resim:
                         fielder_roll=steal_fielder_roll,
                         fielder=self.get_fielder_for_roll(steal_fielder_roll),
                     )
+
+                    if was_caught and self.season >= 15:
+                        self.roll("steal catcher")
+                        # todo: damage them instead
+                    self.damage(runner, "batter")
                     return True
 
             if bases == [2, 2] or bases == [2, 1, 2] or bases == [1, 0, 1]:
@@ -2092,6 +2091,19 @@ class Resim:
         # todo: double strike
 
         return roll
+
+    def damage(self, player: PlayerData, position: str):
+        if self.season < 15:
+            return
+
+        if player.has_mod(Mod.CAREFUL):
+            return
+
+        # threshold seems to vary between 0.0002 and >0.0015
+        # depending on which position or which type of roll?
+        # i tried a few things here but i'm not confident in anything
+        # so the "which item to break" is just moved into the misc handler for now
+        damage_roll = self.roll(f"item damage ({player.name})")
 
     def log_roll(
         self,
@@ -2306,7 +2318,8 @@ class Resim:
 
             if event["playerTags"]:
                 player = self.data.get_player(event["playerTags"][0])
-                player.data[position].remove(meta["from"])
+                if meta["from"] in player.data[position]:
+                    player.data[position].remove(meta["from"])
                 player.data[position].append(meta["to"])
                 player.update_mods()
             else:
@@ -2565,6 +2578,9 @@ class Resim:
         self.roll("ritual")
         self.roll("blood")
         self.roll("coffee")
+
+        if self.event["created"] == "2021-04-12T16:22:20.933Z":
+            self.roll("!!! todo")
 
     def get_runner_multiplier(self, runner, relevant_attr=None):
 
