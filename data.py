@@ -59,17 +59,23 @@ class Mod(Enum):
         """Ensure Mod values match names"""
         return name
 
+    ZERO = "0"
     ACIDIC = auto()
     AFFINITY_FOR_CROWS = auto()
+    ATTRACTOR = auto()
     BASE_INSTINCTS = auto()
     BIG_BUCKET = auto()
     BIRD_SEED = auto()
+    CAREFUL = auto()
     CHUNKY = auto()
     COFFEE_PERIL = auto()
     DEBT_THREE = auto()
     ECHO = auto()
     ECHO_CHAMBER = auto()
     EGO1 = auto()
+    EGO2 = auto()
+    EGO3 = auto()
+    EGO4 = auto()
     ELECTRIC = auto()
     ELSEWHERE = auto()
     FIRE_EATER = auto()
@@ -78,6 +84,7 @@ class Mod(Enum):
     FLOOD_PUMPS = auto()
     GRIND_RAIL = auto()
     GROWTH = auto()
+    H20 = auto()
     HAUNTED = auto()
     HIGH_PRESSURE = auto()
     HONEY_ROASTED = auto()
@@ -93,6 +100,7 @@ class Mod(Enum):
     PEANUT_MISTER = auto()
     PERK = auto()
     PSYCHOACOUSTICS = auto()
+    REDACTED = auto()
     REVERBERATING = auto()
     SCATTERED = auto()
     SECRET_BASE = auto()
@@ -258,9 +266,14 @@ class EventType(IntEnum):
     PSYCHO_ACOUSTICS = 173
     RECEIVER_BECOMES_ECHO = 174
     INVESTIGATION_PROGRESS = 175
+    GLITTER_CRATE_DROP = 177
     MIDDLING = 178
     ENTERING_CRIMESCENE = 181
     AMBITIOUS = 182
+    ITEM_BREAKS = 185
+    ITEM_DAMAGE = 186
+    BROKEN_ITEM_REPAIRED = 187
+    DAMAGED_ITEM_REPAIRED = 188
     RUNS_SCORED = 209
     WIN_COLLECTED_REGULAR = 214
     WIN_COLLECTED_POSTSEASON = 215
