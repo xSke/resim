@@ -785,7 +785,7 @@ class Resim:
 
         is_fc_dp = "into a double play!" in self.desc or "reaches on fielder's choice" in self.desc
 
-        fielder = None
+        named_fielder = None
         if self.ty == EventType.FLY_OUT:  # flyout
             out_fielder_roll = self.roll("out fielder")
             out_roll = self.roll("out")
@@ -807,7 +807,7 @@ class Resim:
                 fielder_roll=out_fielder_roll,
                 fielder=self.get_fielder_for_roll(out_fielder_roll),
             )
-            fielder = fly_fielder
+            named_fielder = fly_fielder
         elif self.ty == EventType.GROUND_OUT:  # ground out
             out_fielder_roll = self.roll("out fielder")
             out_roll = self.roll("out")
@@ -830,13 +830,16 @@ class Resim:
                 fielder_roll=out_fielder_roll,
                 fielder=self.get_fielder_for_roll(out_fielder_roll),
             )
-            fielder = ground_fielder
+            named_fielder = ground_fielder
 
         if self.outs < self.max_outs - 1:
-            self.handle_out_advances(fielder)
+            self.handle_out_advances(named_fielder)
+        elif not is_fc_dp:
+            self.try_roll_batter_debt(named_fielder)
 
-        if not is_fc_dp and self.batter.has_mod(Mod.DEBT_THREE) and fielder and not fielder.has_mod(Mod.COFFEE_PERIL):
-            self.roll("debt")
+    def try_roll_batter_debt(self, fielder):
+        if self.batter.has_mod(Mod.DEBT_THREE) and fielder and not fielder.has_mod(Mod.COFFEE_PERIL):
+            self.roll("batter debt")
 
     def roll_fielder(self, check_name=True):
         eligible_fielders = []
@@ -895,280 +898,17 @@ class Resim:
         if self.event["created"] == "2021-04-07T08:02:52.078Z":
             return
 
+        def did_advance(base, runner_id):
+            if runner_id not in self.update["baseRunners"]:
+                return False
+            if runner_id not in self.next_update["baseRunners"]:
+                return True
+            new_runner_idx = self.next_update["baseRunners"].index(runner_id)
+            new_runner_base = self.next_update["basesOccupied"][new_runner_idx]
+            return new_runner_base != base
+
         bases_before = make_base_map(self.update)
         bases_after = make_base_map(self.next_update)
-
-        if self.ty == EventType.FLY_OUT:
-            # flyouts are NOT nice and simple
-            # -If there are baserunners:
-            #     -Roll advancement
-            #         -Check roll against most advanced runner
-            #         -If fail, end.
-            #         -If pass and no other baserunners, end.
-            #         -If pass and there are other baserunners...
-            #         -If most advanced runner was on 2nd aka initial state was [1, 0], end. <--- This is the weird part
-            #         -Roll advancement again
-            #             -Check roll against second most advanced runner
-            #             -end <--- also kind of weird
-
-            # rolls_advance = []
-            # if self.update(['basesOccupied']):
-            #     base =
-            #     rolls_advance.append(self.roll(f"adv ({base}, {roll_outcome})"))
-            # rolls_advance.append()
-
-            rolls_advance = []
-            for runner_id, base, roll_outcome in calculate_advances(bases_before, bases_after, 0):
-                rolls_advance.append(self.roll(f"adv ({base}, {roll_outcome})"))
-
-                # todo: check to make sure this doesn't break later stuff
-                if self.update["basesOccupied"] == [2, 2] and base == 2 and not roll_outcome and "scores!" in self.desc:
-                    rolls_advance.append(self.roll("holding hands case 2"))
-
-                # or are they? [2,0] -> [2,0] = 1 roll?
-                # [1, 0] -> [2, 0] = 1 roll?
-                # but a [2, 0] -> [0] score is 2, so it's not like it never rolls twice (unless it's special cased...)
-                if not roll_outcome or base == 1:
-                    break
-
-                # our code doesn't handle each baserunner twice so i'm cheating here
-                # rerolling for the "second" player on third's advance if the first successfully advanced,
-                # since it's possible for both
-                if self.update["basesOccupied"] == [2, 2] and base == 2 and roll_outcome:
-                    rolls_advance.append(self.roll("holding hands"))
-            self.log_roll(Csv.FLYOUT, "flyout", rolls_advance, False, fielder=fielder)
-
-        elif self.ty == EventType.GROUND_OUT:
-            # All groundout baserunner situations and the number of extra rolls used
-            # "!" means this roll is solved, "?" means good hunch and we should confirm
-            # DP can end the inning!
-            # DP always has an out at 1st
-            # Successful DP always have 2 rolls (DP check + where check)
-            extras = {
-                (tuple(), tuple()): 0,
-                ((0,), tuple()): 2,  # !DP roll (pass), DP where (unused)
-                ((0,), (0,)): 2,  # !DP roll (fail), !martyr roll (fail)
-                ((0,), (1,)): 3,  # !DP roll (fail), !martyr roll (pass) + advance (unused)
-                ((1,), (1,)): 2,  # !unused, !advance (fail)
-                ((1,), (2,)): 2,  # !unused, !advance (pass)
-                ((2,), tuple()): 2,  # !unused, !advance (pass)
-                ((2,), (2,)): 2,  # !unused, !advance (fail)
-                ((1, 0), tuple()): 2,  # !DP roll (pass), DP where (unused)
-                ((1, 0), (1,)): 2,  # !DP roll (pass), !roll<0.50 out at 3rd
-                ((1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.50 out at 2nd
-                ((1, 0), (1, 0)): 2,  # !DP roll (fail), !martyr roll (fail)
-                ((1, 0), (2, 1)): 4,  # !DP roll (fail), !martyr roll (pass), advancex2 (unused)
-                ((2, 0), tuple()): 2,  # !DP roll (pass), DP where (unused)
-                ((2, 0), (0,)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (pass), !1st advance (fail)
-                ((2, 0), (1,)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (pass), !1st advance (pass)
-                ((2, 0), (2, 1)): 4,  # !DP roll (fail), !martyr roll (pass), !3rd advance (fail), advance (unused)
-                ((2, 1), (1,)): 3,  # !unused, !3rd advance (pass), !2nd advance (fail)
-                ((2, 1), (2,)): 3,  # !unused, !3rd advance (pass), !2nd advance (pass)
-                ((2, 1), (2, 1)): 3,  # !unused, !3rd advance (fail), !2nd advance (fail)
-                ((2, 1), (2, 2)): 3,  # !unused, !3rd advance (fail), !2nd advance (pass)
-                ((2, 2), tuple()): 3,  # !unused, !3rd advance (pass), !3rd advance (pass)
-                ((2, 2), (2,)): 3,  # !unused !3rd advance (fail/pass), !3rd advance (pass/fail)
-                ((2, 2), (2, 2)): 3,  # !unused, !3rd advance (fail), !3rd advance (fail)
-                ((2, 1, 0), tuple()): 2,  # !DP roll (pass), DP where (unused)
-                ((2, 1, 0), (1,)): 2,  # !DP roll (pass), !0.33<roll<0.67 out at 3rd
-                ((2, 1, 0), (2,)): 2,  # !DP roll (pass), !roll>0.67 out at 2nd
-                ((2, 1, 0), (2, 1)): 5,  # !DP roll (fail), !martyr roll (pass), advancex3 (unused);NOT DP!
-                ((2, 1, 0), (2, 1, 0)): 2,  # !DP roll (fail), !martyr roll (fail)
-                ((2, 1, 2, 0), (2, 0)): 3,  # ?DP roll (fail), ?martyr roll(fail), ???
-            }
-
-            event_type = "Out"
-            if "reaches on fielder's choice" in self.desc:
-                # !DP roll (fail), !martyr roll (fail)
-                extras[((2, 0), (0,))] = 2  # what
-                event_type = "FC"
-
-            if "into a double play!" in self.desc:
-                # !DP roll (pass), !roll<0.33 out at home
-                extras[((2, 1, 0), (2, 1))] = 2
-                event_type = "DP"
-
-            extra_roll_desc = extras[
-                (
-                    tuple(self.update["basesOccupied"]),
-                    tuple(self.next_update["basesOccupied"]),
-                )
-            ]
-            extra_rolls = [self.roll("extra") for _ in range(extra_roll_desc)]
-
-            # DP rolls
-            if 0 in self.update["basesOccupied"]:
-                self.log_roll(Csv.GROUNDOUT_FORMULAS, "DP", extra_rolls[0], event_type == "DP", fielder=fielder)
-
-            # Martyr/Sacrifice rolls
-            if (
-                ((self.update["basesOccupied"] in [[0]]) and (self.next_update["basesOccupied"] in [[0], [1]]))
-                or (
-                    (self.update["basesOccupied"] in [[1, 0]])
-                    and (self.next_update["basesOccupied"] in [[1, 0], [2, 1]])
-                )
-                or (
-                    (self.update["basesOccupied"] in [[2, 0]])
-                    and (self.next_update["basesOccupied"] in [[0], [1], [2, 1]])
-                )
-                or (
-                    (self.update["basesOccupied"] in [[2, 1, 0]])
-                    and (self.next_update["basesOccupied"] in [[2, 1], [2, 1, 0]])
-                    and (event_type != "DP")
-                )
-            ):
-
-                passed = (
-                    ((self.update["basesOccupied"] in [[0]]) and (self.next_update["basesOccupied"] in [[1]]))
-                    or ((self.update["basesOccupied"] in [[1, 0]]) and (self.next_update["basesOccupied"] in [[2, 1]]))
-                    or ((self.update["basesOccupied"] in [[2, 0]]) and (len(extra_rolls) == 4))
-                    or (
-                        (self.update["basesOccupied"] in [[2, 1, 0]])
-                        and (self.next_update["basesOccupied"] in [[2, 1]])
-                    )
-                )
-
-                self.log_roll(Csv.GROUNDOUT_FORMULAS, "Sac", extra_rolls[1], passed, fielder=fielder)
-
-            # Advance from 1st base
-            if (
-                (self.update["basesOccupied"] in [[2, 0]])
-                and (self.next_update["basesOccupied"] in [[0], [1]])
-                and (len(extra_rolls) == 4)
-            ):
-                runner = self.data.get_player(self.update["baseRunners"][1])
-                passed = self.next_update["basesOccupied"] == [1]
-                self.log_roll(
-                    Csv.GROUNDOUT_FORMULAS, "advance", extra_rolls[3], passed, fielder=fielder, relevant_runner=runner
-                )
-
-            # Advance from 2nd base
-            if self.update["basesOccupied"] in [[2, 1]]:
-                runner = self.data.get_player(self.update["baseRunners"][1])
-                passed = self.next_update["basesOccupied"] in [[2], [2, 2]]
-                self.log_roll(
-                    Csv.GROUNDOUT_FORMULAS, "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
-                )
-
-            # Advance from 3rd base
-            # [2,0] situation
-            if (
-                (self.update["basesOccupied"] in [[2, 0]])
-                and (self.next_update["basesOccupied"] in [[0], [1], [2, 1]])
-                and (len(extra_rolls) == 4)
-            ):
-                runner = self.data.get_player(self.update["baseRunners"][0])
-                passed = self.next_update["basesOccupied"] in [[0], [1]]
-                self.log_roll(
-                    Csv.GROUNDOUT_FORMULAS, "advance", extra_rolls[2], passed, fielder=fielder, relevant_runner=runner
-                )
-            # [2,1] situation
-            if self.update["basesOccupied"] in [[2, 1]]:
-                runner = self.data.get_player(self.update["baseRunners"][0])
-                passed = self.next_update["basesOccupied"] in [[1], [2]]
-                self.log_roll(
-                    Csv.GROUNDOUT_FORMULAS, "advance", extra_rolls[1], passed, fielder=fielder, relevant_runner=runner
-                )
-            # [2,2] situation
-            if self.update["basesOccupied"] in [[2, 2]]:
-                if self.next_update["basesOccupied"] in [
-                    [],
-                    [2, 2],
-                ]:  # Can't tell with [2] final state! Need to check actual runners
-                    passed = self.next_update["basesOccupied"] in [[]]
-                    runner = self.data.get_player(self.update["baseRunners"][0])
-                    self.log_roll(
-                        Csv.GROUNDOUT_FORMULAS,
-                        "advance",
-                        extra_rolls[1],
-                        passed,
-                        fielder=fielder,
-                        relevant_runner=runner,
-                    )
-                    runner = self.data.get_player(self.update["baseRunners"][1])
-                    self.log_roll(
-                        Csv.GROUNDOUT_FORMULAS,
-                        "advance",
-                        extra_rolls[2],
-                        passed,
-                        fielder=fielder,
-                        relevant_runner=runner,
-                    )
-
-            # Here's a csv for looking at *any* groundout
-            # No Implied pass/fail, and contains ALL extra rolls
-            # Use selections in notebooks to look at different cases!
-            self.log_roll(Csv.GROUNDOUT, "groundout", extra_rolls, False, fielder=fielder)
-
-            # FLOWCHART:
-            # -Always roll for DP. Always. Ignore the roll if no runner on first.
-            # -If runner on first (DP is possible):
-            #     -Roll Where.
-            #     -If DP pass:
-            #         -If this ends the inning, DONE
-            #         -If only forced runner is on first: Doesn't matter
-            #         -Elif two forced runners:
-            #             -Roll < 1/2 -> Out at third
-            #             -Roll > 1/2 -> Out at second
-            #         -Elif three forced runners:
-            #             -Roll < 1/3 -> Out at home
-            #             -Roll > 1/3, < 2/3 -> Out at third
-            #             -Roll > 2/3 -> Out at second
-            #         -Advance all other runners
-            #     -Elif DP fail:
-            #         -Roll Sacrifice
-            #         -If Sacrifice fail:
-            #             -Most advanced runner is out.
-            #             -Advance everyone else
-            #         -Elif Sacrifice pass:
-            #             -Roll Advancement for every baserunner
-            #             -For each runner:
-            #                  -If not forced:
-            #                      -Check advancement roll. Rolls apply in basesOccupied order
-            #                       aka most advanced first ([2,1,2,0] untested!!!)
-            #                  -Elif forced:
-            #                      -If initial baserunners were [2,0] AND 3rd base PASSED advancement (:ballclark:):
-            #                          -Check advancement roll for 1st base.
-            #                      -Elif any other baserunner configuration:
-            #                          -Advance
-            # -Elif no runner on first:
-            #      -For each runner:
-            #         -If not forced:
-            #             -Check advancement roll. Rolls apply in basesOccupied order
-            #              aka most advanced first ([2,1,2,0] untested!!!)
-            #         -Elif forced:
-            #             -If initial baserunners were [2,0] AND 3rd base PASSED advancement (:ballclark:):
-            #                 -Check advancement roll for 1st base.
-            #             -Elif any other baserunner configuration:
-            #                 -Advance
-            #
-            # todo: make this not use a lookup table
-            # Requires a LOT more knowledge about each situation
-            # adv_eligible_runners = dict(bases_before)
-            # if 0 in bases_before:
-            #     # do force play
-            #     self.roll("fc")
-            #     if "hit a ground out to" not in self.desc:
-            #         # it's either fc or dp, roll for which
-            #         self.roll("dp")
-
-            #     for base in range(5):
-            #         if base in bases_before:
-            #             self.print(f"base {base} force advance")
-            #             del adv_eligible_runners[base]
-            #         else:
-            #             self.print(f"base {base} is clear, stopping")
-            #             break
-
-            # self.print("after force:", adv_eligible_runners)
-            # # do "regular" adv for rest
-            # for runner_id, base, roll_outcome in calculate_advances(adv_eligible_runners, bases_after, 0):
-            #     self.roll(f"adv ({base}, {roll_outcome})")
-
-            #     if base == 1:
-            #         self.print("extra adv 1?")
-            #     if base == 2:
-            #         self.roll("extra adv 2?")
 
         self.print(
             "OUT {} {} -> {}".format(
@@ -1177,6 +917,82 @@ class Resim:
                 self.next_update["basesOccupied"],
             )
         )
+
+        if self.ty == EventType.FLY_OUT:
+            self.try_roll_batter_debt(fielder)
+
+            is_third_free = 2 not in self.update["basesOccupied"]
+            for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
+                runner = self.data.get_player(runner_id)
+
+                # yes, *not* checking self.next_update
+                # this is my explanation for why [1, 0] -> [2, 1] never happens
+                # (it still thinks second is occupied even when they move)
+                is_next_free = (base + 1) not in self.update["basesOccupied"]
+                if base == 1 and is_third_free:
+                    is_next_free = True
+
+                roll_outcome = did_advance(base, runner_id)
+                if is_next_free:
+                    adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})")
+                    self.log_roll(
+                        Csv.FLYOUT, "advance", adv_roll, roll_outcome, fielder=fielder, relevant_runner=runner
+                    )
+
+                    # the logic does properly "remove" the runner when scoring from third, though
+                    if roll_outcome and base == 2:
+                        is_third_free = True
+
+                    if not roll_outcome:
+                        break
+
+        elif self.ty == EventType.GROUND_OUT:
+            if len(self.update["basesOccupied"]) > 0:
+                dp_roll = self.roll("dp?")
+
+                if 0 in self.update["basesOccupied"]:
+                    is_dp = "into a double play!" in self.desc
+                    self.log_roll(Csv.GROUNDOUT_FORMULAS, "DP", dp_roll, is_dp, fielder=fielder)
+
+                    if is_dp:
+                        self.roll("dp where")  # (index into basesOccupied)
+                        return
+
+                    fc_roll = self.roll("martyr?")  # high = fc
+                    is_fc = "on fielder's choice" in self.desc
+                    self.log_roll(Csv.GROUNDOUT_FORMULAS, "Sac", fc_roll, not is_fc, fielder=fielder)
+
+                    if is_fc:
+                        return
+
+            self.try_roll_batter_debt(fielder)
+
+            forced_bases = 0
+            while forced_bases in self.update["basesOccupied"]:
+                forced_bases += 1
+
+            for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
+                runner = self.data.get_player(runner_id)
+
+                was_forced = base < forced_bases
+                roll_outcome = did_advance(base, runner_id) if not was_forced else None
+
+                adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})")
+
+                if roll_outcome and base == 2 and not was_forced:
+                    # when a runner scores from third, it "ignores" forcing logic
+                    # ie. [2, 0] -> [0] is possible! (first *isn't* forced to second. even if they probably should)
+                    forced_bases = 0
+
+                if roll_outcome is not None:
+                    self.log_roll(
+                        Csv.GROUNDOUT_FORMULAS,
+                        "advance",
+                        adv_roll,
+                        roll_outcome,
+                        fielder=fielder,
+                        relevant_runner=runner,
+                    )
 
     def handle_hit_advances(self, bases_hit, defender_roll):
         bases_before = make_base_map(self.update)
