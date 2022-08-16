@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import os
 import json
 import requests
-from typing import Any, List, Dict, Iterable, Mapping, Optional, Set, Union
+from typing import Any, List, ClassVar, Dict, Iterable, Mapping, Optional, Set, Union
 from datetime import datetime, timedelta
 from enum import Enum, IntEnum, auto, unique
 from sin_values import SIN_PHASES
@@ -36,16 +36,6 @@ def get_cached(key, url):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f)
     return data
-
-
-def get_mods(entity) -> Set[str]:
-    return set(
-        entity.get("permAttr", [])
-        + entity.get("seasAttr", [])
-        + entity.get("weekAttr", [])
-        + entity.get("gameAttr", [])
-        + entity.get("itemAttr", [])
-    )
 
 
 @unique
@@ -111,11 +101,15 @@ class Mod(Enum):
     SMOOTH = auto()
     SWIM_BLADDER = auto()
     TRAVELING = auto()
+    TRIPLE_THREAT = auto()
     UNDERPERFORMING = auto()
 
     @classmethod
     def coerce(cls, value):
         return cls(value) if value in cls.__members__ else None
+
+    def __str__(self):
+        return self.value
 
 
 def get_feed_between(start, end):
@@ -351,11 +345,76 @@ class Blood(IntEnum):
     STRIKE = 14
 
 
+@unique
+class ModType(IntEnum):
+    PERMANENT = 0
+    SEASON = 1
+    WEEK = 2
+    GAME = 3
+    ITEM = 4
+
+
 @dataclass
-class TeamData:
+class TeamOrPlayerMods:
+    mods: Set[str]
+    mods_by_type: Dict[ModType, Set[str]]
+
+    MOD_KEYS: ClassVar[Dict[ModType, str]] = {
+        ModType.PERMANENT: "permAttr",
+        ModType.SEASON: "seasAttr",
+        ModType.WEEK: "weekAttr",
+        ModType.GAME: "gameAttr",
+        ModType.ITEM: "itemAttr",
+    }
+
+    def init_mods(self):
+        self.mods_by_type = {}
+        for (mod_type, key) in self.MOD_KEYS.items():
+            self.data[key] = self.data.get(key, [])
+            self.mods_by_type[mod_type] = set(self.data[key])
+        self.update_mods()
+
+    def add_mod(self, mod: Union[Mod, str], mod_type: ModType):
+        mod = str(mod)
+        if mod in self.mods_by_type[mod_type]:
+            return
+        self.mods_by_type[mod_type].add(mod)
+        self.data[self.MOD_KEYS[mod_type]].append(mod)
+        self.update_mods()
+
+    def remove_mod(self, mod: Union[Mod, str], mod_type: ModType):
+        mod = str(mod)
+        if mod not in self.mods_by_type[mod_type]:
+            return
+        self.mods_by_type[mod_type].remove(mod)
+        self.data[self.MOD_KEYS[mod_type]].remove(mod)
+        self.update_mods()
+
+    def has_mod(self, mod: Union[Mod, str], mod_type: Optional[ModType] = None) -> bool:
+        mod = str(mod)
+        if mod_type is None:
+            return mod in self.mods
+        return mod in self.mods_by_type[mod_type]
+
+    def has_any(self, *mods: Mod) -> bool:
+        return any(self.has_mod(mod) for mod in mods)
+
+    def update_mods(self):
+        self.mods = set(
+            self.data[self.MOD_KEYS[ModType.PERMANENT]]
+            + self.data[self.MOD_KEYS[ModType.SEASON]]
+            + self.data[self.MOD_KEYS[ModType.WEEK]]
+            + self.data[self.MOD_KEYS[ModType.GAME]]
+            + self.data[self.MOD_KEYS[ModType.ITEM]]
+        )
+
+
+@dataclass
+class TeamData(TeamOrPlayerMods):
     data: Dict[str, Any]
     id: str
     mods: Set[str]
+    mods_by_type: Dict[ModType, Set[str]]
     lineup: List[str]
     rotation: List[str]
     eDensity: float = 0
@@ -365,18 +424,12 @@ class TeamData:
     def __init__(self, data: Dict[str, Any]):
         self.data = data
         self.id = self.data["id"]
-        self.mods = get_mods(self.data)
+        self.init_mods()
         self.lineup = self.data["lineup"]
         self.rotation = self.data["rotation"]
         self.level = self.data.get("level") or 0
         self.eDensity = self.data.get("eDensity") or 0
         self.nickname = self.data.get("nickname") or ""
-
-    def has_mod(self, mod: Mod) -> bool:
-        return mod.value in self.mods
-
-    def update_mods(self):
-        self.mods = get_mods(self.data)
 
     @staticmethod
     def null():
@@ -454,10 +507,9 @@ class StadiumData:
 
 
 @dataclass
-class PlayerData:
+class PlayerData(TeamOrPlayerMods):
     data: Dict[str, Any]
     id: str
-    mods: Set[str]
     raw_name: str
     # Player attributes
     buoyancy: float
@@ -492,7 +544,7 @@ class PlayerData:
     def __init__(self, data: Dict[str, Any]):
         self.data = data
         self.id = self.data["id"]
-        self.mods = get_mods(self.data)
+        self.init_mods()
         self.raw_name = self.data["name"]
         # Player attributes
         self.buoyancy = self.data["buoyancy"]
@@ -528,15 +580,6 @@ class PlayerData:
     def name(self):
         unscattered_name = self.data.get("state", {}).get("unscatteredName")
         return unscattered_name or self.raw_name
-
-    def has_mod(self, mod: Mod) -> bool:
-        return mod.value in self.mods
-
-    def update_mods(self):
-        self.mods = get_mods(self.data)
-
-    def has_any(self, *mods: Mod) -> bool:
-        return any(self.has_mod(mod) for mod in mods)
 
     def vibes(self, day) -> float:
         if self.has_mod(Mod.SCATTERED):
