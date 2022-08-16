@@ -358,6 +358,9 @@ class TeamData:
     mods: Set[str]
     lineup: List[str]
     rotation: List[str]
+    eDensity: float = 0
+    level: int = 0
+    nickname: str = ""
 
     def __init__(self, data: Dict[str, Any]):
         self.data = data
@@ -365,6 +368,9 @@ class TeamData:
         self.mods = get_mods(self.data)
         self.lineup = self.data["lineup"]
         self.rotation = self.data["rotation"]
+        self.level = self.data.get("level") or 0
+        self.eDensity = self.data.get("eDensity") or 0
+        self.nickname = self.data.get("nickname") or ""
 
     def has_mod(self, mod: Mod) -> bool:
         return mod.value in self.mods
