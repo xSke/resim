@@ -3,7 +3,19 @@ import os
 import sys
 import itertools
 
-from data import Blood, EventType, GameData, Mod, ModType, NullUpdate, PlayerData, TeamData, Weather, get_feed_between
+from data import (
+    Base,
+    Blood,
+    EventType,
+    GameData,
+    Mod,
+    ModType,
+    NullUpdate,
+    PlayerData,
+    TeamData,
+    Weather,
+    get_feed_between,
+)
 from output import SaveCsv
 from rng import Rng
 from dataclasses import dataclass
@@ -719,7 +731,7 @@ class Resim:
             for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
                 runner = self.data.get_player(runner_id)
                 self.damage(runner, "runner")
-                if base == 2:
+                if base == Base.THIRD:
                     self.damage(runner, "runner")
 
             return True
@@ -1043,7 +1055,7 @@ class Resim:
                 # this is my explanation for why [1, 0] -> [2, 1] never happens
                 # (it still thinks second is occupied even when they move)
                 is_next_free = (base + 1) not in self.update["basesOccupied"]
-                if base == 1 and is_third_free:
+                if base == Base.SECOND and is_third_free:
                     is_next_free = True
 
                 roll_outcome = did_advance(base, runner_id)
@@ -1057,7 +1069,7 @@ class Resim:
                         self.damage(runner, "batter")
 
                         # the logic does properly "remove" the runner when scoring from third, though
-                        if base == 2:
+                        if base == Base.THIRD:
                             is_third_free = True
                             self.damage(runner, "batter")
                     else:
@@ -1067,7 +1079,7 @@ class Resim:
             if len(self.update["basesOccupied"]) > 0:
                 dp_roll = self.roll("dp?")
 
-                if 0 in self.update["basesOccupied"]:
+                if Base.FIRST in self.update["basesOccupied"]:
                     is_dp = "into a double play!" in self.desc
                     self.log_roll(Csv.GROUNDOUT_FORMULAS, "DP", dp_roll, is_dp, fielder=fielder)
 
@@ -1077,9 +1089,9 @@ class Resim:
                         # todo: is this the selected runner instead?
                         self.damage(self.batter, "batter")
 
-                        if 2 in self.update["basesOccupied"] and self.outs < self.max_outs - 2:
+                        if Base.THIRD in self.update["basesOccupied"] and self.outs < self.max_outs - 2:
                             self.damage(self.batter, "batter")  # this is probably a runner too
-                        if 1 in self.update["basesOccupied"] and self.outs < self.max_outs - 2:
+                        if Base.SECOND in self.update["basesOccupied"] and self.outs < self.max_outs - 2:
                             self.damage(self.batter, "batter")  # this is probably a runner too
 
                         if "scores!" in self.desc:
@@ -1091,12 +1103,12 @@ class Resim:
                     self.log_roll(Csv.GROUNDOUT_FORMULAS, "Sac", fc_roll, not is_fc, fielder=fielder)
 
                     if is_fc:
-                        if 2 in self.update["basesOccupied"]:
+                        if Base.THIRD in self.update["basesOccupied"]:
                             third_id = self.update["baseRunners"][0]
                             third = self.data.get_player(third_id)
                             self.damage(third, "batter")
                             self.damage(third, "batter")
-                        elif 1 in self.update["basesOccupied"]:
+                        elif Base.SECOND in self.update["basesOccupied"]:
                             third_id = self.update["baseRunners"][0]
                             third = self.data.get_player(third_id)
                             self.damage(third, "batter")
@@ -1116,7 +1128,7 @@ class Resim:
 
                 adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})")
 
-                if roll_outcome and base == 2 and not was_forced:
+                if roll_outcome and base == Base.THIRD and not was_forced:
                     # when a runner scores from third, it "ignores" forcing logic
                     # ie. [2, 0] -> [0] is possible! (first *isn't* forced to second. even if they probably should)
                     forced_bases = 0
@@ -1134,7 +1146,7 @@ class Resim:
                 if roll_outcome or was_forced:
                     self.damage(runner, "batter")
 
-                    if base == 2:
+                    if base == Base.THIRD:
                         self.damage(runner, "batter")
 
     def handle_hit_advances(self, bases_hit, defender_roll):
@@ -1144,7 +1156,7 @@ class Resim:
             roll = self.roll(f"adv ({base}, {roll_outcome}")
             runner = self.data.get_player(runner_id)
             fielder = self.get_fielder_for_roll(defender_roll)
-            if base == 1:
+            if base == Base.SECOND:
                 self.log_roll(
                     Csv.HITADVANCE,
                     "second",
@@ -1154,7 +1166,7 @@ class Resim:
                     fielder_roll=defender_roll,
                     fielder=fielder,
                 )
-            elif base == 2:
+            elif base == Base.THIRD:
                 self.log_roll(
                     Csv.HITADVANCE,
                     "third",
@@ -1166,7 +1178,7 @@ class Resim:
                 )
 
             # damage scores on extra advances
-            if base == 2 and roll_outcome:
+            if base == Base.THIRD and roll_outcome:
                 self.damage(runner, "runner")
 
     def handle_hr(self):
@@ -1293,7 +1305,7 @@ class Resim:
             self.strikes == self.max_strikes - 1
             and self.balls == self.max_balls - 1
             and self.outs == self.max_outs - 1
-            and self.update["basesOccupied"] == [2, 1, 0]
+            and self.update["basesOccupied"] == [Base.THIRD, Base.SECOND, Base.FIRST]
         )
         return StatRelevantData(
             self.weather,
@@ -1969,8 +1981,8 @@ class Resim:
             if did_attractor_enter_this_tick:
                 secret_runner_id = self.next_update["secretBaserunner"]
 
-        secret_base_enter_eligible = 1 in bases and not secret_runner_id
-        secret_base_exit_eligible = 1 not in bases and secret_runner_id
+        secret_base_enter_eligible = Base.SECOND in bases and not secret_runner_id
+        secret_base_exit_eligible = Base.SECOND not in bases and secret_runner_id
         if secret_runner_id:
             # what is the exact criteria here?
             # we have ghost Elijah Bates entering a secret base in 42a824ba-bd7b-4b63-aeb5-a60173df136e
@@ -2028,7 +2040,7 @@ class Resim:
                 self.update["baseRunners"].remove(runner_id)
 
     def handle_grind_rail(self):
-        if 0 in self.update["basesOccupied"] and 2 not in self.update["basesOccupied"]:
+        if Base.FIRST in self.update["basesOccupied"] and Base.THIRD not in self.update["basesOccupied"]:
             # i have no idea why this rolls twice but it definitely *does*
             self.roll("grind rail")
             self.roll("grind rail")
@@ -2064,18 +2076,18 @@ class Resim:
 
         base_stolen = None
         if "second base" in self.desc:
-            base_stolen = 1
+            base_stolen = Base.SECOND
         elif "third base" in self.desc:
-            base_stolen = 2
+            base_stolen = Base.THIRD
         elif "fourth base" in self.desc:
-            base_stolen = 3
+            base_stolen = Base.FOURTH
 
         for i, base in enumerate(bases):
             if base + 1 not in bases or (
                 # This is weird, but adding an extra roll here seems like the only way to get S15D75 to line up.
                 # https://reblase.sibr.dev/game/9d224696-6775-42c0-8259-b4de84f850a8#b65483bc-a07f-88e3-9e30-6ff9365f865b
-                bases == [2, 0, 1]
-                and base == 0
+                bases == [Base.THIRD, Base.FIRST, Base.SECOND]
+                and base == Base.FIRST
             ):
                 runner = self.data.get_player(self.update["baseRunners"][i])
 
@@ -2114,7 +2126,11 @@ class Resim:
                     self.damage(runner, "batter")
                     return True
 
-            if bases == [2, 2] or bases == [2, 1, 2] or bases == [1, 0, 1]:
+            if (
+                bases == [Base.THIRD, Base.THIRD]
+                or bases == [Base.THIRD, Base.SECOND, Base.THIRD]
+                or bases == [Base.SECOND, Base.FIRST, Base.SECOND]
+            ):
                 # don't roll twice when holding hands
                 break
 
@@ -2181,9 +2197,10 @@ class Resim:
         if csv not in self.csvs:
             return
         relevant_runner_multiplier = self.get_runner_multiplier(relevant_runner)
-        runner_1st = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 0]
-        runner_2nd = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 1]
-        runners_3rd = [r for base, r in zip(self.update["basesOccupied"], self.update["baseRunners"]) if base == 2]
+        runners_on_bases = zip(self.update["basesOccupied"], self.update["baseRunners"])
+        runner_1st = [r for base, r in runners_on_bases if base == Base.FIRST]
+        runner_2nd = [r for base, r in runners_on_bases if base == Base.SECOND]
+        runners_3rd = [r for base, r in runners_on_bases if base == Base.THIRD]
         if runner_1st:
             runner_on_first = self.data.get_player(runner_1st[0])
             runner_on_first_multiplier = self.get_runner_multiplier(runner_on_first)
