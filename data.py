@@ -331,6 +331,7 @@ class Weather(IntEnum):
         return self.value in [self.FEEDBACK, self.REVERB]
 
 
+@unique
 class Blood(IntEnum):
     A = 0
     AA = 1
