@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import os
 import json
 import requests
-from typing import Any, List, ClassVar, Dict, Iterable, Mapping, Optional, Set, Union
+from typing import Any, List, Dict, Iterable, Mapping, Optional, Set, Union
 from datetime import datetime, timedelta
 from enum import Enum, IntEnum, auto, unique
 from sin_values import SIN_PHASES
@@ -359,19 +359,17 @@ class TeamOrPlayerMods:
     mods: Set[str]
     mods_by_type: Dict[ModType, Set[str]]
 
-    MOD_KEYS: ClassVar[Dict[ModType, str]] = {
-        ModType.PERMANENT: "permAttr",
-        ModType.SEASON: "seasAttr",
-        ModType.WEEK: "weekAttr",
-        ModType.GAME: "gameAttr",
-        ModType.ITEM: "itemAttr",
-    }
-
     def init_mods(self):
+        MOD_KEYS = {
+            ModType.PERMANENT: "permAttr",
+            ModType.SEASON: "seasAttr",
+            ModType.WEEK: "weekAttr",
+            ModType.GAME: "gameAttr",
+            ModType.ITEM: "itemAttr",
+        }
         self.mods_by_type = {}
-        for (mod_type, key) in self.MOD_KEYS.items():
-            self.data[key] = self.data.get(key, [])
-            self.mods_by_type[mod_type] = set(self.data[key])
+        for (mod_type, key) in MOD_KEYS.items():
+            self.mods_by_type[mod_type] = set(self.data.get(key, []))
         self.update_mods()
 
     def add_mod(self, mod: Union[Mod, str], mod_type: ModType):
@@ -379,7 +377,6 @@ class TeamOrPlayerMods:
         if mod in self.mods_by_type[mod_type]:
             return
         self.mods_by_type[mod_type].add(mod)
-        self.data[self.MOD_KEYS[mod_type]].append(mod)
         self.update_mods()
 
     def remove_mod(self, mod: Union[Mod, str], mod_type: ModType):
@@ -387,7 +384,6 @@ class TeamOrPlayerMods:
         if mod not in self.mods_by_type[mod_type]:
             return
         self.mods_by_type[mod_type].remove(mod)
-        self.data[self.MOD_KEYS[mod_type]].remove(mod)
         self.update_mods()
 
     def has_mod(self, mod: Union[Mod, str], mod_type: Optional[ModType] = None) -> bool:
@@ -400,13 +396,7 @@ class TeamOrPlayerMods:
         return any(self.has_mod(mod) for mod in mods)
 
     def update_mods(self):
-        self.mods = set(
-            self.data[self.MOD_KEYS[ModType.PERMANENT]]
-            + self.data[self.MOD_KEYS[ModType.SEASON]]
-            + self.data[self.MOD_KEYS[ModType.WEEK]]
-            + self.data[self.MOD_KEYS[ModType.GAME]]
-            + self.data[self.MOD_KEYS[ModType.ITEM]]
-        )
+        self.mods = set().union(*self.mods_by_type.values())
 
 
 @dataclass
@@ -511,6 +501,7 @@ class PlayerData(TeamOrPlayerMods):
     data: Dict[str, Any]
     id: str
     raw_name: str
+    unscattered_name: Optional[str]
     # Player attributes
     buoyancy: float
     divinity: float
@@ -540,12 +531,19 @@ class PlayerData(TeamOrPlayerMods):
     cinnamon: float
     blood: Optional[Blood]
     consecutive_hits: int
+    bat: Optional[str]
+    soul: int
+    eDensity: float
+    items: List[Dict[str, Any]]
+    season_mod_sources: Dict[str, List[str]]
 
     def __init__(self, data: Dict[str, Any]):
+        data_state = data.get("state", {})
         self.data = data
         self.id = self.data["id"]
         self.init_mods()
         self.raw_name = self.data["name"]
+        self.unscattered_name = data_state.get("unscatteredName")
         # Player attributes
         self.buoyancy = self.data["buoyancy"]
         self.divinity = self.data["divinity"]
@@ -575,11 +573,15 @@ class PlayerData(TeamOrPlayerMods):
         self.cinnamon = self.data.get("cinnamon") or 0
         self.blood = self.data.get("blood") or None
         self.consecutive_hits = self.data.get("consecutiveHits") or 0
+        self.bat = self.data.get("bat") or None
+        self.soul = self.data.get("soul") or 0
+        self.eDensity = self.data.get("eDensity") or 0
+        self.items = self.data.get("items") or []
+        self.season_mod_sources = data_state.get("seasModSources", {})
 
     @property
     def name(self):
-        unscattered_name = self.data.get("state", {}).get("unscatteredName")
-        return unscattered_name or self.raw_name
+        return self.unscattered_name or self.raw_name
 
     def vibes(self, day) -> float:
         if self.has_mod(Mod.SCATTERED):
@@ -631,6 +633,10 @@ class PlayerData(TeamOrPlayerMods):
                 "cinnamon": 0.5,
                 "blood": None,
                 "consecutive_hits": 0,
+                "bat": None,
+                "soul": 0,
+                "eDensity": 0,
+                "items": [],
             }
         )
 
