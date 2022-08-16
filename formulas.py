@@ -80,7 +80,7 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             if meta.is_maximum_blaseball:
                 multiplier += 2.50
 
-    if player.data.get("bat") == "NIGHT_VISION_GOGGLES" and meta.weather == Weather.ECLIPSE:
+    if player.bat == "NIGHT_VISION_GOGGLES" and meta.weather == Weather.ECLIPSE:
         # Blessing description: Item. Random player on your team hits 50% better during Solar Eclipses.
         if attr == "thwackability":
             multiplier += 0.5

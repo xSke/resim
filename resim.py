@@ -1490,8 +1490,8 @@ class Resim:
                 # in s14 this doesn't seem to check (inactive) pitchers
                 # (except all shelled pitchers are inactive so idk)
                 player = self.data.get_player(player_id)
-                # also must be specifically PERMANENT mods - moses mason (shelled in s15 through receiver, so seasonal mod)
-                # is exempt
+                # also must be specifically PERMANENT mods - moses mason
+                # (shelled in s15 through receiver, so seasonal mod) is exempt
                 if player.has_mod(Mod.SHELLED, ModType.PERMANENT):
                     has_shelled_player = True
 
@@ -1823,7 +1823,7 @@ class Resim:
                         self.log_roll(Csv.CONSUMERS, attacked_player.name, target_roll, True)
 
                         roster = [self.data.get_player(p) for p in team.lineup + team.rotation]
-                        densities = [p.data["eDensity"] for p in roster]
+                        densities = [p.eDensity for p in roster]
                         total_density = sum(densities)
 
                         acc = 0
@@ -1850,7 +1850,7 @@ class Resim:
                         for _ in range(25):
                             self.roll("stat change")
 
-                            if attacked_player.data["soul"] == 1:
+                            if attacked_player.soul == 1:
                                 # lost their last soul, redact :<
                                 self.print(f"!!! {attacked_player.name} lost last soul, " f"redacting")
                                 if attacked_player_id in team.lineup:
@@ -2159,7 +2159,7 @@ class Resim:
         # depending on which position or which type of roll?
         # i tried a few things here but i'm not confident in anything
         # so the "which item to break" is just moved into the misc handler for now
-        damage_roll = self.roll(f"item damage ({player.name})")
+        self.roll(f"item damage ({player.name})")
 
     def log_roll(
         self,
@@ -2438,7 +2438,7 @@ class Resim:
 
             # todo: do this in other cases too?
             if meta["from"] == "RECEIVER":
-                for mod, source in player.data["state"]["seasModSources"].items():
+                for mod, source in player.season_mod_sources.items():
                     if source == ["RECEIVER"]:
                         player.remove_mod(mod, ModType.SEASON)
 
