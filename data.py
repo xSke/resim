@@ -359,7 +359,7 @@ class TeamOrPlayerMods:
     mods: Set[str]
     mods_by_type: Dict[ModType, Set[str]]
 
-    def init_mods(self):
+    def init_mods(self, data: Dict[str, Any]):
         MOD_KEYS = {
             ModType.PERMANENT: "permAttr",
             ModType.SEASON: "seasAttr",
@@ -369,7 +369,7 @@ class TeamOrPlayerMods:
         }
         self.mods_by_type = {}
         for (mod_type, key) in MOD_KEYS.items():
-            self.mods_by_type[mod_type] = set(self.data.get(key, []))
+            self.mods_by_type[mod_type] = set(data.get(key, []))
         self.update_mods()
 
     def add_mod(self, mod: Union[Mod, str], mod_type: ModType):
@@ -401,10 +401,7 @@ class TeamOrPlayerMods:
 
 @dataclass
 class TeamData(TeamOrPlayerMods):
-    data: Dict[str, Any]
     id: str
-    mods: Set[str]
-    mods_by_type: Dict[ModType, Set[str]]
     lineup: List[str]
     rotation: List[str]
     eDensity: float = 0
@@ -412,20 +409,20 @@ class TeamData(TeamOrPlayerMods):
     nickname: str = ""
 
     def __init__(self, data: Dict[str, Any]):
-        self.data = data
-        self.id = self.data["id"]
-        self.init_mods()
-        self.lineup = self.data["lineup"]
-        self.rotation = self.data["rotation"]
-        self.level = self.data.get("level") or 0
-        self.eDensity = self.data.get("eDensity") or 0
-        self.nickname = self.data.get("nickname") or ""
+        self.id = data["id"]
+        self.lineup = data["lineup"]
+        self.rotation = data["rotation"]
+        self.level = data.get("level") or 0
+        self.eDensity = data.get("eDensity") or 0
+        self.nickname = data.get("nickname") or ""
+        self.init_mods(data)
 
     @staticmethod
     def null():
         return TeamData(
             {
                 "id": None,
+                "nickname": "Null Team",
                 # Using [None] rather than [] means things like fielder selection
                 # won't get an index error
                 "lineup": [None],
@@ -498,7 +495,6 @@ class StadiumData:
 
 @dataclass
 class PlayerData(TeamOrPlayerMods):
-    data: Dict[str, Any]
     id: str
     raw_name: str
     unscattered_name: Optional[str]
@@ -539,45 +535,44 @@ class PlayerData(TeamOrPlayerMods):
 
     def __init__(self, data: Dict[str, Any]):
         data_state = data.get("state", {})
-        self.data = data
-        self.id = self.data["id"]
-        self.init_mods()
-        self.raw_name = self.data["name"]
+        self.id = data["id"]
+        self.raw_name = data["name"]
         self.unscattered_name = data_state.get("unscatteredName")
         # Player attributes
-        self.buoyancy = self.data["buoyancy"]
-        self.divinity = self.data["divinity"]
-        self.martyrdom = self.data["martyrdom"]
-        self.moxie = self.data["moxie"]
-        self.musclitude = self.data["musclitude"]
-        self.patheticism = self.data["patheticism"]
-        self.thwackability = self.data["thwackability"]
-        self.tragicness = self.data["tragicness"]
-        self.ruthlessness = self.data["ruthlessness"]
-        self.overpowerment = self.data["overpowerment"]
-        self.unthwackability = self.data["unthwackability"]
-        self.shakespearianism = self.data["shakespearianism"]
-        self.suppression = self.data["suppression"]
-        self.coldness = self.data["coldness"]
-        self.baseThirst = self.data["baseThirst"]
-        self.continuation = self.data["continuation"]
-        self.ground_friction = self.data["groundFriction"]
-        self.indulgence = self.data["indulgence"]
-        self.laserlikeness = self.data["laserlikeness"]
-        self.anticapitalism = self.data["anticapitalism"]
-        self.chasiness = self.data["chasiness"]
-        self.omniscience = self.data["omniscience"]
-        self.tenaciousness = self.data["tenaciousness"]
-        self.watchfulness = self.data["watchfulness"]
-        self.pressurization = self.data["pressurization"]
-        self.cinnamon = self.data.get("cinnamon") or 0
-        self.blood = self.data.get("blood") or None
-        self.consecutive_hits = self.data.get("consecutiveHits") or 0
-        self.bat = self.data.get("bat") or None
-        self.soul = self.data.get("soul") or 0
-        self.eDensity = self.data.get("eDensity") or 0
-        self.items = self.data.get("items") or []
+        self.buoyancy = data["buoyancy"]
+        self.divinity = data["divinity"]
+        self.martyrdom = data["martyrdom"]
+        self.moxie = data["moxie"]
+        self.musclitude = data["musclitude"]
+        self.patheticism = data["patheticism"]
+        self.thwackability = data["thwackability"]
+        self.tragicness = data["tragicness"]
+        self.ruthlessness = data["ruthlessness"]
+        self.overpowerment = data["overpowerment"]
+        self.unthwackability = data["unthwackability"]
+        self.shakespearianism = data["shakespearianism"]
+        self.suppression = data["suppression"]
+        self.coldness = data["coldness"]
+        self.baseThirst = data["baseThirst"]
+        self.continuation = data["continuation"]
+        self.ground_friction = data["groundFriction"]
+        self.indulgence = data["indulgence"]
+        self.laserlikeness = data["laserlikeness"]
+        self.anticapitalism = data["anticapitalism"]
+        self.chasiness = data["chasiness"]
+        self.omniscience = data["omniscience"]
+        self.tenaciousness = data["tenaciousness"]
+        self.watchfulness = data["watchfulness"]
+        self.pressurization = data["pressurization"]
+        self.cinnamon = data.get("cinnamon") or 0
+        self.blood = data.get("blood") or None
+        self.consecutive_hits = data.get("consecutiveHits") or 0
+        self.bat = data.get("bat") or None
+        self.soul = data.get("soul") or 0
+        self.eDensity = data.get("eDensity") or 0
+        self.items = data.get("items") or []
         self.season_mod_sources = data_state.get("seasModSources", {})
+        self.init_mods(data)
 
     @property
     def name(self):
