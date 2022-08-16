@@ -1806,9 +1806,8 @@ class Resim:
             teams = [self.home_team, self.away_team]
 
         for team in teams:
-            level = team.data.get("level") or 0
-            if level >= 5:
-                attack_roll = self.roll(f"consumers ({team.data['nickname']})")
+            if team.level >= 5:
+                attack_roll = self.roll(f"consumers ({team.nickname})")
 
                 if self.ty == EventType.CONSUMERS_ATTACK:
                     attacked_player_id = self.event["playerTags"][0]
