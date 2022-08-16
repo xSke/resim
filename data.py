@@ -332,13 +332,12 @@ class Weather(IntEnum):
 
 
 class Blood(IntEnum):
-    UNKNOWN_BLOOD = -1
     A = 0
     AA = 1
     AAA = 2
     ACIDIC = 3
     BASIC = 4
-    O = 5
+    O = 5  # noqa: E741
     O_NO = 6
     H2O = 7
     ELECTRIC = 8
@@ -479,7 +478,7 @@ class PlayerData:
     watchfulness: float
     pressurization: float
     cinnamon: float
-    blood: Blood
+    blood: Optional[Blood]
 
     def __init__(self, data: Dict[str, Any]):
         self.data = data
@@ -513,7 +512,7 @@ class PlayerData:
         self.watchfulness = self.data["watchfulness"]
         self.pressurization = self.data["pressurization"]
         self.cinnamon = self.data.get("cinnamon", 0)
-        self.blood = self.data.get("blood", Blood.UNKNOWN_BLOOD)
+        self.blood = self.data.get("blood", None)
         self.consecutive_hits = self.data.get("consecutiveHits", 0)
 
     @property
@@ -578,7 +577,7 @@ class PlayerData:
                 "watchfulness": 0.5,
                 "pressurization": 0.5,
                 "cinnamon": 0.5,
-                "blood": Blood.UNKNOWN_BLOOD,
+                "blood": None,
             }
         )
 
