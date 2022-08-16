@@ -1112,7 +1112,6 @@ class Resim:
                     if base == 2:
                         self.damage(runner, "batter")
 
-
     def handle_hit_advances(self, bases_hit, defender_roll):
         bases_before = make_base_map(self.update)
         bases_after = make_base_map(self.next_update)
@@ -1261,7 +1260,7 @@ class Resim:
         self.handle_hit_advances(hit_bases, defender_roll)
 
         if self.event["created"] == "2021-04-14T08:08:28.240Z":
-            self.roll("???") # yeah idk either
+            self.roll("???")  # yeah idk either
 
     def get_stat_meta(self):
         is_maximum_blaseball = (
@@ -1864,17 +1863,17 @@ class Resim:
                 self.roll("receiving player")
 
                 glitter_lengths = {
-                    "2021-04-13T23:09:03.266Z": 11, # Inflatable Sunglasses
+                    "2021-04-13T23:09:03.266Z": 11,  # Inflatable Sunglasses
                     "2021-04-13T23:15:49.175Z": 5,  # Cap
                     "2021-04-14T03:02:56.577Z": 5,  # Cap
                     "2021-04-14T03:08:02.423Z": 4,  # Sunglasses
                     "2021-04-14T11:03:16.318Z": 4,  # Sunglasses
-                    "2021-04-14T11:11:16.266Z": 11, # Bat of Vanity
+                    "2021-04-14T11:11:16.266Z": 11,  # Bat of Vanity
                     "2021-04-14T15:11:14.466Z": 5,  # Bat
                     "2021-04-14T21:13:25.144Z": 4,  # Necklace
                     "2021-04-15T07:04:22.275Z": 5,  # Shoes
-                    "2021-04-15T07:08:27.800Z": 10, # Leg Glove
-                    "2021-04-15T07:09:02.365Z": 12, # Cryogenic Shoes
+                    "2021-04-15T07:08:27.800Z": 10,  # Leg Glove
+                    "2021-04-15T07:09:02.365Z": 12,  # Cryogenic Shoes
                     "2021-04-15T07:11:27.306Z": 5,  # Ring
                     "2021-04-15T09:21:46.071Z": 9,  # Golden Bat
                 }
@@ -1940,7 +1939,6 @@ class Resim:
                     self.print("!!! warn: should add attractor but could not find any")
 
                 return
-
 
         if secret_base_exit_eligible:
             self.roll("secret base exit")
