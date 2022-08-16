@@ -3,7 +3,7 @@ import os
 import sys
 import itertools
 
-from data import Blood, EventType, GameData, Mod, NullUpdate, PlayerData, Weather, get_feed_between
+from data import Blood, EventType, GameData, Mod, ModType, NullUpdate, PlayerData, Weather, get_feed_between
 from output import SaveCsv
 from rng import Rng
 from dataclasses import dataclass
@@ -112,15 +112,13 @@ class Resim:
         if self.game_id == "8577919c-4288-4404-bde2-694f5e7a38d1":
             jands = self.data.get_team("a37f9158-7f82-46bc-908c-c9e2dda7c33b")
             if not jands.has_mod(Mod.OVERPERFORMING):
-                jands.data["permAttr"].append(Mod.OVERPERFORMING.value)
-                jands.update_mods()
+                jands.add_mod(Mod.OVERPERFORMING, ModType.PERMANENT)
 
         # another workaround for bad data
         if self.game_id == "c608b5db-29ad-4216-a703-8f0627057523":
             caleb_novak = self.data.get_player("0eddd056-9d72-4804-bd60-53144b785d5c")
             if caleb_novak.has_mod(Mod.ELSEWHERE):
-                caleb_novak.data["permAttr"].remove(Mod.ELSEWHERE.value)
-                caleb_novak.update_mods()
+                caleb_novak.remove_mod(Mod.ELSEWHERE, ModType.PERMANENT)
 
         self.print()
         if not self.update:
@@ -379,14 +377,18 @@ class Resim:
 
                 # it's also specifically permanent mods, not seasonal mods that may or may not be echoed/received
                 self.print(
-                    "home pitcher mods: {} ({})".format(self.home_pitcher.data["permAttr"], self.home_pitcher.name)
+                    "home pitcher mods: {} ({})".format(
+                        self.home_pitcher.mods_by_type[ModType.PERMANENT], self.home_pitcher.name
+                    )
                 )
                 self.print(
-                    "away pitcher mods: {} ({})".format(self.away_pitcher.data["permAttr"], self.away_pitcher.name)
+                    "away pitcher mods: {} ({})".format(
+                        self.away_pitcher.mods_by_type[ModType.PERMANENT], self.away_pitcher.name
+                    )
                 )
-                if "TRIPLE_THREAT" in self.home_pitcher.data["permAttr"] or self.weather == Weather.COFFEE_3S:
+                if self.home_pitcher.has_mod(Mod.TRIPLE_THREAT, ModType.PERMANENT) or self.weather == Weather.COFFEE_3S:
                     self.roll("remove home pitcher triple threat")
-                if "TRIPLE_THREAT" in self.away_pitcher.data["permAttr"] or self.weather == Weather.COFFEE_3S:
+                if self.away_pitcher.has_mod(Mod.TRIPLE_THREAT, ModType.PERMANENT) or self.weather == Weather.COFFEE_3S:
                     self.roll("remove away pitcher triple threat")
             # todo: salmon
             return True
@@ -569,7 +571,7 @@ class Resim:
                 Weather.FEEDBACK,
                 Weather.REVERB,
             ] and self.stadium.has_mod(Mod.PSYCHOACOUSTICS):
-                self.print("away team mods:", self.away_team.data["permAttr"])
+                self.print("away team mods:", self.away_team.mods_by_type[ModType.PERMANENT])
                 self.roll("echo team mod")
             return True
         if self.ty in [EventType.FLAG_PLANTED]:
@@ -1488,9 +1490,9 @@ class Resim:
                 # in s14 this doesn't seem to check (inactive) pitchers
                 # (except all shelled pitchers are inactive so idk)
                 player = self.data.get_player(player_id)
-                # also must be specifically permAttr - moses mason (shelled in s15 through receiver, so seasonal mod)
+                # also must be specifically PERMANENT mods - moses mason (shelled in s15 through receiver, so seasonal mod)
                 # is exempt
-                if Mod.SHELLED.value in player.data["permAttr"]:
+                if player.has_mod(Mod.SHELLED, ModType.PERMANENT):
                     has_shelled_player = True
 
             if self.ty == EventType.BIRDS_CIRCLE:
@@ -2014,8 +2016,7 @@ class Resim:
                 # remove baserunner from roster so fielder math works.
                 # should probably move this logic into a function somehow
                 self.batting_team.lineup.remove(runner_id)
-                runner.data["permAttr"].append("REDACTED")
-                runner.update_mods()
+                runner.add_mod(Mod.REDACTED, ModType.PERMANENT)
 
                 # and just as a cherry on top let's hack this so we don't roll for steal as well
                 self.update["basesOccupied"].remove(1)
@@ -2312,17 +2313,15 @@ class Resim:
             self.batter
             and self.batter.has_mod(Mod.PERK)
             and self.weather.is_coffee()
-            and Mod.OVERPERFORMING.value not in self.batter.data["gameAttr"]
+            and not self.batter.has_mod(Mod.OVERPERFORMING, ModType.GAME)
             and not self.batter.has_mod(Mod.INHABITING)
             and self.ty != EventType.BATTER_UP
         ):
-            self.batter.data["gameAttr"].append(Mod.OVERPERFORMING.value)
-            self.batter.update_mods()
+            self.batter.add_mod(Mod.OVERPERFORMING, ModType.GAME)
 
     def apply_event_changes(self, event):
         # maybe move this function to data.py?
         meta = event.get("metadata", {})
-        mod_positions = ["permAttr", "seasAttr", "weekAttr", "gameAttr"]
         desc = event["description"]
 
         # player or team mod added
@@ -2330,77 +2329,58 @@ class Resim:
             EventType.ADDED_MOD,
             EventType.ADDED_MOD_FROM_OTHER_MOD,
         ]:
-            position = mod_positions[meta["type"]]
-
             if event["playerTags"]:
                 player = self.data.get_player(event["playerTags"][0])
-                if meta["mod"] not in player.data[position]:
-                    player.data[position].append(meta["mod"])
-                    player.update_mods()
+                player.add_mod(meta["mod"], meta["type"])
             else:
                 team = self.data.get_team(event["teamTags"][0])
-                if meta["mod"] not in team.data[position]:
-                    team.data[position].append(meta["mod"])
-                    team.update_mods()
+                team.add_mod(meta["mod"], meta["type"])
 
         # player or team mod removed
         if event["type"] in [
             EventType.REMOVED_MOD,
             EventType.REMOVED_MODIFICATION,
         ]:
-            position = mod_positions[meta["type"]]
-
             if event["playerTags"]:
                 player = self.data.get_player(event["playerTags"][0])
 
-                if meta["mod"] not in player.data[position]:
+                if not player.has_mod(meta["mod"], meta["type"]):
                     self.print(f"!!! warn: trying to remove mod {meta['mod']} but can't find it")
                 else:
-                    player.data[position].remove(meta["mod"])
-                    player.update_mods()
+                    player.remove_mod(meta["mod"], meta["type"])
             else:
                 team = self.data.get_team(event["teamTags"][0])
 
-                if meta["mod"] not in team.data[position]:
+                if not team.has_mod(meta["mod"], meta["type"]):
                     self.print(f"!!! warn: trying to remove mod {meta['mod']} but can't find it")
                 else:
-                    team.data[position].remove(meta["mod"])
-                    team.update_mods()
+                    team.remove_mod(meta["mod"], meta["type"])
 
         # mod replaced
         if event["type"] in [EventType.CHANGED_MODIFIER]:
-            position = mod_positions[meta["type"]]
-
             if event["playerTags"]:
                 player = self.data.get_player(event["playerTags"][0])
-                if meta["from"] in player.data[position]:
-                    player.data[position].remove(meta["from"])
-                player.data[position].append(meta["to"])
-                player.update_mods()
+                player.remove_mod(meta["from"], meta["type"])
+                player.add_mod(meta["to"], meta["type"])
             else:
                 team = self.data.get_team(event["teamTags"][0])
-                team.data[position].remove(meta["from"])
-                team.data[position].append(meta["to"])
-                team.update_mods()
+                team.remove_mod(meta["from"], meta["type"])
+                team.add_mod(meta["to"], meta["type"])
 
         # timed mods wore off
         if event["type"] in [EventType.MOD_EXPIRES]:
-            position = mod_positions[meta["type"]]
-
             if event["playerTags"]:
                 for mod in meta["mods"]:
                     player = self.data.get_player(event["playerTags"][0])
-                    if mod not in player.data[position]:
+                    if not player.has_mod(mod, meta["type"]):
                         self.print(f"!!! warn: trying to remove mod {mod} but can't find it")
                     else:
-                        player.data[position].remove(mod)
-                        player.update_mods()
+                        player.remove_mod(mod, meta["type"])
 
             else:
                 for mod in meta["mods"]:
                     team = self.data.get_team(event["teamTags"][0])
-                    team.data[position].remove(mod)
-                    team.update_mods()
+                    team.remove_mod(mod, meta["type"])
 
         # echo mods added/removed
         if event["type"] in [
@@ -2409,10 +2389,9 @@ class Resim:
         ]:
             player = self.data.get_player(event["playerTags"][0])
             for mod in meta.get("adds", []):
-                player.data[mod_positions[mod["type"]]].append(mod["mod"])
+                player.add_mod(mod["mod"], mod["type"])
             for mod in meta.get("removes", []):
-                player.data[mod_positions[mod["type"]]].remove(mod["mod"])
-            player.update_mods()
+                player.remove_mod(mod["mod"], mod["type"])
 
         # cases where the tagged player needs to be refetched (party, consumer, incin replacement)
         if event["type"] in [
@@ -2454,16 +2433,14 @@ class Resim:
         # mod changed from one to other
         if event["type"] == EventType.MODIFICATION_CHANGE:
             player = self.data.get_player(event["playerTags"][0])
-            player.data[mod_positions[meta["type"]]].remove(meta["from"])
-            player.data[mod_positions[meta["type"]]].append(meta["to"])
+            player.remove_mod(meta["from"], meta["type"])
+            player.add_mod(meta["to"], meta["type"])
 
             # todo: do this in other cases too?
             if meta["from"] == "RECEIVER":
                 for mod, source in player.data["state"]["seasModSources"].items():
                     if source == ["RECEIVER"]:
-                        if mod in player.data["seasAttr"]:
-                            player.data["seasAttr"].remove(mod)
-            player.update_mods()
+                        player.remove_mod(mod, ModType.SEASON)
 
         # roster swap
         if event["type"] == EventType.PLAYER_TRADED:
