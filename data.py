@@ -327,6 +327,16 @@ class Weather(IntEnum):
 
 
 @unique
+class Base(IntEnum):
+    """Yes, these are zero-indexed."""
+
+    FIRST = 0
+    SECOND = 1
+    THIRD = 2
+    FOURTH = 3
+
+
+@unique
 class Blood(IntEnum):
     A = 0
     AA = 1
