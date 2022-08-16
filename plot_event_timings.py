@@ -11,7 +11,7 @@ def load_data(season=None):
         with open(file) as f:
             for event in json.load(f):
                 metadata = event.get("metadata") or {}  # needs to be or!
-                if (season is None or event["season"] == season) and "play" in metadata and not "parent" in metadata:
+                if (season is None or event["season"] == season) and "play" in metadata and "parent" not in metadata:
                     yield event
 
 

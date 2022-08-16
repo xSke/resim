@@ -1929,24 +1929,24 @@ class Resim:
 
                 # fmt: off
                 glitter_lengths = {
-                    "2021-04-13T23:09:03.266Z": 11, # Inflatable Sunglasses
-                    "2021-04-13T23:15:49.175Z": 5,  # Cap
-                    "2021-04-14T03:02:56.577Z": 5,  # Cap
-                    "2021-04-14T03:08:02.423Z": 4,  # Sunglasses
-                    "2021-04-14T11:03:16.318Z": 4,  # Sunglasses
-                    "2021-04-14T11:11:16.266Z": 11, # Bat of Vanity
-                    "2021-04-14T15:11:14.466Z": 5,  # Bat
-                    "2021-04-14T21:13:25.144Z": 4,  # Necklace
-                    "2021-04-15T07:04:22.275Z": 5,  # Shoes
-                    "2021-04-15T07:08:27.800Z": 10, # Leg Glove
-                    "2021-04-15T07:09:02.365Z": 12, # Cryogenic Shoes
-                    "2021-04-15T07:11:27.306Z": 5,  # Ring
-                    "2021-04-15T09:21:46.071Z": 9,  # Golden Bat
-                    "2021-04-15T15:11:08.363Z": 5,  # Shoes
-                    "2021-04-15T22:21:35.826Z": 9,  # Shoes of Blaserunning
-                    "2021-04-16T04:02:46.484Z": 9,  # Parasitic Ring
-                    "2021-04-16T04:11:23.475Z": 13, # Chaotic Jersey
-                    "2021-04-16T13:06:47.014Z": 14, # Metaphorical Shoes
+                    "2021-04-13T23:09:03.266Z": 11,  # Inflatable Sunglasses
+                    "2021-04-13T23:15:49.175Z": 5,   # Cap
+                    "2021-04-14T03:02:56.577Z": 5,   # Cap
+                    "2021-04-14T03:08:02.423Z": 4,   # Sunglasses
+                    "2021-04-14T11:03:16.318Z": 4,   # Sunglasses
+                    "2021-04-14T11:11:16.266Z": 11,  # Bat of Vanity
+                    "2021-04-14T15:11:14.466Z": 5,   # Bat
+                    "2021-04-14T21:13:25.144Z": 4,   # Necklace
+                    "2021-04-15T07:04:22.275Z": 5,   # Shoes
+                    "2021-04-15T07:08:27.800Z": 10,  # Leg Glove
+                    "2021-04-15T07:09:02.365Z": 12,  # Cryogenic Shoes
+                    "2021-04-15T07:11:27.306Z": 5,   # Ring
+                    "2021-04-15T09:21:46.071Z": 9,   # Golden Bat
+                    "2021-04-15T15:11:08.363Z": 5,   # Shoes
+                    "2021-04-15T22:21:35.826Z": 9,   # Shoes of Blaserunning
+                    "2021-04-16T04:02:46.484Z": 9,   # Parasitic Ring
+                    "2021-04-16T04:11:23.475Z": 13,  # Chaotic Jersey
+                    "2021-04-16T13:06:47.014Z": 14,  # Metaphorical Shoes
                 }
                 # fmt: on
                 for _ in range(glitter_lengths[self.event["created"]]):

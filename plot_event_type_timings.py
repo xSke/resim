@@ -15,7 +15,7 @@ def load_data(season=None):
         with open(file) as f:
             for event in json.load(f):
                 metadata = event.get("metadata") or {}  # needs to be or!
-                if (season is None or event["season"] == season) and "play" in metadata and not "parent" in metadata:
+                if (season is None or event["season"] == season) and "play" in metadata and "parent" not in metadata:
                     yield event
 
 
@@ -35,12 +35,12 @@ def main():
 
     fig, ax = plt.subplots(1)
     x_labels = list(timings.keys())
-    x_map = {k: i for i, k in enumerate(x_labels)}
+    # x_map = {k: i for i, k in enumerate(x_labels)}
     # x, y = zip(*[(x_map[type_num], time) for type_num, type_timings in timings.items() for time in type_timings])
 
     ax.violinplot(timings.values(), positions=range(len(x_labels)))
     ax.set_xticks(range(len(x_labels)))
-    ax.set_xticklabels([EventType(l).name for l in x_labels], rotation="vertical")
+    ax.set_xticklabels([EventType(label).name for label in x_labels], rotation="vertical")
     ax.set_ylabel("Time Visible (s)")
     ax.set_xlabel("Event type")
     ax.grid(visible=True, which="major", axis="x")
