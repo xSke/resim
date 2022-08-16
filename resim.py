@@ -364,7 +364,7 @@ class Resim:
         if self.ty == EventType.POSTSEASON_SPOT:
             self.generate_player()
             return True
-        if self.ty in [EventType.REVERB_ROTATION_SHUFFLE, EventType.REVERB_FULL_SHUFFLE]:
+        if self.ty in [EventType.REVERB_ROTATION_SHUFFLE, EventType.REVERB_FULL_SHUFFLE, EventType.REVERB_LINEUP_SHUFFLE]:
             # skip reverb
             self.data.fetch_teams(self.event["created"], 30)
             return True
@@ -422,6 +422,12 @@ class Resim:
                 self.roll("restore item??")
                 self.roll("restore item??")
                 self.roll("restore item??")
+
+            if self.stadium.has_mod(Mod.SALMON_CANNONS):
+                self.roll("salmon cannons")
+
+                if "caught in the bind!" in self.desc:
+                    self.roll("salmon cannons player")
 
             return True
         if self.ty in [
@@ -539,6 +545,12 @@ class Resim:
                 "b2bb8e5c-358f-448b-bbf3-7c8c33148107": 2,
                 "8cf809f0-a8ad-450d-bfe2-a7700634c77f": 1,
                 "5c9ff17f-07f4-41dc-8a12-b4ece963d265": 1,
+                "b6a9ab46-f00b-49b2-a2ec-1c0d616f5ba3": 1,
+                "816a7284-7c81-448a-970e-43a969375d21": 1,
+                "ef3a5cca-9a08-4c50-8197-dba44e35881a": 1,
+                "cbe8c862-a7df-439f-bb9f-c0f6f500f678": 1,
+                "b9047cd3-4978-4a2e-85c0-e02424f2b37d": 1,
+                "cb7d6021-24c9-4b79-9333-3ff8101840b9": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -648,6 +660,10 @@ class Resim:
                 self.damage(self.batter, "batter")
                 self.damage(self.batter, "batter")
                 self.damage(self.batter, "batter")
+
+                if "scores!" in self.desc:
+                    last_runner = self.data.get_player(self.update["baseRunners"][0])
+                    self.damage(last_runner, "runner")
 
                 self.handle_batter_reverb()  # apparently don mitchell can do this.
                 return True
@@ -788,16 +804,18 @@ class Resim:
         if self.ty == EventType.WALK:
             self.damage(self.batter, "batter")
 
-        if "scores!" in self.desc:
-            scorer = self.data.get_player(self.update["baseRunners"][-1])
-            self.damage(scorer, "batter")
+            if self.batting_team.has_mod(Mod.BASE_INSTINCTS):
+                self.roll("base instincts")
 
-        if self.ty == EventType.WALK and self.batting_team.has_mod(Mod.BASE_INSTINCTS):
-            self.roll("base instincts")
+                if "Base Instincts take them directly to" in self.desc:
+                    self.roll("which base")
+                    self.roll("which base")
 
-            if "Base Instincts take them directly to" in self.desc:
-                self.roll("which base")
-                self.roll("which base")
+            for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
+                did_score = runner_id not in self.next_update["baseRunners"]
+                if did_score:
+                    runner = self.data.get_player(runner_id)
+                    self.damage(runner, "runner")
 
     def handle_strike(self):
         if ", swinging" in self.desc or "strikes out swinging." in self.desc:
@@ -1055,10 +1073,11 @@ class Resim:
 
                         if 2 in self.update["basesOccupied"] and self.outs < self.max_outs - 2:
                             self.damage(self.batter, "batter")  # this is probably a runner too
-                            self.damage(self.batter, "batter")  # this is probably a runner too
-                        elif 1 in self.update["basesOccupied"] and self.outs < self.max_outs - 2:
+                        if 1 in self.update["basesOccupied"] and self.outs < self.max_outs - 2:
                             self.damage(self.batter, "batter")  # this is probably a runner too
 
+                        if "scores!" in self.desc:
+                            self.damage(self.batter, "batter")
                         return
 
                     fc_roll = self.roll("martyr?")  # high = fc
@@ -1139,6 +1158,10 @@ class Resim:
                     fielder_roll=defender_roll,
                     fielder=fielder,
                 )
+
+            # damage scores on extra advances
+            if base == 2 and roll_outcome:
+                self.damage(runner, "runner")
 
     def handle_hr(self):
         if " is Magmatic!" not in self.desc:
@@ -1249,18 +1272,15 @@ class Resim:
         self.damage(self.batter, "batter")
 
         # tentative: damage every runner at least once?
-        for runner_id in self.update["baseRunners"]:
+        for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
             runner = self.data.get_player(runner_id)
             self.damage(runner, "batter")
 
-            if runner_id not in self.next_update["baseRunners"]:
-                # and damage scoring?
+            is_force_score = base >= (3 - hit_bases) # fifth base lol
+            if is_force_score:
                 self.damage(runner, "batter")
 
         self.handle_hit_advances(hit_bases, defender_roll)
-
-        if self.event["created"] == "2021-04-14T08:08:28.240Z":
-            self.roll("???")  # yeah idk either
 
     def get_stat_meta(self):
         is_maximum_blaseball = (
@@ -1340,10 +1360,22 @@ class Resim:
 
             if self.batter.has_mod(Mod.MARKED):
                 self.roll("unstable")
+            if self.pitcher.has_mod(Mod.MARKED):
+                self.roll("unstable")
 
             if self.ty == EventType.INCINERATION:
-                self.roll("target")
+                if "A Debt was collected" not in self.desc:
+                    self.roll("target")
+                else:
+                    self.roll("instability target?")
+                    self.roll("instability target?")
                 self.generate_player()
+
+                # there are def two extra rolls earlier and two extra down here, but i don't know what they would be
+                if "A Debt was collected" in self.desc:
+                    self.roll("extra instability stuff??")
+                    self.roll("extra instability stuff??")
+
                 return True
 
             if eclipse_roll < threshold:
@@ -1369,6 +1401,8 @@ class Resim:
                         self.roll("target")
                         return True
                     break
+
+
         elif self.weather == Weather.GLITTER:
             # this is handled inside the ballpark proc block(?????)
             pass
@@ -1510,6 +1544,9 @@ class Resim:
                         eligible_players.extend(self.batting_team.rotation)
                         eligible_players = [self.batter.id] + eligible_players
 
+                        # opposite_pitcher = self.away_pitcher if self.update["topOfInning"] else self.home_pitcher
+                        # eligible_players.remove(opposite_pitcher.id)
+                        # eligible_players = [opposite_pitcher.id] + eligible_players
                     else:
                         eligible_players.extend(self.pitching_team.lineup)
 
@@ -1544,6 +1581,14 @@ class Resim:
                 elif "several players shuffled" in self.desc:
                     # 2021-04-15T01:08:22.391Z
                     for _ in range(9):
+                        self.roll("reverb shuffle?")
+                elif "lineup shuffled in the Reverb!" in self.desc:
+                    # 2021-04-15T20:06:11.850Z
+                    self.print(f"(lineup length: {len(self.pitching_team.lineup)})")
+                    for _ in range(10):
+                        self.roll("reverb shuffle?")
+
+                    if self.event["created"] == "2021-04-16T02:10:17.885Z":
                         self.roll("reverb shuffle?")
                 else:
                     for _ in range(2):
@@ -1796,6 +1841,10 @@ class Resim:
                                 # pick item to break maybe? or something??
                                 self.roll("???")
                                 return True
+                        
+                        # todo: find out where this is
+                        if self.stadium.has_mod(Mod.SALMON_CANNONS):
+                            self.roll("salmon cannons?")
 
                         for _ in range(25):
                             self.roll("stat change")
@@ -1824,8 +1873,8 @@ class Resim:
             for _ in range(25):
                 self.roll("stat")
 
-            if self.event["created"] in ["2021-04-12T17:25:29.667Z"]:
-                # either s16+/damage or just afterparty, investigate once we get lateseason
+            if self.season >= 15:
+                # probably damage roll for receiver? which i think is very funny
                 self.roll("extra party?")
 
             return True
@@ -1876,6 +1925,11 @@ class Resim:
                     "2021-04-15T07:09:02.365Z": 12,  # Cryogenic Shoes
                     "2021-04-15T07:11:27.306Z": 5,  # Ring
                     "2021-04-15T09:21:46.071Z": 9,  # Golden Bat
+                    "2021-04-15T15:11:08.363Z": 5,  # Shoes
+                    "2021-04-15T22:21:35.826Z": 9,  # Shoes of Blaserunning
+                    "2021-04-16T04:02:46.484Z": 9,  # Parasitic Ring
+                    "2021-04-16T04:11:23.475Z": 13, # Chaotic Jersey
+                    "2021-04-16T13:06:47.014Z": 14, # Metaphorical Shoes
                 }
                 for _ in range(glitter_lengths[self.event["created"]]):
                     self.roll("item")
