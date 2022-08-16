@@ -362,7 +362,11 @@ class Resim:
         if self.ty == EventType.POSTSEASON_SPOT:
             self.generate_player()
             return True
-        if self.ty in [EventType.REVERB_ROTATION_SHUFFLE, EventType.REVERB_FULL_SHUFFLE, EventType.REVERB_LINEUP_SHUFFLE]:
+        if self.ty in [
+            EventType.REVERB_ROTATION_SHUFFLE,
+            EventType.REVERB_FULL_SHUFFLE,
+            EventType.REVERB_LINEUP_SHUFFLE,
+        ]:
             # skip reverb
             self.data.fetch_teams(self.event["created"], 30)
             return True
@@ -1278,7 +1282,7 @@ class Resim:
             runner = self.data.get_player(runner_id)
             self.damage(runner, "batter")
 
-            is_force_score = base >= (3 - hit_bases) # fifth base lol
+            is_force_score = base >= (3 - hit_bases)  # fifth base lol
             if is_force_score:
                 self.damage(runner, "batter")
 
@@ -1403,7 +1407,6 @@ class Resim:
                         self.roll("target")
                         return True
                     break
-
 
         elif self.weather == Weather.GLITTER:
             # this is handled inside the ballpark proc block(?????)
@@ -1838,11 +1841,11 @@ class Resim:
                             )
 
                         for item in attacked_player.items:
-                            if item["health"] > 0:
+                            if item.health > 0:
                                 # pick item to break maybe? or something??
                                 self.roll("???")
                                 return True
-                        
+
                         # todo: find out where this is
                         if self.stadium.has_mod(Mod.SALMON_CANNONS):
                             self.roll("salmon cannons?")
