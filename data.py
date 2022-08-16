@@ -417,6 +417,7 @@ class TeamData(TeamOrPlayerMods):
     eDensity: float = 0
     level: int = 0
     nickname: str = ""
+    rotation_slot: int = 0
 
     def __init__(self, data: Dict[str, Any]):
         self.id = data["id"]
@@ -425,6 +426,7 @@ class TeamData(TeamOrPlayerMods):
         self.level = data.get("level") or 0
         self.eDensity = data.get("eDensity") or 0
         self.nickname = data.get("nickname") or ""
+        self.rotation_slot = data.get("rotationSlot") or 0
         self.init_mods(data)
 
     @staticmethod

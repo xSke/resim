@@ -277,6 +277,8 @@ class Resim:
             EventType.SHAMING_RUN,
             EventType.EARLBIRD,
         ]:
+            if self.ty == EventType.PSYCHO_ACOUSTICS:
+                self.roll("which mod?")
             # skipping pregame messages
             return True
         if self.ty in [
@@ -487,88 +489,20 @@ class Resim:
 
             # todo: figure out the real logic here, i'm sure there's some
             extra_start_rolls = {
-                "608b496a-1b2c-4d5e-9251-011f949baafa": 1,
-                "fa9dab2a-409c-4886-979c-f1c584518d5d": 1,
-                "3244b12f-838a-4d75-abde-88874b75ab04": 0,
-                "a47f2a8b-0bde-42c8-bdd0-0513da92a6b1": 1,
-                "e07d8602-ec51-4ef6-be20-4a07da6b457e": 2,
-                "f7985270-455e-4bf7-83fb-948ac326c8af": 2,
-                "6c5396bd-bbe4-45df-842b-72d9a01fff4b": 1,
-                "20cd1579-e8b8-488f-8579-d1c11c95218e": 0,
-                "dcbc2123-c46a-4d21-8501-302f84ca8207": 1,
-                "fb3add1d-c711-42b3-8ca8-a5d1086c0429": 1,
-                "9eaf6ba7-14b0-4570-917b-acd6ff6a425b": 1,
-                "a89f342d-7014-4f11-bb90-ecdb6fe73de6": 1,
-                "080e5fb4-0322-44db-8407-3761f84600a3": 2,
-                "3e4f43d3-2f5a-4283-8065-ff5fa881c888": 1,
-                "3c1b4d10-78af-4b8e-a9f5-e6ea2d50e5c4": 2,
-                "c84df551-f639-470a-8435-bd305af0847f": 1,
-                "4d898adc-8085-406b-967d-e36321eb2a14": 1,
-                "5491123b-9d35-4cf1-9db2-422378e1541e": 1,
-                "96d81673-e752-4fc3-8e32-6068f330a278": 1,
-                "65949d33-9b8f-4422-9b63-70af548e1fbf": 1,
-                "0575b652-a5a9-40b6-ac20-3d92c72044bc": 1,
-                "1095a2fd-f0b7-4d07-a0e2-e91d7fa3f5ea": 1,
-                "e9fc696d-6c4c-4bca-bbfa-301a50b7917c": 1,
-                "6c986027-2100-4372-bc90-1adad22489e2": 1,
-                "741b5632-fbf8-49e7-9a64-9c92e636ea7a": 1,
-                "cc2d060c-c0a4-471b-a848-d9038c1881e0": 1,
-                "e1748a76-eb68-4cd7-a0a4-9132155142a6": 1,
-                "15097b04-c186-4402-a7f2-e373dceb8ed6": 1,
-                "7efb55e2-8009-46da-a9aa-ca92a120d59e": 1,
-                "ec1ab96f-40e2-4335-bb7a-945cbeadb75e": 1,
-                "dcd6d171-a761-494e-a4e0-95abc4e28a60": 1,
-                "d00b2402-3756-4489-aeba-5f771da9868b": 1,
-                "3b3ad672-3846-496e-8c8a-9ac19a563644": 1,
+                "e07d8602-ec51-4ef6-be20-4a07da6b457e": 1,
+                "3c1b4d10-78af-4b8e-a9f5-e6ea2d50e5c4": 1,
                 "196f195c-f8b2-44e9-b117-a7a46de390cd": 1,
-                "c7a63a95-53bc-44a7-a5e3-c3d9d1bf8779": 1,
-                "d022b5e3-3ab2-48e9-baae-85cc48e3d01a": 1,
                 "502d6a06-1975-4c70-94d6-bdf9e31aaec6": 1,
-                "d41babda-81bd-4992-a0e6-b389db1b080d": 1,
-                "bf7d15e6-62b2-4e03-a752-dd51beffd519": 1,
-                "c9c94bc2-7c34-4803-9df2-0c3c3bfe183c": 1,
-                "6a00cc1f-9f26-4528-9a84-e6f253a28635": 1,
                 "2dff1e11-c2b9-4423-9930-6bb96d1a72d7": 1,
-                "c09fbaf1-c068-45a5-b644-e481f18be0bd": 217,  # ...earlsiesta reading???
-                "936a0ceb-5027-4a1a-a608-2c7e58bf387b": 1,
-                "2898a325-68c1-4521-a531-8437b86feb91": 1,
-                "3f5507e4-7058-4fc5-afa2-4be16e681c24": 1,
-                "f03707f1-8612-4b8c-bfcb-e84c5d9cc760": 1,
-                "24ff0b2e-ecb7-4f4c-aac2-18dac4911109": 1,
-                "f1925518-e056-46f6-be9a-fefd09c0c259": 1,
+                "c09fbaf1-c068-45a5-b644-e481f18be0bd": 216,  # ...earlsiesta reading???
                 "94785708-7b40-47b7-a258-9ce10a157395": 9,  # earlsiesta reading
                 "e39803d0-add7-43cb-b472-04f04e4b0935": 1,
-                "12b62fd9-36ac-4744-8d67-20820bb68e77": 1,
-                "d5d3d040-571c-42cd-8e45-a79c2c8255ac": 1,
-                "483c8a63-4925-46b4-954d-c9cdebb4591a": 1,
-                "657f5360-7875-4abf-b2f5-54c4c25e170e": 1,
-                "fa25ee09-7889-4276-8b52-ac46f0e51cf5": 1,
-                "0b4929f8-68ed-4c99-b3bd-b65a7d8bc63e": 1,
-                "5a350a9d-8c13-49be-b4ca-845d5573ff6d": 1,
-                "f15ace24-7fae-46f2-b16e-c18bb4bd630f": 1,
                 "3ff91111-7862-442e-aa59-c338871c63fe": 2,
                 "1514e79b-e14b-45e0-aada-dad2ba4d753d": 1,
-                "6173c3f5-f244-405d-b9a3-62fe8c48e656": 1,
-                "7fda4e9c-a20e-4163-aba3-6ad1663a747f": 1,
-                "b35f095d-9bc9-4a1c-822a-3749a7b83bcb": 1,
                 "a327e425-aaf4-4199-8292-bba0ec4a226a": 2,
-                "9e28de60-f139-43fd-ad75-f9ef757a53b6": 1,
                 "5deffffd-97bd-44b3-bb5d-6a03e91065b0": 1,
-                "4ba94e98-eaea-459b-a952-b975506e16f2": 1,
                 "d03ad239-25ee-41bf-a1d3-6e087f302171": 1,
-                "26f71b68-caaa-4c58-bd19-818297133c60": 1,
-                "ff3a87e4-7dfd-4871-bcce-94647f1e4278": 1,
-                "a46c8074-5b30-4781-b104-7abf4ea5bdea": 1,
-                "4f71abbd-50f7-4368-94ae-ad6c53a880eb": 1,
-                "b2bb8e5c-358f-448b-bbf3-7c8c33148107": 2,
-                "8cf809f0-a8ad-450d-bfe2-a7700634c77f": 1,
-                "5c9ff17f-07f4-41dc-8a12-b4ece963d265": 1,
-                "b6a9ab46-f00b-49b2-a2ec-1c0d616f5ba3": 1,
-                "816a7284-7c81-448a-970e-43a969375d21": 1,
-                "ef3a5cca-9a08-4c50-8197-dba44e35881a": 1,
-                "cbe8c862-a7df-439f-bb9f-c0f6f500f678": 1,
-                "b9047cd3-4978-4a2e-85c0-e02424f2b37d": 1,
-                "cb7d6021-24c9-4b79-9333-3ff8101840b9": 1,
+                "b2bb8e5c-358f-448b-bbf3-7c8c33148107": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -582,6 +516,16 @@ class Resim:
 
                 timestamp = self.event["created"]
                 self.data.fetch_league_data(timestamp, 20)
+
+            for team_id in [self.next_update["homeTeam"], self.next_update["awayTeam"]]:
+                team = self.data.get_team(team_id)
+                prev_pitcher_id = team.rotation[(team.rotation_slot - 2) % len(team.rotation)]
+                prev_pitcher = self.data.get_player(prev_pitcher_id)
+                if prev_pitcher.has_mod(Mod.SHELLED):
+                    # don't roll immediately after sixpack receives shelled, for some reason that doesn't trigger it
+                    # and not in postseason either
+                    if self.game_id != "31ae7c75-b30a-49b1-bddd-b40e3ebd518e" and self.day < 99:
+                        self.roll("extra roll for shelled pitcher")
 
             if self.weather in [
                 Weather.FEEDBACK,
