@@ -401,7 +401,7 @@ class TeamOrPlayerMods:
 
 @dataclass
 class TeamData(TeamOrPlayerMods):
-    id: str
+    id: Optional[str]
     lineup: List[str]
     rotation: List[str]
     eDensity: float = 0
@@ -494,8 +494,46 @@ class StadiumData:
 
 
 @dataclass
+class ItemData:
+    id: Optional[str]
+    name: str
+    health: int
+    durability: int
+    defense_rating: float
+    hitting_rating: float
+    pitching_rating: float
+    baserunning_rating: float
+
+    @staticmethod
+    def from_dict(data):
+        return ItemData(
+            id=data["id"],
+            name=data["name"],
+            health=data["health"],
+            durability=data["durability"],
+            defense_rating=data["defenseRating"],
+            hitting_rating=data["hittingRating"],
+            pitching_rating=data["pitchingRating"],
+            baserunning_rating=data["baserunningRating"],
+        )
+
+    @staticmethod
+    def null():
+        return ItemData(
+            id=None,
+            name="Null Item",
+            health=0,
+            durability=0,
+            defense_rating=0,
+            hitting_rating=0,
+            pitching_rating=0,
+            baserunning_rating=0,
+        )
+
+
+@dataclass
 class PlayerData(TeamOrPlayerMods):
-    id: str
+    id: Optional[str]
     raw_name: str
     unscattered_name: Optional[str]
     # Player attributes
@@ -530,7 +568,7 @@ class PlayerData(TeamOrPlayerMods):
     bat: Optional[str]
     soul: int
     eDensity: float
-    items: List[Dict[str, Any]]
+    items: List[ItemData]
     season_mod_sources: Dict[str, List[str]]
 
     def __init__(self, data: Dict[str, Any]):
@@ -570,7 +608,7 @@ class PlayerData(TeamOrPlayerMods):
         self.bat = data.get("bat") or None
         self.soul = data.get("soul") or 0
         self.eDensity = data.get("eDensity") or 0
-        self.items = data.get("items") or []
+        self.items = [ItemData.from_dict(item) for item in data.get("items") or []]
         self.season_mod_sources = data_state.get("seasModSources", {})
         self.init_mods(data)
 
