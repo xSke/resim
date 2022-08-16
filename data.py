@@ -487,6 +487,7 @@ class PlayerData:
     pressurization: float
     cinnamon: float
     blood: Optional[Blood]
+    consecutive_hits: int
 
     def __init__(self, data: Dict[str, Any]):
         self.data = data
@@ -519,9 +520,9 @@ class PlayerData:
         self.tenaciousness = self.data["tenaciousness"]
         self.watchfulness = self.data["watchfulness"]
         self.pressurization = self.data["pressurization"]
-        self.cinnamon = self.data.get("cinnamon", 0)
-        self.blood = self.data.get("blood", None)
-        self.consecutive_hits = self.data.get("consecutiveHits", 0)
+        self.cinnamon = self.data.get("cinnamon") or 0
+        self.blood = self.data.get("blood") or None
+        self.consecutive_hits = self.data.get("consecutiveHits") or 0
 
     @property
     def name(self):
@@ -586,6 +587,7 @@ class PlayerData:
                 "pressurization": 0.5,
                 "cinnamon": 0.5,
                 "blood": None,
+                "consecutive_hits": 0,
             }
         )
 
