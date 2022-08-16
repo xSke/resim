@@ -3,7 +3,7 @@ import os
 import sys
 import itertools
 
-from data import Blood, EventType, GameData, Mod, ModType, NullUpdate, PlayerData, Weather, get_feed_between
+from data import Blood, EventType, GameData, Mod, ModType, NullUpdate, PlayerData, TeamData, Weather, get_feed_between
 from output import SaveCsv
 from rng import Rng
 from dataclasses import dataclass
@@ -2201,11 +2201,13 @@ class Resim:
             runner_on_third_hh_multiplier = self.get_runner_multiplier(runner_on_third_hh)
         else:
             runner_on_third_hh, runner_on_third_hh_multiplier = None, 1
+        null_player = PlayerData.null()
+        null_team = TeamData.null()
         self.csvs[csv].write(
             event_type,
             roll,
             passed,
-            relevant_batter or self.batter,
+            relevant_batter or self.batter or null_player,
             self.batting_team,
             self.pitcher,
             self.pitching_team,
@@ -2219,20 +2221,20 @@ class Resim:
             self.strike_roll,
             self.strike_threshold,
             fielder_roll,
-            fielder,
+            fielder or null_player,
             self.get_fielder_multiplier(fielder) if fielder else 1,
-            relevant_runner,
+            relevant_runner or null_player,
             relevant_runner_multiplier,
-            runner_on_first,
+            runner_on_first or null_player,
             runner_on_first_multiplier,
-            runner_on_second,
+            runner_on_second or null_player,
             runner_on_second_multiplier,
-            runner_on_third,
+            runner_on_third or null_player,
             runner_on_third_multiplier,
-            runner_on_third_hh,
+            runner_on_third_hh or null_player,
             runner_on_third_hh_multiplier,
             self.next_update["basesOccupied"] if self.next_update else None,
-            attacked_team,
+            attacked_team or null_team,
         )
 
     def setup_data(self, event):
