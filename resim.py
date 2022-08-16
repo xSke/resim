@@ -3,7 +3,7 @@ import os
 import sys
 import itertools
 
-from data import EventType, GameData, Mod, NullUpdate, PlayerData, Weather, get_feed_between
+from data import Blood, EventType, GameData, Mod, NullUpdate, PlayerData, Weather, get_feed_between
 from output import SaveCsv
 from rng import Rng
 from dataclasses import dataclass
@@ -631,10 +631,10 @@ class Resim:
 
         # before season 16, love blood only proc'd when the player also had love blood
         if self.event["season"] < 15:
-            if self.batter.data["blood"] != 9:
+            if self.batter.blood != Blood.LOVE:
                 batter_charm_eligible = False
 
-            if self.pitcher.data["blood"] != 9:
+            if self.pitcher.blood != Blood.LOVE:
                 pitcher_charm_eligible = False
 
         # todo: figure out logic order when both teams have charm
