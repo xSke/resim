@@ -367,7 +367,8 @@ class ModType(IntEnum):
 @dataclass
 class TeamOrPlayerMods:
     mods: Set[str]
-    mods_by_type: Dict[ModType, Set[str]]
+    # Used internally only
+    __mods_by_type: Dict[ModType, Set[str]]
 
     def init_mods(self, data: Dict[str, Any]):
         MOD_KEYS = {
@@ -377,36 +378,39 @@ class TeamOrPlayerMods:
             ModType.GAME: "gameAttr",
             ModType.ITEM: "itemAttr",
         }
-        self.mods_by_type = {}
+        self.__mods_by_type = {}
         for (mod_type, key) in MOD_KEYS.items():
-            self.mods_by_type[mod_type] = set(data.get(key, []))
-        self.update_mods()
+            self.__mods_by_type[mod_type] = set(data.get(key, []))
+        self.__update_mods()
 
     def add_mod(self, mod: Union[Mod, str], mod_type: ModType):
         mod = str(mod)
-        if mod in self.mods_by_type[mod_type]:
+        if mod in self.__mods_by_type[mod_type]:
             return
-        self.mods_by_type[mod_type].add(mod)
-        self.update_mods()
+        self.__mods_by_type[mod_type].add(mod)
+        self.__update_mods()
 
     def remove_mod(self, mod: Union[Mod, str], mod_type: ModType):
         mod = str(mod)
-        if mod not in self.mods_by_type[mod_type]:
+        if mod not in self.__mods_by_type[mod_type]:
             return
-        self.mods_by_type[mod_type].remove(mod)
-        self.update_mods()
+        self.__mods_by_type[mod_type].remove(mod)
+        self.__update_mods()
 
     def has_mod(self, mod: Union[Mod, str], mod_type: Optional[ModType] = None) -> bool:
         mod = str(mod)
         if mod_type is None:
             return mod in self.mods
-        return mod in self.mods_by_type[mod_type]
+        return mod in self.__mods_by_type[mod_type]
 
     def has_any(self, *mods: Mod) -> bool:
         return any(self.has_mod(mod) for mod in mods)
 
-    def update_mods(self):
-        self.mods = set().union(*self.mods_by_type.values())
+    def print_mods(self, mod_type: Optional[ModType] = None) -> str:
+        return str(list(self.__mods_by_type.get(mod_type) or self.mods))
+
+    def __update_mods(self):
+        self.mods = set().union(*self.__mods_by_type.values())
 
 
 @dataclass
@@ -463,6 +467,9 @@ class StadiumData:
 
     def has_mod(self, mod: Mod) -> bool:
         return mod.value in self.mods
+
+    def print_mods(self) -> str:
+        return list(set(self.mods))
 
     @staticmethod
     def from_dict(data):

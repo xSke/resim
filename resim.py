@@ -164,12 +164,16 @@ class Resim:
             return
 
         if self.batter:
-            self.print("- batter mods: {} + {} ({})".format(self.batter.mods, self.batting_team.mods, self.batter.name))
+            self.print(
+                f"- batter mods: {self.batter.print_mods()} + "
+                f"{self.batting_team.print_mods()} ({self.batter.name}) "
+            )
         if self.pitcher:
             self.print(
-                "- pitcher mods: {} + {} ({})".format(self.pitcher.mods, self.pitching_team.mods, self.pitcher.name)
+                f"- pitcher mods: {self.pitcher.print_mods()} + "
+                f"{self.pitching_team.print_mods()} ({self.pitcher.name})"
             )
-        self.print("- stadium mods: {} ({})".format(self.stadium.mods, self.stadium.nickname))
+        self.print(f"- stadium mods: {self.stadium.print_mods()} ({self.stadium.nickname})")
 
         if self.ty == EventType.BATTER_UP:
             self.handle_batter_up()
@@ -395,14 +399,12 @@ class Resim:
 
                 # it's also specifically permanent mods, not seasonal mods that may or may not be echoed/received
                 self.print(
-                    "home pitcher mods: {} ({})".format(
-                        self.home_pitcher.mods_by_type[ModType.PERMANENT], self.home_pitcher.name
-                    )
+                    f"home pitcher mods: {self.home_pitcher.print_mods(ModType.PERMANENT)} "
+                    f"({self.home_pitcher.name})"
                 )
                 self.print(
-                    "away pitcher mods: {} ({})".format(
-                        self.away_pitcher.mods_by_type[ModType.PERMANENT], self.away_pitcher.name
-                    )
+                    f"away pitcher mods: {self.away_pitcher.print_mods(ModType.PERMANENT)} "
+                    f"({self.away_pitcher.name})"
                 )
                 if self.home_pitcher.has_mod(Mod.TRIPLE_THREAT, ModType.PERMANENT) or self.weather == Weather.COFFEE_3S:
                     self.roll("remove home pitcher triple threat")
@@ -531,7 +533,7 @@ class Resim:
                 Weather.FEEDBACK,
                 Weather.REVERB,
             ] and self.stadium.has_mod(Mod.PSYCHOACOUSTICS):
-                self.print("away team mods:", self.away_team.mods_by_type[ModType.PERMANENT])
+                self.print("away team mods:", self.away_team.print_mods(ModType.PERMANENT))
                 self.roll("echo team mod")
             return True
         if self.ty in [EventType.FLAG_PLANTED]:
@@ -1651,7 +1653,7 @@ class Resim:
                     len(all_players),
                     i / len(all_players),
                     (i + 1) / len(all_players),
-                    player.mods,
+                    player.print_mods(),
                 )
             )
         self.print("players with mods:")
