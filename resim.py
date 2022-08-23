@@ -818,8 +818,6 @@ class Resim:
 
         if not self.is_flinching():
             swing_roll = self.roll_swing(False)
-            if swing_roll < 0.05:
-                self.print("!!! very low swing roll on ball")
             self.log_roll(Csv.SWING_ON_BALL, "Ball", swing_roll, False)
 
         if self.ty == EventType.WALK:
