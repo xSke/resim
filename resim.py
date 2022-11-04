@@ -132,6 +132,7 @@ class Resim:
             if caleb_novak.has_mod(Mod.ELSEWHERE):
                 caleb_novak.remove_mod(Mod.ELSEWHERE, ModType.PERMANENT)
 
+
         self.print()
         if not self.update:
             self.print("!!! missing update data")
@@ -150,6 +151,16 @@ class Resim:
         if self.game_id == "e1fda957-f4ac-4188-835d-265a67b9585d" and self.play == 145:
             self.roll("???")
 
+    
+        event_adjustments = {
+            # clean :)
+        }
+        to_step = event_adjustments.get(self.event["created"])
+        if to_step is not None:
+            self.rng.step(to_step)
+            time = self.event["created"]
+            self.print(f"!!! CORRECTION: stepping {to_step} @ {time}")
+
         if self.handle_misc():
             return
 
@@ -157,10 +168,9 @@ class Resim:
             return
 
         if self.ty in [
-            EventType.BATTER_SKIPPED,
             EventType.RETURN_FROM_ELSEWHERE,
         ]:
-            # skipping elsewhere/elsewhere return
+            # skipping elsewhere return
             return
 
         if self.batter:
@@ -175,8 +185,7 @@ class Resim:
             )
         self.print(f"- stadium mods: {self.stadium.print_mods()} ({self.stadium.nickname})")
 
-        if self.ty == EventType.BATTER_UP:
-            self.handle_batter_up()
+        if self.handle_batter_up():
             return
 
         if self.handle_weather():
@@ -361,6 +370,7 @@ class Resim:
                     self.roll("stat")
 
             return True
+            
         if self.ty == EventType.EXISTING_PLAYER_ADDED_TO_ILB:
             if "pulled through the Rift" in self.desc:
                 # The Second Wyatt Masoning
@@ -505,6 +515,13 @@ class Resim:
                 "5deffffd-97bd-44b3-bb5d-6a03e91065b0": 1,
                 "d03ad239-25ee-41bf-a1d3-6e087f302171": 1,
                 "b2bb8e5c-358f-448b-bbf3-7c8c33148107": 1,
+                "bf35c2a3-61f3-49e2-b693-9e7ead9a2f8e": 1,
+                "5b9dcdb4-db02-400a-9d6d-55713939332f": 1,
+                "9ded2295-da80-4395-9f70-92f5bdae38a1": 1,
+                "893edab1-9100-4164-a72c-3d2ace026f8a": 1,
+                "adcbbf30-de0d-4df2-ad93-7d91d6daaa6a": 1,
+                "cb7dd13c-bf04-4bb1-a53a-cf478bc2e26c": 2,
+                "2fabc7aa-8c17-4b8b-aa10-bb1a7af90d82": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -764,8 +781,22 @@ class Resim:
                 self.print("!!! very low swing roll on ball")
             self.log_roll(Csv.SWING_ON_BALL, "Ball", swing_roll, False)
 
+        if self.ty == EventType.WALK:
+            # pitchers: convert walk to strikeout (failed)
+            if self.pitching_team.has_mod("PSYCHIC"):
+                self.roll("mind trick?")
+                
+            if "uses a Mind Trick" in self.desc:
+                # batter successfully converted strikeout to walk
+                self.roll("mind trick?")
+
+                if "strikes out swinging" in self.desc:
+                    # this might be a damage roll of some kind
+                    self.roll("mind trick?")
+
         self.damage(self.pitcher, "pitcher")
         if self.ty == EventType.WALK:
+
             self.damage(self.batter, "batter")
 
             if self.batting_team.has_mod(Mod.BASE_INSTINCTS):
@@ -802,11 +833,20 @@ class Resim:
             if not self.is_flinching():
                 swing_roll = self.roll_swing(False)
                 self.log_roll(Csv.SWING_ON_STRIKE, "StrikeLooking", swing_roll, False)
+                            
         elif ", flinching" in self.desc:
             value = self.throw_pitch("strike")
             self.log_roll(Csv.STRIKES, "StrikeFlinching", value, True)
 
         self.damage(self.pitcher, "pitcher")
+
+        if "strikes out" in self.desc:
+            # batters: convert strikeout to walk (failed)
+            if self.batting_team.has_mod(Mod.PSYCHIC):
+                self.roll("mind trick?")
+
+            if self.pitcher.has_mod(Mod.PARASITE) and self.weather == Weather.BLOODDRAIN:
+                self.print("!!! parasite eligible")
 
     def try_roll_salmon(self):
         # don't reroll if we *just* reset
@@ -1032,15 +1072,17 @@ class Resim:
                     if is_dp:
                         self.roll("dp where")  # (index into basesOccupied)
 
-                        # todo: is this the selected runner instead?
-                        self.damage(self.batter, "batter")
+                        # todo: this might be the *pitcher*? we know there's one less roll if the pitcher is careful
+                        self.damage(self.pitcher, "pitcher")
 
-                        if Base.THIRD in self.update["basesOccupied"] and self.outs < self.max_outs - 2:
-                            self.damage(self.batter, "batter")  # this is probably a runner too
-                        if Base.SECOND in self.update["basesOccupied"] and self.outs < self.max_outs - 2:
-                            self.damage(self.batter, "batter")  # this is probably a runner too
+                        if self.outs < self.max_outs - 2:
+                            for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
+                                runner = self.data.get_player(runner_id)
+                                if base == Base.THIRD or base == Base.SECOND:
+                                    self.damage(runner, "runner")
 
                         if "scores!" in self.desc:
+                            # todo: is this also a runner?
                             self.damage(self.batter, "batter")
                         return
 
@@ -1055,9 +1097,9 @@ class Resim:
                             self.damage(third, "batter")
                             self.damage(third, "batter")
                         elif Base.SECOND in self.update["basesOccupied"]:
-                            third_id = self.update["baseRunners"][0]
-                            third = self.data.get_player(third_id)
-                            self.damage(third, "batter")
+                            second_id = self.update["baseRunners"][0]
+                            second = self.data.get_player(second_id)
+                            self.damage(self.batter, "batter") # uhhhhhhh also needed for careful but this prob isn't the right way
                         return
 
             self.try_roll_batter_debt(fielder)
@@ -1234,6 +1276,7 @@ class Resim:
 
         self.damage(self.pitcher, "pitcher")
         self.damage(self.batter, "batter")
+        self.handle_hit_advances(hit_bases, defender_roll)
 
         # tentative: damage every runner at least once?
         for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
@@ -1244,7 +1287,10 @@ class Resim:
             if is_force_score:
                 self.damage(runner, "batter")
 
-        self.handle_hit_advances(hit_bases, defender_roll)
+        if self.batting_team.has_mod(Mod.AAA) and hit_bases == 3:
+            # todo: figure out if this checks mod origin or not
+            if not self.batter.has_mod(Mod.OVERPERFORMING):
+                self.roll("power chAAArge")
 
     def get_stat_meta(self):
         is_maximum_blaseball = (
@@ -1302,16 +1348,28 @@ class Resim:
         self.damage(self.batter, "batter")
 
     def handle_batter_up(self):
-        if self.batter and self.batter.has_mod(Mod.HAUNTED):
-            haunt_roll = self.roll("haunted")
-            self.log_roll(Csv.HAUNTED, "NoHaunt", haunt_roll, False)
+        batter = self.batter
+        if self.ty == EventType.BATTER_SKIPPED:
+            # find the batter that *would* have been at bat
+            lineup = self.batting_team.lineup
+            index = self.next_update["awayTeamBatterCount"] if self.next_update["topOfInning"] else self.next_update["homeTeamBatterCount"]
+            batter_id = lineup[index % len(lineup)]
+            batter = self.data.get_player(batter_id)
 
-        # if the haunting is successful the batter won't be the haunted player lol
-        if "is Inhabiting" in self.event["description"]:
-            haunt_roll = self.roll("haunted")
-            self.log_roll(Csv.HAUNTED, "YesHaunt", haunt_roll, True)
 
-            self.roll("haunter selection")
+        if self.ty in [EventType.BATTER_UP, EventType.BATTER_SKIPPED]:
+            if batter and batter.has_mod(Mod.HAUNTED):
+                haunt_roll = self.roll("haunted")
+                self.log_roll(Csv.HAUNTED, "NoHaunt", haunt_roll, False)
+
+            # if the haunting is successful the batter won't be the haunted player lol
+            if "is Inhabiting" in self.event["description"]:
+                haunt_roll = self.roll("haunted")
+                self.log_roll(Csv.HAUNTED, "YesHaunt", haunt_roll, True)
+
+                self.roll("haunter selection")
+
+            return True
 
     def handle_weather(self):
         if self.weather == Weather.SUN_2:
@@ -1330,6 +1388,9 @@ class Resim:
             if self.ty == EventType.INCINERATION:
                 if "A Debt was collected" not in self.desc:
                     self.roll("target")
+
+                    if self.season >= 16:
+                        self.roll("extra target?")
                 else:
                     self.roll("instability target?")
                     self.roll("instability target?")
@@ -1411,8 +1472,15 @@ class Resim:
                 # todo: ???
                 if self.event["created"] in [
                     "2021-03-12T01:10:43.414Z",
+                    "2021-04-21T18:00:46.683Z",
                 ]:
                     self.roll("blooddrain proc")
+                return True
+            
+            if self.ty == EventType.BLOODDRAIN_BLOCKED:
+                self.roll("blooddrain proc")
+                self.roll("blooddrain proc")
+                self.roll("blooddrain proc")
                 return True
 
         elif self.weather == Weather.PEANUTS:
@@ -1735,6 +1803,7 @@ class Resim:
                     13: 0.0005,
                     14: 0.0004,
                     15: 0.0004,
+                    16: 0.0004, # todo: we don't know
                 }[self.season]
 
                 if unscatter_roll < threshold:
@@ -1826,8 +1895,13 @@ class Resim:
                     self.log_roll(Csv.CONSUMERS, "Miss", attack_roll, False, attacked_team=team)
 
     def handle_party(self):
-        # lol. turns out it just rolls party all the time and throws out the roll if the team isn't partying
-        party_roll = self.roll("party time")
+        if self.season < 16:
+            # lol. turns out it just rolls party all the time and throws out the roll if the team isn't partying
+            party_roll = self.roll("party time")
+        else:
+            # todo: what do we do in s17? i haven't gotten that far
+            party_roll = 1
+
         if self.ty == EventType.PARTY:
             self.log_roll(Csv.PARTY, "Party", party_roll, True)
             team_roll = self.roll("target team")  # <0.5 for home, >0.5 for away
@@ -1947,16 +2021,15 @@ class Resim:
         attractor_eligible = not secret_runner_id
         if attractor_eligible:
             attract_roll = self.roll("secret base attract")
-            if attract_roll < 0.0002:  # guessing at threshold
+            if attract_roll < 0.00035:  # guessing at threshold, was 0.0002 in s15/s16?
                 update_one_after_next = self.data.get_update(self.game_id, self.play + 2)
                 attractor_id = self.next_update.get("secretBaserunner") or update_one_after_next.get("secretBaserunner")
                 if attractor_id:
                     self.roll("choose attractor")
                     self.pending_attractor = self.data.get_player(attractor_id)
+                    return
                 else:
                     self.print("!!! warn: should add attractor but could not find any")
-
-                return
 
         if secret_base_exit_eligible:
             self.roll("secret base exit")
@@ -2017,8 +2090,15 @@ class Resim:
 
     def handle_steal(self):
         steal_fielder_roll = self.roll("steal fielder")
+        steal_fielder = self.get_fielder_for_roll(steal_fielder_roll)
+
         bases = self.update["basesOccupied"]
         self.print(f"- base states: {bases}")
+
+        secret_runner_id = self.update.get("secretBaserunner")
+        if secret_runner_id:
+            secret_runner = self.data.get_player(secret_runner_id)
+            self.print(f"- secret runner: {secret_runner_id} ({secret_runner.name})")
 
         base_stolen = None
         if "second base" in self.desc:
@@ -2048,7 +2128,7 @@ class Resim:
                     relevant_batter=self.batter,
                     relevant_runner=runner,
                     fielder_roll=steal_fielder_roll,
-                    fielder=self.get_fielder_for_roll(steal_fielder_roll),
+                    fielder=steal_fielder,
                 )
 
                 if was_success:
@@ -2063,13 +2143,13 @@ class Resim:
                         relevant_batter=self.batter,
                         relevant_runner=runner,
                         fielder_roll=steal_fielder_roll,
-                        fielder=self.get_fielder_for_roll(steal_fielder_roll),
+                        fielder=steal_fielder,
                     )
 
-                    if was_caught and self.season >= 15:
-                        self.roll("steal catcher")
-                        # todo: damage them instead
                     self.damage(runner, "batter")
+                    if was_caught and self.season >= 15:
+                        self.damage(steal_fielder, "fielder")
+
                     return True
 
             if (
@@ -2111,7 +2191,11 @@ class Resim:
         elif known_result == "ball" and roll < threshold:
             self.print(f"!!! warn: too low strike roll (threshold {threshold})")
 
-        # todo: double strike
+        if self.pitching_team.has_mod("FIERY") and self.strikes < self.max_strikes - 1:
+            if self.is_strike:
+                self.roll("double strike")
+            else:
+                self.print("!!! double strike eligible!")
 
         return roll
 
@@ -2120,6 +2204,7 @@ class Resim:
             return
 
         if player.has_mod(Mod.CAREFUL):
+            self.print(f"item damage skipped ({player.name} is careful)")
             return
 
         # threshold seems to vary between 0.0002 and >0.0015
@@ -2413,6 +2498,20 @@ class Resim:
 
             b_location[b_idx] = a_player
             a_location[a_idx] = b_player
+
+        # carcinization etc
+        if event["type"] == EventType.PLAYER_MOVE:
+            send_team = self.data.get_team(meta["sendTeamId"])
+            receive_team = self.data.get_team(meta["receiveTeamId"])
+            player_id = meta["playerId"]
+
+            if player_id in send_team.lineup: 
+                send_team.lineup.remove(player_id)
+                receive_team.lineup.append(player_id)
+            if player_id in send_team.rotation: 
+                send_team.rotation.remove(player_id)
+                receive_team.rotation.append(player_id)
+
 
     def find_start_of_inning_score(self, game_id, inning):
         for play in range(1000):

@@ -50,6 +50,8 @@ class Mod(Enum):
         return name
 
     ZERO = "0"
+    AA = auto()
+    AAA = auto()
     ACIDIC = auto()
     AFFINITY_FOR_CROWS = auto()
     ATTRACTOR = auto()
@@ -86,9 +88,11 @@ class Mod(Enum):
     O_NO = auto()
     ON_FIRE = auto()
     OVERPERFORMING = auto()
+    PARASITE = auto()
     PARTY_TIME = auto()
     PEANUT_MISTER = auto()
     PERK = auto()
+    PSYCHIC = auto()
     PSYCHOACOUSTICS = auto()
     REDACTED = auto()
     REVERBERATING = auto()
