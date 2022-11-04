@@ -153,7 +153,8 @@ class Resim:
 
     
         event_adjustments = {
-            # clean :)
+            "2021-05-10T19:28:42.723Z": 1,
+            "2021-05-11T05:03:22.874Z": 1,
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -289,9 +290,11 @@ class Resim:
             EventType.MIDDLING,
             EventType.SHAMING_RUN,
             EventType.EARLBIRD,
+            EventType.PRIZE_MATCH,
         ]:
             if self.ty == EventType.PSYCHO_ACOUSTICS:
                 self.roll("which mod?")
+
             # skipping pregame messages
             return True
         if self.ty in [
@@ -337,6 +340,20 @@ class Resim:
                 for player_id in team.rotation:
                     for _ in range(25):
                         self.roll("stat")
+
+            # todo: clean this up, see if we can find a better check for "is this a holiday inning party" elsewhere
+            if "is Partying" in self.desc:
+                team = self.data.get_team(self.event["teamTags"][0])
+                if not team.has_mod(Mod.PARTY_TIME) and self.day < 27:
+                    # this is a holiday inning party (why 26?)
+                    for _ in range(26):
+                        self.roll("stat")
+
+            if "entered the Shadows" in self.desc:
+                # fax machine dunk
+                for _ in range(25):
+                    self.roll("stat")
+
             # skip party/consumer stat change
             return True
         if self.ty in [
@@ -364,11 +381,6 @@ class Resim:
             EventType.INVESTIGATION_PROGRESS,
             EventType.ENTERING_CRIMESCENE,
         ]:
-            # skip liquid/plasma plot nonsense
-            if self.ty == EventType.ENTERING_CRIMESCENE:
-                for _ in range(25):
-                    self.roll("stat")
-
             return True
             
         if self.ty == EventType.EXISTING_PLAYER_ADDED_TO_ILB:
@@ -425,10 +437,16 @@ class Resim:
         if self.ty in [EventType.HALF_INNING]:
             # skipping top-of/bottom-of
             if self.next_update["topOfInning"]:
-                pass
+                is_holiday = self.next_update.get("state", {}).get("holidayInning")
+                # if this was a holiday inning then we already rolled in the block below
+                if self.stadium.has_mod(Mod.HOTEL_MOTEL) and not is_holiday:
+                    self.roll("hotel motel")
 
             if self.weather == Weather.SALMON:
                 self.try_roll_salmon()
+            return True
+        if self.ty == EventType.HOLIDAY_INNING:
+            self.roll("hotel motel") # success
             return True
         if self.ty == EventType.SALMON_SWIM:
             self.roll("salmon")
@@ -460,7 +478,6 @@ class Resim:
 
                 if "caught in the bind!" in self.desc:
                     self.roll("salmon cannons player")
-
             return True
         if self.ty in [
             EventType.GAME_END,
@@ -482,7 +499,7 @@ class Resim:
                 )
                 for player_id in rosters:
                     player = self.data.get_player(player_id)
-                    if player.has_mod(Mod.COFFEE_PERIL):
+                    if player.has_mod(Mod.COFFEE_PERIL) and not player.has_mod(Mod.FORCE):
                         self.roll(f"redaction ({player.name})")
 
             return True
@@ -498,6 +515,9 @@ class Resim:
             ):
                 # *why*
                 self.roll("game start")
+
+            if self.season >= 17:
+                self.roll("prize match")
 
             # todo: figure out the real logic here, i'm sure there's some
             extra_start_rolls = {
@@ -522,6 +542,14 @@ class Resim:
                 "adcbbf30-de0d-4df2-ad93-7d91d6daaa6a": 1,
                 "cb7dd13c-bf04-4bb1-a53a-cf478bc2e26c": 2,
                 "2fabc7aa-8c17-4b8b-aa10-bb1a7af90d82": 1,
+                "eb441ce0-6768-4463-a997-817381b176fe": 1,
+                "0633f858-d1cb-4ba2-a04b-6b035767bed5": 1,
+                "09aa60b8-aa2a-42ab-92c2-e00a0954c25d": 8, # prize match??
+                "e2a7f575-b165-485f-b1c9-39a3c8edacbf": 16, # prize match
+                "883b56f8-d470-4a9f-b709-7647ffcac4cc": 1,
+                "f39fc061-5485-4140-9ec0-92d716c1fa67": 1,
+                "ca53fd25-ed06-4d6d-b0ae-80d0a1b58ed1": 9,
+                "24506e8e-e774-4566-a1d5-ecfb2616efc2": 19,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -601,8 +629,21 @@ class Resim:
         ]:
             if self.ty in [EventType.ITEM_BREAKS, EventType.ITEM_DAMAGE] and "CONSUMERS" not in self.desc:
                 self.roll("which item")
+
+            if self.ty == EventType.PLAYER_GAINED_ITEM and "gained the Prized" in self.desc:
+                # prize match reward
+                self.roll("prize target")
             return True
         if self.ty == EventType.PLAYER_SWAP:
+            return True
+        if self.ty == EventType.FAX_MACHINE_ACTIVATION:
+            amount = 8
+            if self.event["created"] == "2021-05-11T11:20:04.246Z":
+                amount = 4
+            for _ in range(amount):
+                self.roll("fax???")
+            return True
+        if self.ty in [EventType.PLAYER_HIDDEN_STAT_INCREASE, EventType.PLAYER_HIDDEN_STAT_DECREASE]:
             return True
 
     def handle_bird_ambush(self):
@@ -639,8 +680,8 @@ class Resim:
             if " charms " in self.desc:
                 self.damage(self.batter, "batter")
                 self.damage(self.batter, "batter")
-                self.damage(self.batter, "batter")
-                self.damage(self.batter, "batter")
+                self.damage(self.pitcher, "pitcher")
+                self.damage(self.pitcher, "pitcher")
 
                 if "scores!" in self.desc:
                     last_runner = self.data.get_player(self.update["baseRunners"][0])
@@ -846,7 +887,7 @@ class Resim:
                 self.roll("mind trick?")
 
             if self.pitcher.has_mod(Mod.PARASITE) and self.weather == Weather.BLOODDRAIN:
-                self.print("!!! parasite eligible")
+                self.roll("parasite") # can't remember what this is
 
     def try_roll_salmon(self):
         # don't reroll if we *just* reset
@@ -1292,6 +1333,11 @@ class Resim:
             if not self.batter.has_mod(Mod.OVERPERFORMING):
                 self.roll("power chAAArge")
 
+        if self.batting_team.has_mod(Mod.AA) and hit_bases == 2:
+            # todo: figure out if this checks mod origin or not
+            if not self.batter.has_mod(Mod.OVERPERFORMING):
+                self.roll("power chAArge")
+
     def get_stat_meta(self):
         is_maximum_blaseball = (
             self.strikes == self.max_strikes - 1
@@ -1421,6 +1467,9 @@ class Resim:
                 if player.has_mod(Mod.FIRE_EATER) and not player.has_mod(Mod.ELSEWHERE):
                     self.roll(f"fire eater ({player.name})")
 
+                    if player.has_mod(Mod.MARKED):
+                        self.roll("extra roll just for basilio fig")
+
                     if self.ty == EventType.INCINERATION_BLOCKED:
                         # fire eater proc - target roll maybe?
                         self.roll("target")
@@ -1481,6 +1530,7 @@ class Resim:
                 self.roll("blooddrain proc")
                 self.roll("blooddrain proc")
                 self.roll("blooddrain proc")
+                self.roll("blooddrain proc")
                 return True
 
         elif self.weather == Weather.PEANUTS:
@@ -1533,6 +1583,9 @@ class Resim:
 
             # threshold is at 0.0125 at 0.5 fort
             bird_threshold = 0.0125 - 0.02 * (self.stadium.fortification - 0.5)
+            if self.event["created"] in ["2021-05-11T09:09:08.543Z"]:
+                # might have changed in s18?
+                bird_threshold = 1
 
             if has_shelled_player and bird_roll < bird_threshold:
                 self.roll("extra bird roll")
@@ -1616,7 +1669,11 @@ class Resim:
                 elif "lineup shuffled in the Reverb!" in self.desc:
                     # 2021-04-15T20:06:11.850Z
                     self.print(f"(lineup length: {len(self.pitching_team.lineup)})")
-                    for _ in range(10):
+
+                    amount = 10
+                    if self.event["created"] == "2021-05-11T02:19:07.285Z":
+                        amount = 8
+                    for _ in range(amount):
                         self.roll("reverb shuffle?")
 
                     if self.event["created"] == "2021-04-16T02:10:17.885Z":
@@ -1804,6 +1861,7 @@ class Resim:
                     14: 0.0004,
                     15: 0.0004,
                     16: 0.0004, # todo: we don't know
+                    17: 0.00041, # we have a 0.0004054748749369175
                 }[self.season]
 
                 if unscatter_roll < threshold:
@@ -1895,7 +1953,7 @@ class Resim:
                     self.log_roll(Csv.CONSUMERS, "Miss", attack_roll, False, attacked_team=team)
 
     def handle_party(self):
-        if self.season < 16:
+        if self.season != 16:
             # lol. turns out it just rolls party all the time and throws out the roll if the team isn't partying
             party_roll = self.roll("party time")
         else:
@@ -1938,6 +1996,11 @@ class Resim:
 
         if self.stadium.has_mod(Mod.SMITHY):
             self.roll("smithy")
+
+            if self.ty == EventType.SMITHY_ACTIVATION:
+                self.roll("smithy???")
+                self.roll("smithy???")
+                return True
 
         # WHY DOES GLITTER ROLL HERE
         if self.weather == Weather.GLITTER:
@@ -2014,6 +2077,10 @@ class Resim:
             if secret_runner_id in pitching_lineup:
                 self.print("can't exit secret base on wrong team", secret_runner.name)
                 secret_base_exit_eligible = False
+
+        if self.season == 17 and secret_runner_id == "070758a0-092a-4a2c-8a16-253c835887cb":
+            # alx can't leave...???
+            secret_base_exit_eligible = False
 
         # weird order issues here. when an attractor is placed in the secret base, it only applies the *next* tick
         # likely because of some kinda async function that fills in the field between ticks
