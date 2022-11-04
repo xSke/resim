@@ -103,6 +103,7 @@ class Mod(Enum):
     FIREPROOF = auto()
     FLINCH = auto()
     FLOOD_PUMPS = auto()
+    FRIEND_OF_CROWS = auto()
     FORCE = auto()
     GRIND_RAIL = auto()
     GROWTH = auto()
@@ -134,10 +135,12 @@ class Mod(Enum):
     SINKING_SHIP = auto()
     SMITHY = auto()
     SMOOTH = auto()
+    SWEETENER = auto()
     SWIM_BLADDER = auto()
     TRAVELING = auto()
     TRIPLE_THREAT = auto()
     UNDERPERFORMING = auto()
+    WILD = auto()
 
     @classmethod
     def coerce(cls, value):
