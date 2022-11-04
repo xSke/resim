@@ -2512,6 +2512,14 @@ class Resim:
                 send_team.rotation.remove(player_id)
                 receive_team.rotation.append(player_id)
 
+        if event["type"] in [EventType.ITEM_BREAKS, EventType.ITEM_DAMAGE, EventType.BROKEN_ITEM_REPAIRED, EventType.DAMAGED_ITEM_REPAIRED]:
+            player_id = event["playerTags"][0]
+            player = self.data.get_player(player_id)
+            for item in player.items:
+                if item.id == meta["itemId"]:
+                    item.health = meta["itemHealthAfter"]
+            player.update_stats()
+
 
     def find_start_of_inning_score(self, game_id, inning):
         for play in range(1000):

@@ -8,6 +8,35 @@ from datetime import datetime, timedelta
 from enum import Enum, IntEnum, auto, unique
 from sin_values import SIN_PHASES
 
+stat_indices = [
+    "tragicness",
+    "buoyancy",
+    "thwackability",
+    "moxie",
+    "divinity",
+    "musclitude",
+    "patheticism",
+    "martyrdom",
+    "cinnamon",
+    "baseThirst",
+    "laserlikeness",
+    "continuation",
+    "indulgence",
+    "groundFriction",
+    "shakespearianism",
+    "suppression",
+    "unthwackability",
+    "coldness",
+    "overpowerment",
+    "ruthlessness",
+    "pressurization",
+    "omniscience",
+    "tenaciousness",
+    "watchfulness",
+    "anticapitalism",
+    "chasiness"
+]
+
 
 def offset_timestamp(timestamp: str, delta_secs: float) -> str:
     timestamp = timestamp.replace("Z", "+00:00")
@@ -526,9 +555,22 @@ class ItemData:
     hitting_rating: float
     pitching_rating: float
     baserunning_rating: float
+    stats: dict
 
     @staticmethod
     def from_dict(data):
+        stats = {}
+        components = [data["root"], data["suffix"], data["prePrefix"], data["postPrefix"]] + (data["prefixes"] or [])
+        for component in components:
+            if not component:
+                continue
+
+            for adjustment in component["adjustments"]:
+                if adjustment["type"] == 1:
+                    stat_name = stat_indices[adjustment["stat"]]
+                    value = adjustment["value"]
+                    stats[stat_name] = stats.get(stat_name, 0) + value
+
         return ItemData(
             id=data["id"],
             name=data["name"],
@@ -538,6 +580,7 @@ class ItemData:
             hitting_rating=data["hittingRating"],
             pitching_rating=data["pitchingRating"],
             baserunning_rating=data["baserunningRating"],
+            stats=stats,
         )
 
     @staticmethod
@@ -551,6 +594,7 @@ class ItemData:
             hitting_rating=0,
             pitching_rating=0,
             baserunning_rating=0,
+            stats={},
         )
 
 
@@ -559,6 +603,7 @@ class PlayerData(TeamOrPlayerMods):
     id: Optional[str]
     raw_name: str
     unscattered_name: Optional[str]
+    data: dict
     # Player attributes
     buoyancy: float
     divinity: float
@@ -595,43 +640,20 @@ class PlayerData(TeamOrPlayerMods):
     season_mod_sources: Dict[str, List[str]]
 
     def __init__(self, data: Dict[str, Any]):
+        self.data = data
+
         data_state = data.get("state", {})
         self.id = data["id"]
         self.raw_name = data["name"]
         self.unscattered_name = data_state.get("unscatteredName")
         # Player attributes
-        self.buoyancy = data["buoyancy"]
-        self.divinity = data["divinity"]
-        self.martyrdom = data["martyrdom"]
-        self.moxie = data["moxie"]
-        self.musclitude = data["musclitude"]
-        self.patheticism = data["patheticism"]
-        self.thwackability = data["thwackability"]
-        self.tragicness = data["tragicness"]
-        self.ruthlessness = data["ruthlessness"]
-        self.overpowerment = data["overpowerment"]
-        self.unthwackability = data["unthwackability"]
-        self.shakespearianism = data["shakespearianism"]
-        self.suppression = data["suppression"]
-        self.coldness = data["coldness"]
-        self.baseThirst = data["baseThirst"]
-        self.continuation = data["continuation"]
-        self.ground_friction = data["groundFriction"]
-        self.indulgence = data["indulgence"]
-        self.laserlikeness = data["laserlikeness"]
-        self.anticapitalism = data["anticapitalism"]
-        self.chasiness = data["chasiness"]
-        self.omniscience = data["omniscience"]
-        self.tenaciousness = data["tenaciousness"]
-        self.watchfulness = data["watchfulness"]
-        self.pressurization = data["pressurization"]
-        self.cinnamon = data.get("cinnamon") or 0
+        self.items = [ItemData.from_dict(item) for item in data.get("items") or []]
+        self.update_stats()
         self.blood = data.get("blood") or None
         self.consecutive_hits = data.get("consecutiveHits") or 0
         self.bat = data.get("bat") or None
         self.soul = data.get("soul") or 0
         self.eDensity = data.get("eDensity") or 0
-        self.items = [ItemData.from_dict(item) for item in data.get("items") or []]
         self.season_mod_sources = data_state.get("seasModSources", {})
         self.init_mods(data)
 
@@ -654,6 +676,45 @@ class PlayerData(TeamOrPlayerMods):
         pressurization = self.pressurization
         cinnamon = self.cinnamon or 0
         return 0.5 * ((sin_phase - 1) * pressurization + (sin_phase + 1) * cinnamon)
+
+    def stats_with_items(self) -> dict:
+        stats = {stat: self.data[stat] for stat in stat_indices}
+        for item in self.items:
+            if item.health != 0:
+                for stat, value in item.stats.items():
+                    stats[stat] += value
+        return stats
+
+    def update_stats(self):
+        stats = self.stats_with_items()
+
+        self.buoyancy = stats["buoyancy"]
+        self.divinity = stats["divinity"]
+        self.martyrdom = stats["martyrdom"]
+        self.moxie = stats["moxie"]
+        self.musclitude = stats["musclitude"]
+        self.patheticism = stats["patheticism"]
+        self.thwackability = stats["thwackability"]
+        self.tragicness = stats["tragicness"]
+        self.ruthlessness = stats["ruthlessness"]
+        self.overpowerment = stats["overpowerment"]
+        self.unthwackability = stats["unthwackability"]
+        self.shakespearianism = stats["shakespearianism"]
+        self.suppression = stats["suppression"]
+        self.coldness = stats["coldness"]
+        self.baseThirst = stats["baseThirst"]
+        self.continuation = stats["continuation"]
+        self.ground_friction = stats["groundFriction"]
+        self.indulgence = stats["indulgence"]
+        self.laserlikeness = stats["laserlikeness"]
+        self.anticapitalism = stats["anticapitalism"]
+        self.chasiness = stats["chasiness"]
+        self.omniscience = stats["omniscience"]
+        self.tenaciousness = stats["tenaciousness"]
+        self.watchfulness = stats["watchfulness"]
+        self.pressurization = stats["pressurization"]
+        self.cinnamon = stats.get("cinnamon") or 0
+
 
     @staticmethod
     def null():
