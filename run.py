@@ -219,6 +219,7 @@ def get_total_events():
         if event_count_cache["fragments_hash"] == fragments_hash:
             return event_count_cache["total_events"]
     print("Counting events...")
+    print("This may take several minutes if new events need to be fetched from chron")
     total_events = sum(
         len(get_feed_between(start_time, end_time))
         for _, _, _, start_time, end_time in tqdm(FRAGMENTS, unit=" fragments")
