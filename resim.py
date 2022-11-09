@@ -164,6 +164,12 @@ class Resim:
         event_adjustments = {
             "2021-05-10T19:28:42.723Z": 1,
             "2021-05-11T05:03:22.874Z": 1,
+
+            "2021-05-17T23:00:41.407Z": -1, # double strike
+            "2021-05-17T23:10:48.610Z": 1, # something wrong with item damage rolls
+            "2021-05-18T02:14:14.532Z": 1, # somewhere around this
+            "2021-05-18T02:22:44.148Z": 1, # idk
+
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -216,6 +222,9 @@ class Resim:
 
         if self.ty == EventType.HIGH_PRESSURE_ON_OFF:
             # s14 high pressure proc, not sure when this should interrupt
+            return
+        if self.ty == EventType.FAX_MACHINE_ACTIVATION:
+            # this also interrupts late
             return
 
         if self.handle_steal():
@@ -300,9 +309,12 @@ class Resim:
             EventType.SHAMING_RUN,
             EventType.EARLBIRD,
             EventType.PRIZE_MATCH,
+            EventType.A_BLOOD_TYPE,
         ]:
             if self.ty == EventType.PSYCHO_ACOUSTICS:
                 self.roll("which mod?")
+            if self.ty == EventType.A_BLOOD_TYPE:
+                self.roll("a blood type")
 
             # skipping pregame messages
             return True
@@ -448,7 +460,10 @@ class Resim:
             if self.next_update["topOfInning"]:
                 is_holiday = self.next_update.get("state", {}).get("holidayInning")
                 # if this was a holiday inning then we already rolled in the block below
-                if self.stadium.has_mod(Mod.HOTEL_MOTEL) and not is_holiday:
+
+                # hm was ratified in the season 18 election
+                has_hotel_motel = self.stadium.has_mod(Mod.HOTEL_MOTEL) or self.season >= 18
+                if has_hotel_motel and not is_holiday:
                     self.roll("hotel motel")
 
             if self.weather == Weather.SALMON:
@@ -498,6 +513,7 @@ class Resim:
             EventType.TEAM_DID_SHAME,
             EventType.ELIMINATED_FROM_POSTSEASON,
             EventType.POSTSEASON_ADVANCE,
+            EventType.HYPE_BUILT,
         ]:
             # skipping game end
 
@@ -559,6 +575,8 @@ class Resim:
                 "f39fc061-5485-4140-9ec0-92d716c1fa67": 1,
                 "ca53fd25-ed06-4d6d-b0ae-80d0a1b58ed1": 9,
                 "24506e8e-e774-4566-a1d5-ecfb2616efc2": 19,
+                "a581bfd7-725f-49a3-83ff-dc98806ef262": 15,
+                "88147839-a9c7-44f8-a5aa-e3c733a5013a": 10, # prize match
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -645,13 +663,6 @@ class Resim:
             return True
         if self.ty == EventType.PLAYER_SWAP:
             return True
-        if self.ty == EventType.FAX_MACHINE_ACTIVATION:
-            amount = 8
-            if self.event["created"] == "2021-05-11T11:20:04.246Z":
-                amount = 4
-            for _ in range(amount):
-                self.roll("fax???")
-            return True
         if self.ty in [EventType.PLAYER_HIDDEN_STAT_INCREASE, EventType.PLAYER_HIDDEN_STAT_DECREASE]:
             return True
 
@@ -693,31 +704,10 @@ class Resim:
 
             if self.pitcher.blood != Blood.LOVE:
                 pitcher_charm_eligible = False
-
-        # todo: figure out logic order when both teams have charm
-        if self.event["created"] == "2021-03-19T06:16:10.085Z":
-            self.roll("charm 2?")
-
-        if batter_charm_eligible or pitcher_charm_eligible:
+        
+        if pitcher_charm_eligible:
             charm_roll = self.roll("charm")
-            if " charms " in self.desc:
-                self.log_roll(
-                    Csv.MODPROC,
-                    "Charmed",
-                    charm_roll,
-                    True,
-                )
-                self.damage(self.batter, "batter")
-                self.damage(self.batter, "batter")
-                self.damage(self.pitcher, "pitcher")
-                self.damage(self.pitcher, "pitcher")
 
-                if "scores!" in self.desc:
-                    last_runner = self.data.get_player(self.update["baseRunners"][0])
-                    self.damage(last_runner, "runner")
-
-                self.handle_batter_reverb()  # apparently don mitchell can do this.
-                return True
             if " charmed " in self.desc:
                 self.log_roll(
                     Csv.MODPROC,
@@ -737,6 +727,27 @@ class Resim:
                     charm_roll,
                     False,
                 )
+
+        if batter_charm_eligible:
+            charm_roll = self.roll("charm")
+            if " charms " in self.desc:
+                self.log_roll(
+                    Csv.MODPROC,
+                    "Charmed",
+                    charm_roll,
+                    True,
+                )
+                self.damage(self.batter, "batter")
+                self.damage(self.batter, "batter")
+                self.damage(self.pitcher, "pitcher")
+                self.damage(self.pitcher, "pitcher")
+
+                if "scores!" in self.desc:
+                    last_runner = self.data.get_player(self.update["baseRunners"][0])
+                    self.damage(last_runner, "runner")
+
+                self.handle_batter_reverb()  # apparently don mitchell can do this.
+                return True
 
     def handle_electric(self):
         # todo: don't roll this if <s15 and batter doesn't have electric blood?
@@ -1562,7 +1573,7 @@ class Resim:
                 if player.has_mod(Mod.FIRE_EATER) and not player.has_mod(Mod.ELSEWHERE):
                     self.roll(f"fire eater ({player.name})")
 
-                    if player.has_mod(Mod.MARKED):
+                    if player.has_mod(Mod.MARKED) and not self.batter.has_mod(Mod.MARKED):
                         self.roll("extra roll just for basilio fig")
 
                     if self.ty == EventType.INCINERATION_BLOCKED:
@@ -2157,6 +2168,7 @@ class Resim:
                     15: 0.0004,
                     16: 0.0004, # todo: we don't know
                     17: 0.00041, # we have a 0.0004054748749369175
+                    18: 0.00041, # todo: we don't know
                 }[self.season]
 
                 if unscatter_roll < threshold:
@@ -2640,8 +2652,10 @@ class Resim:
 
         if known_result == "strike" and roll > threshold:
             self.print(f"!!! warn: too high strike roll (threshold {threshold})")
+            self.is_strike = True
         elif known_result == "ball" and roll < threshold:
             self.print(f"!!! warn: too low strike roll (threshold {threshold})")
+            self.is_strike = False
 
         if self.pitching_team.has_mod("FIERY") and self.strikes < self.max_strikes - 1:
             if self.is_strike:
