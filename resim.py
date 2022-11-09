@@ -165,10 +165,13 @@ class Resim:
             "2021-05-10T19:28:42.723Z": 1,
             "2021-05-11T05:03:22.874Z": 1,
 
-            "2021-05-17T23:00:41.407Z": -1, # double strike
             "2021-05-17T23:10:48.610Z": 1, # something wrong with item damage rolls
+            "2021-05-18T02:04:07.079Z": -1, # double strike
+            "2021-05-18T02:11:28.932Z": 1, # idk?
             "2021-05-18T02:14:14.532Z": 1, # somewhere around this
+            "2021-05-18T02:17:40.187Z": 1, # somewhere around this
             "2021-05-18T02:22:44.148Z": 1, # idk
+            "2021-05-18T03:20:25.483Z": 1, # def double strike
 
         }
         to_step = event_adjustments.get(self.event["created"])
@@ -212,6 +215,8 @@ class Resim:
 
         # has to be rolled after party
         if self.handle_flooding():
+            return
+        if self.handle_polarity():
             return
 
         if self.handle_consumers():
@@ -380,6 +385,7 @@ class Resim:
         if self.ty in [
             EventType.PLAYER_BORN_FROM_INCINERATION,
             EventType.ENTER_HALL_OF_FLAME,
+            EventType.EXIT_HALL_OF_FLAME,
             EventType.PLAYER_HATCHED,
         ]:
             # skipping incineration stuff
@@ -492,7 +498,7 @@ class Resim:
             if self.season >= 15:
                 self.roll("reset items? idk?")
 
-            if "was restored!" in self.desc or "was repaired." in self.desc:
+            if "was restored!" in self.desc or "was repaired." in self.desc or "were repaired." in self.desc:
                 self.roll("restore item??")
                 self.roll("restore item??")
                 self.roll("restore item??")
@@ -575,8 +581,13 @@ class Resim:
                 "f39fc061-5485-4140-9ec0-92d716c1fa67": 1,
                 "ca53fd25-ed06-4d6d-b0ae-80d0a1b58ed1": 9,
                 "24506e8e-e774-4566-a1d5-ecfb2616efc2": 19,
-                "a581bfd7-725f-49a3-83ff-dc98806ef262": 15,
+                "a581bfd7-725f-49a3-83ff-dc98806ef262": 16,
                 "88147839-a9c7-44f8-a5aa-e3c733a5013a": 10, # prize match
+                "2b9d87df-a76a-48d1-aea2-d0be9876c857": 11, # prize match
+                "0cde3960-b7dd-4df2-b469-5274be158563": 1,
+                "8a90bd4b-9f51-4c2e-9c24-882dabdfe932": 1,
+                "1a84542b-abd4-42aa-86b3-1a89a80184f6": 14, # prize match
+                "0a79fdbb-73ca-4b8e-8696-10776d75cd0f": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -665,6 +676,17 @@ class Resim:
             return True
         if self.ty in [EventType.PLAYER_HIDDEN_STAT_INCREASE, EventType.PLAYER_HIDDEN_STAT_DECREASE]:
             return True
+        if self.ty == EventType.WEATHER_CHANGE:
+            return True
+
+    def handle_polarity(self):
+        if self.weather.is_polarity():
+            # polarity +/-
+            self.roll("polarity")
+
+            if self.ty == EventType.POLARITY_SHIFT:
+                return True
+
 
     def handle_bird_ambush(self):
         if self.weather == Weather.BIRDS:
@@ -966,6 +988,13 @@ class Resim:
             if not self.is_flinching():
                 swing_roll = self.roll_swing(False)
                 self.log_roll(Csv.SWING_ON_STRIKE, "StrikeLooking", swing_roll, False)
+
+        if "strikes out thinking." in self.desc:
+            # pitcher: convert walk to strikeout (success)
+            # not logging these rn
+            self.roll("strike")
+            self.roll("swing")
+            self.roll("mind trick?")
                             
         elif ", flinching" in self.desc:
             value = self.throw_pitch("strike")
@@ -1546,12 +1575,16 @@ class Resim:
                 else:
                     self.roll("instability target?")
                     self.roll("instability target?")
+
                 self.generate_player()
 
                 # there are def two extra rolls earlier and two extra down here, but i don't know what they would be
                 if "A Debt was collected" in self.desc:
                     self.roll("extra instability stuff??")
                     self.roll("extra instability stuff??")
+
+                if "An Ambush." in self.desc:
+                    self.roll("ambush target")
 
                 return True
 
@@ -1645,6 +1678,7 @@ class Resim:
                 if self.event["created"] in [
                     "2021-03-12T01:10:43.414Z",
                     "2021-04-21T18:00:46.683Z",
+                    "2021-05-18T10:20:04.864Z",
                 ]:
                     self.roll("blooddrain proc")
                 return True
@@ -1908,6 +1942,8 @@ class Resim:
                     amount = 10
                     if self.event["created"] == "2021-05-11T02:19:07.285Z":
                         amount = 8
+                    if self.event["created"] == "2021-05-18T03:10:44.033Z":
+                        amount = 11
                     for _ in range(amount):
                         self.roll("reverb shuffle?")
 
@@ -2045,8 +2081,9 @@ class Resim:
             pass
 
         elif self.weather.is_polarity():
-            # polarity +/-
-            self.roll("polarity")
+            # this is handled after party roll...?
+            pass
+
         else:
             self.print(f"error: {self.weather.name} weather not implemented")
 
@@ -2389,8 +2426,10 @@ class Resim:
                 self.print("can't exit secret base on wrong team", secret_runner.name)
                 secret_base_exit_eligible = False
 
-        if self.season == 17 and secret_runner_id == "070758a0-092a-4a2c-8a16-253c835887cb":
-            # alx can't leave...???
+        # todo: figure out how to query "player in active team's shadow" and exclude those properly
+        if self.season >= 17 and secret_runner_id == "070758a0-092a-4a2c-8a16-253c835887cb":
+            secret_base_exit_eligible = False
+        if self.season >= 18 and secret_runner_id == "114100a4-1bf7-4433-b304-6aad75904055":
             secret_base_exit_eligible = False
 
         # weird order issues here. when an attractor is placed in the secret base, it only applies the *next* tick
@@ -2985,6 +3024,9 @@ class Resim:
                 if item.id == meta["itemId"]:
                     item.health = meta["itemHealthAfter"]
             player.update_stats()
+    
+        if event["type"] == EventType.HYPE_BUILT:
+            self.stadium.hype = meta["after"]
 
 
     def find_start_of_inning_score(self, game_id, inning):
