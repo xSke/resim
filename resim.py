@@ -68,6 +68,10 @@ class Csv(Enum):
     SWEET2 = "sweet2"
     WEATHERPROC = "weatherproc"
     MODPROC = "modproc"
+    BASE = "base"
+    INSTINCTS = "instincts"
+    PSYCHIC = "psychic"
+    BSYCHIC = "bsychic"
 
 
 class Resim:
@@ -240,10 +244,23 @@ class Resim:
 
         # todo: don't know where this actually is - seems to be before mild at least
         if self.pitcher.has_mod(Mod.DEBT_THREE) and not self.batter.has_mod(Mod.COFFEE_PERIL):
-            self.roll("debt")
+            debt_roll = self.roll("debt")
             if self.ty == EventType.HIT_BY_PITCH:
+                self.log_roll(
+                    Csv.MODPROC,
+                    "Bonk",
+                    debt_roll,
+                    True,
+                )
                 # debt success
                 return True
+            else: 
+                self.log_roll(
+                    Csv.MODPROC,
+                    "No Bonk",
+                    debt_roll,
+                    False,
+                )
 
         if self.handle_bird_ambush():
             return
@@ -915,19 +932,26 @@ class Resim:
         if self.ty == EventType.WALK:
             # pitchers: convert walk to strikeout (failed)
             if self.pitching_team.has_mod("PSYCHIC"):
-                self.roll("mind trick?")
+                psychic_roll = self.roll("walk-strikeout")
+                self.log_roll(Csv.PSYCHIC,
+                "Fail",
+                psychic_roll,
+                False
+                )
                 
             if "uses a Mind Trick" in self.desc:
                 # batter successfully converted strikeout to walk
-                self.roll("mind trick?")
+                psychiccontact_roll = self.roll("psychiccontact")
 
-                if "strikes out swinging" in self.desc:
-                    # this might be a damage roll of some kind
-                    self.roll("mind trick?")
+                if "strikes out swinging." in self.desc:
+                    bsychic_roll = self.roll("bsychic")
+                    self.log_roll(Csv.BSYCHIC,
+                        "Success",
+                        bsychic_roll,
+                        True
+                        )
 
         if self.ty == EventType.WALK:
-
-            self.damage(self.batter, "batter")
 
             if self.batting_team.has_mod(Mod.BASE_INSTINCTS):
                 instinct_roll = self.roll("base instincts")
@@ -940,7 +964,7 @@ class Resim:
                     if "Base Instincts take them directly to second base!" in self.desc:
                         #Note: The fielder roll is used here as the formula multiplies two rolls together and this is the easiest way to log two rolls at once
                         self.log_roll(
-                            Csv.MODPROC, 
+                            Csv.INSTINCTS, 
                             "Second",
                             base_two_roll, 
                             False,
@@ -949,7 +973,7 @@ class Resim:
                         )
                     if "Base Instincts take them directly to third base!" in self.desc:
                         self.log_roll(
-                            Csv.MODPROC, 
+                            Csv.INSTINCTS, 
                             "Third",
                             base_two_roll, 
                             True,
@@ -965,6 +989,7 @@ class Resim:
                     runner = self.data.get_player(runner_id)
                     self.damage(runner, "runner")
 
+            self.damage(self.batter, "batter")
         self.damage(self.pitcher, "pitcher")
 
     def handle_strike(self):
@@ -994,21 +1019,31 @@ class Resim:
             # not logging these rn
             self.roll("strike")
             self.roll("swing")
-            self.roll("mind trick?")
-                            
+            mindtrick_roll = self.roll("Psychic")
+            self.log_roll(Csv.PSYCHIC,
+            "Success",
+            mindtrick_roll,
+            True
+            )
+
         elif ", flinching" in self.desc:
             value = self.throw_pitch("strike")
             self.log_roll(Csv.STRIKES, "StrikeFlinching", value, True)
 
-        self.damage(self.pitcher, "pitcher")
-
         if "strikes out" in self.desc:
             # batters: convert strikeout to walk (failed)
             if self.batting_team.has_mod(Mod.PSYCHIC):
-                self.roll("mind trick?")
+                bpsychic_roll = self.roll("strikeout-walk")
+                self.log_roll(Csv.BSYCHIC,
+                "Fail",
+                bpsychic_roll,
+                False,
+                )
 
             if self.pitcher.has_mod(Mod.PARASITE) and self.weather == Weather.BLOODDRAIN:
                 self.roll("parasite") # can't remember what this is
+
+        self.damage(self.pitcher, "pitcher")
 
     def try_roll_salmon(self):
         # don't reroll if we *just* reset
@@ -2331,6 +2366,7 @@ class Resim:
                 self.print("!!! away team is in party time")
 
     def handle_ballpark(self):
+
         if self.stadium.has_mod(Mod.PEANUT_MISTER):
             mister_roll = self.roll("peanut mister")
             if self.ty == EventType.PEANUT_MISTER:
@@ -2343,12 +2379,16 @@ class Resim:
                 return True
 
         if self.stadium.has_mod(Mod.SMITHY):
-            self.roll("smithy")
+            smithy_roll = self.roll("smithy")
 
             if self.ty == EventType.SMITHY_ACTIVATION:
-                self.roll("smithy???")
-                self.roll("smithy???")
+                self.log_roll(Csv.MODPROC, "Fix", smithy_roll, True)
+
+                player_roll = self.roll("smithy1")
+                item_roll = self.roll("smithy2")
                 return True
+            else: 
+                self.log_roll(Csv.MODPROC, "NoFix", smithy_roll, False)
 
         # WHY DOES GLITTER ROLL HERE
         if self.weather == Weather.GLITTER:
