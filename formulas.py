@@ -102,21 +102,25 @@ def get_strike_threshold(
     mox = batter.moxie * get_multiplier(batter, batting_team, "batter", "moxie", meta)
     fwd = stadium.forwardness
 
+    # fmt: off
     constant, ruth_factor, fwd_factor, musc_factor, mox_factor, roll_cap = {
-        11: (0.2,  0.35,  0.2,   0.1,   0,    0.9),
-        12: (0.2,  0.3,   0.2,   0.1,   0,    0.85),
-        13: (0.2,  0.3,   0.2,   0.1,   0,    0.85),
-        14: (0.2,  0.285, 0.2,   0.1,   0,    0.86),
-        15: (0.2,  0.285, 0.2,   0.1,   0,    0.86),  # todo: not sure but seems right
-        16: (0.2,  0.285, 0.2,   0.1,   0,    0.86),  # todo: not sure but seems right
-        17: (0.2,  0.285, 0.2,   0.1,   0,    0.86),  # todo: not sure but seems right
-        18: (0.28,  0.29,  0.125, 0.075, -0.1, 0.86),  # todo: a solid starter guess
+        11: (0.2,  0.35,  0.2,   0.1,    0,   0.9),
+        12: (0.2,  0.3,   0.2,   0.1,    0,   0.85),
+        13: (0.2,  0.3,   0.2,   0.1,    0,   0.85),
+        14: (0.2,  0.285, 0.2,   0.1,    0,   0.86),
+        15: (0.2,  0.285, 0.2,   0.1,    0,   0.86),  # todo: not sure but seems right
+        16: (0.2,  0.285, 0.2,   0.1,    0,   0.86),  # todo: not sure but seems right
+        17: (0.2,  0.285, 0.2,   0.1,    0,   0.86),  # todo: not sure but seems right
+        18: (0.28, 0.29,  0.125, 0.075, -0.1, 0.86),  # todo: a solid starter guess
     }[meta.season]
+    # fmt: on
 
     if is_flinching:
         constant += 0.2
 
-    threshold = constant + ruth_factor * (ruth * (1 + 0.2 * vibes)) + fwd_factor * fwd + musc_factor * musc + mox_factor * mox
+    threshold = (
+        constant + ruth_factor * (ruth * (1 + 0.2 * vibes)) + fwd_factor * fwd + musc_factor * musc + mox_factor * mox
+    )
     threshold = min(threshold, roll_cap)
     return threshold
 
