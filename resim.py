@@ -487,16 +487,19 @@ class Resim:
                 # hm was ratified in the season 18 election
                 has_hotel_motel = self.stadium.has_mod(Mod.HOTEL_MOTEL) or self.season >= 18
                 if has_hotel_motel and not is_holiday:
-                    self.roll("hotel motel")
+                    hotel_roll = self.roll("hotel motel")
+                    self.log_roll(Csv.MODPROC, "Notel", hotel_roll, False)
 
             if self.weather == Weather.SALMON:
                 self.try_roll_salmon()
             return True
         if self.ty == EventType.HOLIDAY_INNING:
-            self.roll("hotel motel") # success
+            hotel_roll = self.roll("hotel motel")  # success
+            self.log_roll(Csv.MODPROC, "Hotel", hotel_roll, True)
             return True
         if self.ty == EventType.SALMON_SWIM:
-            self.roll("salmon")
+            salmon_roll = self.roll("salmon")
+            self.log_roll(Csv.WEATHERPROC, "Salmon", salmon_roll, True)
 
             # special case for a weird starting point with missing data
             last_inning = self.update["inning"]
@@ -1061,7 +1064,8 @@ class Resim:
             # only roll salmon if the last inning had any scores, but also we have to dig into game history to find this
             # how does the sim do it? no idea. i'm cheating.
             if current_away_score != last_inning_away_score or current_home_score != last_inning_home_score:
-                self.roll("salmon")
+                salmon_roll = self.roll("salmon")
+                self.log_roll(Csv.WEATHERPROC, "NoSalmon", salmon_roll, False)
 
     def is_flinching(self):
         return self.batter.has_mod(Mod.FLINCH) and self.strikes == 0
@@ -2723,7 +2727,9 @@ class Resim:
 
         roll = self.roll("strike", lower=lower_bound, upper=upper_bound)
         if self.pitching_team.has_mod(Mod.ACIDIC):
-            self.roll("acidic")
+            acidic_roll = self.roll("acidic")
+            success = "Acidic pitch" in self.desc
+            self.log_roll(Csv.MODPROC, "Acidic Pitch" if success else "Not Acidic Pitch", acidic_roll, success)
 
         self.is_strike = roll < threshold
         self.strike_roll = roll
@@ -2738,7 +2744,9 @@ class Resim:
 
         if self.pitching_team.has_mod("FIERY") and self.strikes < self.max_strikes - 1:
             if self.is_strike:
-                self.roll("double strike")
+                double_strike_roll = self.roll("double strike")
+                success = "fires a Double Strike" in self.desc
+                self.log_roll(Csv.MODPROC, "Double Strike" if success else "Single Strike", double_strike_roll, success)
             else:
                 self.print("!!! double strike eligible!")
 
