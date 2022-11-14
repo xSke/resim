@@ -34,7 +34,7 @@ stat_indices = [
     "tenaciousness",
     "watchfulness",
     "anticapitalism",
-    "chasiness"
+    "chasiness",
 ]
 
 
@@ -727,7 +727,6 @@ class PlayerData(TeamOrPlayerMods):
         self.watchfulness = stats["watchfulness"]
         self.pressurization = stats["pressurization"]
         self.cinnamon = stats.get("cinnamon") or 0
-
 
     @staticmethod
     def null():
