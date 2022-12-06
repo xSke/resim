@@ -695,7 +695,13 @@ class PlayerData(TeamOrPlayerMods):
         for item in self.items:
             if item.health != 0:
                 for stat, value in item.stats.items():
-                    stats[stat] += value
+                    if stat != "buoyancy":
+                        stats[stat] += value
+            else:
+                for stat, value in item.stats.items():
+                    # well aren't you special
+                    if stat == "thwackability":
+                        stats[stat] += value
         return stats
 
     def update_stats(self):
