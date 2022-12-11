@@ -131,6 +131,7 @@ class Mod(Enum):
     SALMON_CANNONS = auto()
     SCATTERED = auto()
     SECRET_BASE = auto()
+    SEEKER = auto()
     SHELLED = auto()
     SINKING_SHIP = auto()
     SMITHY = auto()
@@ -309,6 +310,7 @@ class EventType(IntEnum):
     ITEM_DAMAGE = 186
     BROKEN_ITEM_REPAIRED = 187
     DAMAGED_ITEM_REPAIRED = 188
+    COMMUNITY_CHEST_GAME_EVENT = 189
     FAX_MACHINE_ACTIVATION = 191
     HOLIDAY_INNING = 192
     PRIZE_MATCH = 193
@@ -464,6 +466,7 @@ class TeamData(TeamOrPlayerMods):
     id: Optional[str]
     lineup: List[str]
     rotation: List[str]
+    shadows: List[str]
     eDensity: float = 0
     level: int = 0
     nickname: str = ""
@@ -473,6 +476,7 @@ class TeamData(TeamOrPlayerMods):
         self.id = data["id"]
         self.lineup = data["lineup"]
         self.rotation = data["rotation"]
+        self.shadows = data.get("shadows", []) + data.get("bullpen", []) + data.get("bench", [])
         self.level = data.get("level") or 0
         self.eDensity = data.get("eDensity") or 0
         self.nickname = data.get("nickname") or ""
