@@ -134,6 +134,7 @@ class Mod(Enum):
     SEEKER = auto()
     SHELLED = auto()
     SINKING_SHIP = auto()
+    SLOW_BUILD = auto()
     SMITHY = auto()
     SMOOTH = auto()
     SWEETENER = auto()
@@ -655,6 +656,7 @@ class PlayerData(TeamOrPlayerMods):
     eDensity: float
     items: List[ItemData]
     season_mod_sources: Dict[str, List[str]]
+    peanut_allergy: bool
 
     def __init__(self, data: Dict[str, Any]):
         self.data = data
@@ -672,6 +674,7 @@ class PlayerData(TeamOrPlayerMods):
         self.soul = data.get("soul") or 0
         self.eDensity = data.get("eDensity") or 0
         self.season_mod_sources = data_state.get("seasModSources", {})
+        self.peanut_allergy = data.get("peanutAllergy")
         self.init_mods(data)
 
     @property

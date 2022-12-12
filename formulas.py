@@ -11,6 +11,7 @@ class StatRelevantData:
     runner_count: int
     top_of_inning: bool
     is_maximum_blaseball: bool
+    batter_at_bats: int
 
 
 def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str, meta: StatRelevantData):
@@ -79,6 +80,9 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             # not "seen in the data" yet
             if meta.is_maximum_blaseball:
                 multiplier += 2.50
+        elif mod == Mod.SLOW_BUILD:
+            # guessing at how this works
+            multiplier += meta.batter_at_bats * 0.01
 
     if player.bat == "NIGHT_VISION_GOGGLES" and meta.weather == Weather.ECLIPSE:
         # Blessing description: Item. Random player on your team hits 50% better during Solar Eclipses.
