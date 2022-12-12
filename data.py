@@ -131,8 +131,10 @@ class Mod(Enum):
     SALMON_CANNONS = auto()
     SCATTERED = auto()
     SECRET_BASE = auto()
+    SEEKER = auto()
     SHELLED = auto()
     SINKING_SHIP = auto()
+    SLOW_BUILD = auto()
     SMITHY = auto()
     SMOOTH = auto()
     SWEETENER = auto()
@@ -309,6 +311,7 @@ class EventType(IntEnum):
     ITEM_DAMAGE = 186
     BROKEN_ITEM_REPAIRED = 187
     DAMAGED_ITEM_REPAIRED = 188
+    COMMUNITY_CHEST_GAME_EVENT = 189
     FAX_MACHINE_ACTIVATION = 191
     HOLIDAY_INNING = 192
     PRIZE_MATCH = 193
@@ -464,6 +467,7 @@ class TeamData(TeamOrPlayerMods):
     id: Optional[str]
     lineup: List[str]
     rotation: List[str]
+    shadows: List[str]
     eDensity: float = 0
     level: int = 0
     nickname: str = ""
@@ -473,6 +477,7 @@ class TeamData(TeamOrPlayerMods):
         self.id = data["id"]
         self.lineup = data["lineup"]
         self.rotation = data["rotation"]
+        self.shadows = data.get("shadows", []) + data.get("bullpen", []) + data.get("bench", [])
         self.level = data.get("level") or 0
         self.eDensity = data.get("eDensity") or 0
         self.nickname = data.get("nickname") or ""
@@ -651,6 +656,7 @@ class PlayerData(TeamOrPlayerMods):
     eDensity: float
     items: List[ItemData]
     season_mod_sources: Dict[str, List[str]]
+    peanut_allergy: bool
 
     def __init__(self, data: Dict[str, Any]):
         self.data = data
@@ -668,6 +674,7 @@ class PlayerData(TeamOrPlayerMods):
         self.soul = data.get("soul") or 0
         self.eDensity = data.get("eDensity") or 0
         self.season_mod_sources = data_state.get("seasModSources", {})
+        self.peanut_allergy = data.get("peanutAllergy")
         self.init_mods(data)
 
     @property
