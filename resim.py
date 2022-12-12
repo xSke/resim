@@ -176,26 +176,20 @@ class Resim:
         event_adjustments = {
             "2021-05-10T19:28:42.723Z": 1,
             "2021-05-11T05:03:22.874Z": 1,
-
             "2021-05-17T23:10:48.902Z": 1,  # something wrong with item damage rolls
             "2021-05-18T02:22:44.148Z": 1,  # idk
             "2021-05-18T11:05:58.086Z": -1,  # item damage roll issue with fcs?
-
-            "2021-05-19T05:07:37.850Z": 2, # undertaker roll maybe
-            "2021-05-19T05:08:17.283Z": 2, # undertaker roll maybe
-            "2021-05-19T06:12:19.941Z": 2, # again item damage issue with fcs
-
-            "2021-05-19T08:24:40.136Z": -1, # bad alignment on fax rolls?
-
-            "2021-05-19T11:03:26.307Z": -1, # idk
-            "2021-05-19T14:15:32.723Z": 1, # more item damage stuff i think
-
-            "2021-05-19T15:04:00.568Z": 2, # undertaker roll i think
-            "2021-05-19T16:17:13.969Z": 1, # sigh more item damage
-            "2021-05-19T17:16:43.296Z": 2, # undertaker
-
-            "2021-05-19T17:25:31.749Z": -1, # also bad alignment on fax rolls
-            "2021-05-19T17:26:24.243Z": -2, # also bad alignment on fax rolls
+            "2021-05-19T05:07:37.850Z": 2,  # undertaker roll maybe
+            "2021-05-19T05:08:17.283Z": 2,  # undertaker roll maybe
+            "2021-05-19T06:12:19.941Z": 2,  # again item damage issue with fcs
+            "2021-05-19T08:24:40.136Z": -1,  # bad alignment on fax rolls?
+            "2021-05-19T11:03:26.307Z": -1,  # idk
+            "2021-05-19T14:15:32.723Z": 1,  # more item damage stuff i think
+            "2021-05-19T15:04:00.568Z": 2,  # undertaker roll i think
+            "2021-05-19T16:17:13.969Z": 1,  # sigh more item damage
+            "2021-05-19T17:16:43.296Z": 2,  # undertaker
+            "2021-05-19T17:25:31.749Z": -1,  # also bad alignment on fax rolls
+            "2021-05-19T17:26:24.243Z": -2,  # also bad alignment on fax rolls
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -839,13 +833,8 @@ class Resim:
         if self.batting_team.has_mod(Mod.ELECTRIC) and self.update["atBatStrikes"] > 0:
             electric_roll = self.roll("electric")
             if self.ty == EventType.STRIKE_ZAPPED:
-                self.log_roll(
-                    Csv.MODPROC,
-                    "Zap",
-                    electric_roll,
-                    True
-                )
-            if self .ty != EventType.STRIKE_ZAPPED:
+                self.log_roll(Csv.MODPROC, "Zap", electric_roll, True)
+            if self.ty != EventType.STRIKE_ZAPPED:
                 self.log_roll(Csv.MODPROC, "NoZap", electric_roll, False)
 
         if self.ty == EventType.STRIKE_ZAPPED:
@@ -981,11 +970,7 @@ class Resim:
                     psychiccontact_roll = self.roll("psychiccontact")
 
                 bsychic_roll = self.roll("bsychic")
-                self.log_roll(Csv.BSYCHIC,
-                                "Success",
-                                bsychic_roll,
-                                True
-                                )
+                self.log_roll(Csv.BSYCHIC, "Success", bsychic_roll, True)
 
                 if "draws a walk." in self.desc:
                     # a walk converted to a strikeout, that still registers as a walk type
@@ -995,11 +980,7 @@ class Resim:
             # pitchers: convert walk to strikeout (failed)
             elif self.pitching_team.has_mod("PSYCHIC"):
                 psychic_roll = self.roll("walk-strikeout")
-                self.log_roll(Csv.PSYCHIC,
-                              "Fail",
-                              psychic_roll,
-                              False
-                              )
+                self.log_roll(Csv.PSYCHIC, "Fail", psychic_roll, False)
 
         if self.ty == EventType.WALK:
 
@@ -1070,11 +1051,7 @@ class Resim:
             self.roll("strike")
             self.roll("swing")
             mindtrick_roll = self.roll("Psychic")
-            self.log_roll(Csv.PSYCHIC,
-                          "Success",
-                          mindtrick_roll,
-                          True
-                          )
+            self.log_roll(Csv.PSYCHIC, "Success", mindtrick_roll, True)
 
         elif ", flinching" in self.desc:
             value = self.throw_pitch("strike")
@@ -1084,11 +1061,12 @@ class Resim:
             # batters: convert strikeout to walk (failed)
             if self.batting_team.has_mod(Mod.PSYCHIC):
                 bpsychic_roll = self.roll("strikeout-walk")
-                self.log_roll(Csv.BSYCHIC,
-                              "Fail",
-                              bpsychic_roll,
-                              False,
-                              )
+                self.log_roll(
+                    Csv.BSYCHIC,
+                    "Fail",
+                    bpsychic_roll,
+                    False,
+                )
 
             if self.pitcher.has_mod(Mod.PARASITE) and self.weather == Weather.BLOODDRAIN:
                 self.roll("parasite")  # can't remember what this is
@@ -1567,8 +1545,10 @@ class Resim:
             and self.outs == self.max_outs - 1
             and self.update["basesOccupied"] == [Base.THIRD, Base.SECOND, Base.FIRST]
         )
-        batter_count = self.update["awayTeamBatterCount"] if self.update["topOfInning"] else self.update["homeTeamBatterCount"]
-        batter_at_bats = batter_count // len(self.batting_team.lineup) # todo: +1?
+        batter_count = (
+            self.update["awayTeamBatterCount"] if self.update["topOfInning"] else self.update["homeTeamBatterCount"]
+        )
+        batter_at_bats = batter_count // len(self.batting_team.lineup)  # todo: +1?
         return StatRelevantData(
             self.weather,
             self.season,
@@ -1623,7 +1603,11 @@ class Resim:
         if self.ty == EventType.BATTER_SKIPPED:
             # find the batter that *would* have been at bat
             lineup = self.batting_team.lineup
-            index = self.next_update["awayTeamBatterCount"] if self.next_update["topOfInning"] else self.next_update["homeTeamBatterCount"]
+            index = (
+                self.next_update["awayTeamBatterCount"]
+                if self.next_update["topOfInning"]
+                else self.next_update["homeTeamBatterCount"]
+            )
             batter_id = lineup[index % len(lineup)]
             batter = self.data.get_player(batter_id)
 
@@ -1807,7 +1791,12 @@ class Resim:
                 return True
 
             has_allergic_players = False
-            for player_id in self.batting_team.lineup + self.batting_team.rotation + self.pitching_team.lineup + self.pitching_team.rotation:
+            for player_id in (
+                self.batting_team.lineup
+                + self.batting_team.rotation
+                + self.pitching_team.lineup
+                + self.pitching_team.rotation
+            ):
                 player = self.data.get_player(player_id)
                 if player.peanut_allergy:
                     has_allergic_players = True
@@ -2118,33 +2107,13 @@ class Resim:
         elif self.weather == Weather.COFFEE_2:
             coffee2_roll = self.roll("coffee 2")
             if self.ty == EventType.GAIN_FREE_REFILL and not self.stadium.has_mod(Mod.SWEETENER):
-                self.log_roll(
-                    Csv.WEATHERPROC,
-                    "Refill",
-                    coffee2_roll,
-                    True
-                )
+                self.log_roll(Csv.WEATHERPROC, "Refill", coffee2_roll, True)
             if self.ty != EventType.GAIN_FREE_REFILL and not self.stadium.has_mod(Mod.SWEETENER):
-                self.log_roll(
-                    Csv.WEATHERPROC,
-                    "NoRefill",
-                    coffee2_roll,
-                    False
-                )
+                self.log_roll(Csv.WEATHERPROC, "NoRefill", coffee2_roll, False)
             if self.ty == EventType.GAIN_FREE_REFILL and self.stadium.has_mod(Mod.SWEETENER):
-                self.log_roll(
-                    Csv.SWEET2,
-                    "Refill",
-                    coffee2_roll,
-                    True
-                )
+                self.log_roll(Csv.SWEET2, "Refill", coffee2_roll, True)
             if self.ty != EventType.GAIN_FREE_REFILL and self.stadium.has_mod(Mod.SWEETENER):
-                self.log_roll(
-                    Csv.SWEET2,
-                    "NoRefill",
-                    coffee2_roll,
-                    False
-                )
+                self.log_roll(Csv.SWEET2, "NoRefill", coffee2_roll, False)
 
             if self.ty == EventType.GAIN_FREE_REFILL:
                 quality_roll = self.roll("coffee 2 proc1")
@@ -2305,7 +2274,6 @@ class Resim:
                 player = self.data.get_player(player_id)
                 if player.has_mod(Mod.SEEKER):
                     self.roll(f"seeker ({player.raw_name})")
-
 
     def do_elsewhere_return(self, player):
         scatter_times = 0
@@ -2533,9 +2501,17 @@ class Resim:
                 secret_base_exit_eligible = False
 
         # todo: figure out how to query "player in active team's shadow" and exclude those properly
-        if (17, 0) <= (self.season, self.day) and secret_runner_id == "070758a0-092a-4a2c-8a16-253c835887cb" and self.game_id != "377f87df-36aa-4fac-bc97-59c24efb684b":
+        if (
+            (17, 0) <= (self.season, self.day)
+            and secret_runner_id == "070758a0-092a-4a2c-8a16-253c835887cb"
+            and self.game_id != "377f87df-36aa-4fac-bc97-59c24efb684b"
+        ):
             secret_base_exit_eligible = False
-        if self.season >= 18 and secret_runner_id == "114100a4-1bf7-4433-b304-6aad75904055" and self.game_id != "2a314b60-a36b-4e22-bee8-5da17c8e0d05":
+        if (
+            self.season >= 18
+            and secret_runner_id == "114100a4-1bf7-4433-b304-6aad75904055"
+            and self.game_id != "2a314b60-a36b-4e22-bee8-5da17c8e0d05"
+        ):
             secret_base_exit_eligible = False
 
         # weird order issues here. when an attractor is placed in the secret base, it only applies the *next* tick
@@ -2650,22 +2626,24 @@ class Resim:
 
                 firsttrick_roll = self.roll("trick 1 success")
                 if "but lose their balance and bail!" in self.desc:
-                    self.log_roll(Csv.TRICK_ONE,
-                                  "Fail",
-                                  firsttrick_roll,
-                                  False,
-                                  relevant_batter=self.batter,
-                                  relevant_runner=runner,
-                                  )
+                    self.log_roll(
+                        Csv.TRICK_ONE,
+                        "Fail",
+                        firsttrick_roll,
+                        False,
+                        relevant_batter=self.batter,
+                        relevant_runner=runner,
+                    )
 
                 else:
-                    self.log_roll(Csv.TRICK_ONE,
-                                  "Pass",
-                                  firsttrick_roll,
-                                  True,
-                                  relevant_batter=self.batter,
-                                  relevant_runner=runner,
-                                  )
+                    self.log_roll(
+                        Csv.TRICK_ONE,
+                        "Pass",
+                        firsttrick_roll,
+                        True,
+                        relevant_batter=self.batter,
+                        relevant_runner=runner,
+                    )
 
                 if "lose their balance and bail!" not in self.desc:
                     self.roll("trick 2 name")
@@ -2818,6 +2796,7 @@ class Resim:
                 "2021-05-18T02:14:14.532Z": True,
                 "2021-05-18T02:17:39.455Z": True,
                 "2021-05-18T03:20:25.483Z": True,
+                "2021-05-18T16:01:01.346Z": True,
                 "2021-05-19T02:22:30.724Z": False,
                 "2021-05-19T03:17:52.633Z": True,
                 "2021-05-19T03:25:43.040Z": False,
@@ -2832,6 +2811,8 @@ class Resim:
                 "2021-05-19T16:10:47.907Z": True,
                 "2021-05-19T16:16:29.241Z": True,
                 "2021-05-19T16:26:20.125Z": True,
+                "2021-05-19T17:01:06.420Z": True,
+                "2021-05-19T17:07:37.279Z": True,
                 "2021-05-19T17:11:42.669Z": True,
             }
 
@@ -3170,14 +3151,23 @@ class Resim:
 
             a_player = meta["aPlayerId"]
             b_player = meta["bPlayerId"]
-            a_location = team.rotation if meta["aLocation"] == 1 else (team.lineup if meta["aLocation"] == 0 else team.shadows)
-            b_location = team.rotation if meta["bLocation"] == 1 else (team.lineup if meta["bLocation"] == 0 else team.shadows)
+            a_location = (
+                team.rotation if meta["aLocation"] == 1 else (team.lineup if meta["aLocation"] == 0 else team.shadows)
+            )
+            b_location = (
+                team.rotation if meta["bLocation"] == 1 else (team.lineup if meta["bLocation"] == 0 else team.shadows)
+            )
             a_idx = a_location.index(a_player)
             b_idx = b_location.index(b_player)
             b_location[b_idx] = a_player
             a_location[a_idx] = b_player
 
-        if event["type"] in [EventType.ITEM_BREAKS, EventType.ITEM_DAMAGE, EventType.BROKEN_ITEM_REPAIRED, EventType.DAMAGED_ITEM_REPAIRED]:
+        if event["type"] in [
+            EventType.ITEM_BREAKS,
+            EventType.ITEM_DAMAGE,
+            EventType.BROKEN_ITEM_REPAIRED,
+            EventType.DAMAGED_ITEM_REPAIRED,
+        ]:
             player_id = event["playerTags"][0]
             player = self.data.get_player(player_id)
             for item in player.items:
