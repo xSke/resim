@@ -702,10 +702,11 @@ class PlayerData(TeamOrPlayerMods):
         for item in self.items:
             if item.health != 0:
                 for stat, value in item.stats.items():
-                    if stat == "patheticism":
+                    if stat in ["patheticism", "tragicness"]:
                         # path increases from items seem to actually *decrease* path in the formulas (and the other way
                         # around for path decreases)... even though the star calculations on the site ding you for
                         # having an item that increases path! at least right now, through season 19.
+                        # tragicness: also backwards
                         stats[stat] -= value
                     elif stat not in ["buoyancy", "cinnamon", "pressurization"]:
                         stats[stat] += value
