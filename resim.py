@@ -74,7 +74,7 @@ class Csv(Enum):
 
 
 class Resim:
-    def __init__(self, rng, out_file, run_name, raise_on_errors=True, csvs_to_log=[]):
+    def __init__(self, rng, out_file, cached_objects, run_name, raise_on_errors=True, csvs_to_log=[]):
         self.rng = rng
         self.out_file = out_file
         self.data = GameData()
@@ -106,9 +106,10 @@ class Resim:
 
         if run_name:
             os.makedirs("roll_data", exist_ok=True)
+            os.makedirs("object_data", exist_ok=True)
             run_name = run_name.replace(":", "_")
             csvs_to_log = csvs_to_log or list(Csv)
-            self.csvs = {csv: SaveCsv(run_name, csv.value) for csv in Csv if csv in csvs_to_log}
+            self.csvs = {csv: SaveCsv(run_name, csv.value, cached_objects) for csv in Csv if csv in csvs_to_log}
         else:
             self.csvs = {}
         self.roll_log: List[LoggedRoll] = []
@@ -2880,65 +2881,55 @@ class Resim:
     ):
         if csv not in self.csvs:
             return
-        relevant_runner_multiplier = self.get_runner_multiplier(relevant_runner)
         runners_on_bases = zip(self.update["basesOccupied"], self.update["baseRunners"])
         runner_1st = [r for base, r in runners_on_bases if base == Base.FIRST]
         runner_2nd = [r for base, r in runners_on_bases if base == Base.SECOND]
         runners_3rd = [r for base, r in runners_on_bases if base == Base.THIRD]
         if runner_1st:
             runner_on_first = self.data.get_player(runner_1st[0])
-            runner_on_first_multiplier = self.get_runner_multiplier(runner_on_first)
         else:
-            runner_on_first, runner_on_first_multiplier = None, 1
+            runner_on_first = None
         if runner_2nd:
             runner_on_second = self.data.get_player(runner_2nd[0])
-            runner_on_second_multiplier = self.get_runner_multiplier(runner_on_second)
         else:
-            runner_on_second, runner_on_second_multiplier = None, 1
+            runner_on_second = None
         if runners_3rd:
             runner_on_third = self.data.get_player(runners_3rd[0])
-            runner_on_third_multiplier = self.get_runner_multiplier(runner_on_third)
         else:
-            runner_on_third, runner_on_third_multiplier = None, 1
+            runner_on_third = None
         if len(runners_3rd) == 2:  # Holding hands
             runner_on_third_hh = self.data.get_player(runners_3rd[1])
-            runner_on_third_hh_multiplier = self.get_runner_multiplier(runner_on_third_hh)
         else:
-            runner_on_third_hh, runner_on_third_hh_multiplier = None, 1
+            runner_on_third_hh = None
+
         null_player = PlayerData.null()
         null_team = TeamData.null()
         self.csvs[csv].write(
             event_type,
             roll,
             passed,
-            relevant_batter or self.batter or null_player,
-            self.batting_team,
-            self.pitcher,
-            self.pitching_team,
-            self.stadium,
             self.update,
+            self.next_update["basesOccupied"] if self.next_update else None,
             0,
             0,
-            self.get_batter_multiplier(relevant_batter),
-            self.get_pitcher_multiplier(),
             self.is_strike,
             self.strike_roll,
             self.strike_threshold,
             fielder_roll,
-            fielder or null_player,
-            self.get_fielder_multiplier(fielder) if fielder else 1,
-            relevant_runner or null_player,
-            relevant_runner_multiplier,
-            runner_on_first or null_player,
-            runner_on_first_multiplier,
-            runner_on_second or null_player,
-            runner_on_second_multiplier,
-            runner_on_third or null_player,
-            runner_on_third_multiplier,
-            runner_on_third_hh or null_player,
-            runner_on_third_hh_multiplier,
-            self.next_update["basesOccupied"] if self.next_update else None,
-            attacked_team or null_team,
+            {
+                "batter": relevant_batter or self.batter or null_player,
+                "batting_team": self.batting_team,
+                "pitcher": self.pitcher,
+                "pitching_team": self.pitching_team,
+                "stadium": self.stadium,
+                "fielder": fielder or null_player,
+                "runner": relevant_runner or null_player,
+                "runner_on_first": runner_on_first or null_player,
+                "runner_on_second": runner_on_second or null_player,
+                "runner_on_third": runner_on_third or null_player,
+                "runner_on_third_hh": runner_on_third_hh or null_player,
+                "attacked_team": attacked_team or null_team,
+            }
         )
 
     def setup_data(self, event):

@@ -74,7 +74,7 @@ def main():
     out_file = StringIO()
 
     stub_rng = StubRng()
-    resim = Resim(stub_rng, out_file, run_name=None, raise_on_errors=False)
+    resim = Resim(stub_rng, out_file, set(), run_name=None, raise_on_errors=False)
     resim.run(start_timestamp, end_timestamp, None)
 
     print(f"got {len(resim.roll_log)} rolls")

@@ -168,9 +168,11 @@ def main():
 
     total_events = get_total_events()
 
+    cached_objects = set()
+
     print("Running resim...")
     with tqdm(total=total_events, unit=" events", unit_scale=True) as progress:
-        all_pool_args = [((args.silent, args.outfile, args.csv), fragment) for fragment in FRAGMENTS]
+        all_pool_args = [((args.silent, args.outfile, args.csv), fragment, cached_objects) for fragment in FRAGMENTS]
         if args.no_multiprocessing:
             for pool_args in all_pool_args:
                 run_fragment(pool_args, progress_callback=lambda: progress.update())
@@ -243,11 +245,11 @@ def init_pool_worker(init_args):
 def run_fragment(pool_args, progress_callback=None):
     if PROGRESS_QUEUE:
         PROGRESS_QUEUE.put((ProgressEventType.FRAGMENT_START, None))
-    (silent, out_file_name, csvs_to_log), (rng_state, rng_offset, step, start_time, end_time) = pool_args
+    (silent, out_file_name, csvs_to_log), (rng_state, rng_offset, step, start_time, end_time), cached_objects = pool_args
     out_file = get_out_file(silent, out_file_name, start_time)
     rng = Rng(rng_state, rng_offset)
     rng.step(step)
-    resim = Resim(rng, out_file, run_name=start_time, raise_on_errors=False, csvs_to_log=csvs_to_log)
+    resim = Resim(rng, out_file, cached_objects, run_name=start_time, raise_on_errors=False, csvs_to_log=csvs_to_log)
 
     unreported_progress = 0
 

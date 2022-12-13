@@ -473,7 +473,9 @@ class TeamData(TeamOrPlayerMods):
     nickname: str = ""
     rotation_slot: int = 0
 
-    def __init__(self, data: Dict[str, Any]):
+    def __init__(self, data: Dict[str, Any], version_date: str):
+        self.version_date = version_date
+
         self.id = data["id"]
         self.lineup = data["lineup"]
         self.rotation = data["rotation"]
@@ -494,13 +496,15 @@ class TeamData(TeamOrPlayerMods):
                 # won't get an index error
                 "lineup": [None],
                 "rotation": [None],
-            }
+            },
+            "1970-01-01T00:00:00Z"
         )
 
 
-@dataclass
+@dataclass(frozen=True)
 class StadiumData:
     id: Optional[str]
+    version_date: str
     mods: Set[str]
     name: str
     nickname: str
@@ -523,9 +527,10 @@ class StadiumData:
         return list(set(self.mods))
 
     @staticmethod
-    def from_dict(data):
+    def from_dict(data, valid_from: str):
         return StadiumData(
             id=data["id"],
+            version_date=valid_from,
             mods=set(data["mods"]),
             name=data["name"],
             nickname=data["nickname"],
@@ -546,6 +551,7 @@ class StadiumData:
     def null():
         return StadiumData(
             id=None,
+            version_date="1970-01-01T00:00:00Z",
             mods=set(),
             name="Null Stadium",
             nickname="Null Stadium",
@@ -619,6 +625,7 @@ class ItemData:
 @dataclass
 class PlayerData(TeamOrPlayerMods):
     id: Optional[str]
+    version_date: str
     raw_name: str
     unscattered_name: Optional[str]
     data: dict
@@ -658,8 +665,9 @@ class PlayerData(TeamOrPlayerMods):
     season_mod_sources: Dict[str, List[str]]
     peanut_allergy: bool
 
-    def __init__(self, data: Dict[str, Any]):
+    def __init__(self, data: Dict[str, Any], version_date: str):
         self.data = data
+        self.version_date = version_date
 
         data_state = data.get("state", {})
         self.id = data["id"]
@@ -773,7 +781,8 @@ class PlayerData(TeamOrPlayerMods):
                 "soul": 0,
                 "eDensity": 0,
                 "items": [],
-            }
+            },
+            "1970-01-01T00:00:00Z"
         )
 
 
@@ -815,7 +824,7 @@ class GameData:
             key,
             f"{CHRONICLER_URI}/v2/entities?type=team&at={timestamp}&count=1000",
         )
-        self.teams = {e["entityId"]: TeamData(e["data"]) for e in resp["items"]}
+        self.teams = {e["entityId"]: TeamData(e["data"], e["validFrom"]) for e in resp["items"]}
 
     def fetch_players(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
@@ -824,7 +833,7 @@ class GameData:
             key,
             f"{CHRONICLER_URI}/v2/entities?type=player&at={timestamp}&count=2000",
         )
-        self.players = {e["entityId"]: PlayerData(e["data"]) for e in resp["items"]}
+        self.players = {e["entityId"]: PlayerData(e["data"], e["validFrom"]) for e in resp["items"]}
 
     def fetch_stadiums(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
@@ -833,7 +842,7 @@ class GameData:
             key,
             f"{CHRONICLER_URI}/v2/entities?type=stadium&at={timestamp}&count=1000",
         )
-        self.stadiums = {e["entityId"]: StadiumData.from_dict(e["data"]) for e in resp["items"]}
+        self.stadiums = {e["entityId"]: StadiumData.from_dict(e["data"], e["validFrom"]) for e in resp["items"]}
 
     def fetch_player_after(self, player_id, timestamp):
         key = f"player_{player_id}_after_{timestamp}"
@@ -842,7 +851,7 @@ class GameData:
             f"{CHRONICLER_URI}/v2/versions?type=player&id={player_id}&after={timestamp}&count=1&order=asc",
         )
         for item in resp["items"]:
-            self.players[item["entityId"]] = PlayerData(item["data"])
+            self.players[item["entityId"]] = PlayerData(item["data"], item["validFrom"])
 
     def fetch_game(self, game_id):
         key = f"game_updates_{game_id}"
