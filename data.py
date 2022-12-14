@@ -1,12 +1,16 @@
 import collections
+import dataclasses
+import re
 from dataclasses import dataclass
 import os
 import json
 import requests
-from typing import Any, List, Dict, Iterable, Mapping, Optional, Set, Union
+from typing import Any, List, Dict, Iterable, Mapping, Optional, Set, Union, FrozenSet, TypeVar, Tuple
 from datetime import datetime, timedelta
 from enum import Enum, IntEnum, auto, unique
 from sin_values import SIN_PHASES
+
+from frozendict import frozendict
 
 stat_indices = [
     "tragicness",
@@ -413,82 +417,96 @@ class ModType(IntEnum):
     ITEM = 4
 
 
-@dataclass
+camel_to_snake_re = re.compile('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))')
+
+
+def camel_to_snake_case(s: str) -> str:
+    return camel_to_snake_re.sub(r'_\1', s).lower()
+
+
+MOD_KEYS = {
+    ModType.PERMANENT: "permAttr",
+    ModType.SEASON: "seasAttr",
+    ModType.WEEK: "weekAttr",
+    ModType.GAME: "gameAttr",
+    ModType.ITEM: "itemAttr",
+}
+
+TeamOrPlayer = TypeVar("TeamOrPlayer")
+
+
+@dataclass(frozen=True)
 class TeamOrPlayerMods:
-    mods: Set[str]
+    mods: FrozenSet[str]
     # Used internally only
-    __mods_by_type: Dict[ModType, Set[str]]
+    _mods_by_type: Dict[ModType, FrozenSet[str]]
 
-    def init_mods(self, data: Dict[str, Any]):
-        MOD_KEYS = {
-            ModType.PERMANENT: "permAttr",
-            ModType.SEASON: "seasAttr",
-            ModType.WEEK: "weekAttr",
-            ModType.GAME: "gameAttr",
-            ModType.ITEM: "itemAttr",
-        }
-        self.__mods_by_type = {}
+    @staticmethod
+    def mods_from_dict(data: Dict[str, Any]):
+        mods_by_type = {}
         for (mod_type, key) in MOD_KEYS.items():
-            self.__mods_by_type[mod_type] = set(data.get(key, []))
-        self.__update_mods()
+            mods_by_type[mod_type] = frozenset(data.get(key, []))
+        mods = frozenset().union(*mods_by_type.values())
 
-    def add_mod(self, mod: Union[Mod, str], mod_type: ModType):
-        mod = str(mod)
-        if mod in self.__mods_by_type[mod_type]:
-            return
-        self.__mods_by_type[mod_type].add(mod)
-        self.__update_mods()
-
-    def remove_mod(self, mod: Union[Mod, str], mod_type: ModType):
-        mod = str(mod)
-        if mod not in self.__mods_by_type[mod_type]:
-            return
-        self.__mods_by_type[mod_type].remove(mod)
-        self.__update_mods()
+        return dict(
+            mods=mods,
+            _mods_by_type=mods_by_type
+        )
 
     def has_mod(self, mod: Union[Mod, str], mod_type: Optional[ModType] = None) -> bool:
         mod = str(mod)
         if mod_type is None:
             return mod in self.mods
-        return mod in self.__mods_by_type[mod_type]
+        return mod in self._mods_by_type[mod_type]
 
     def has_any(self, *mods: Mod) -> bool:
         return any(self.has_mod(mod) for mod in mods)
 
     def print_mods(self, mod_type: Optional[ModType] = None) -> str:
-        return str(list(self.__mods_by_type.get(mod_type) or self.mods))
+        return str(list(self._mods_by_type.get(mod_type) or self.mods))
 
-    def __update_mods(self):
-        self.mods = set().union(*self.__mods_by_type.values())
+    def _concatenate_mods_by_type(self) -> FrozenSet[str]:
+        return frozenset().union(*self._mods_by_type.values())
+
+    def without_mod(self: TeamOrPlayer, mod_name: str, mod_type: ModType, version_date: str) -> TeamOrPlayer:
+        self._mods_by_type[mod_type] = self._mods_by_type[mod_type].difference({mod_name})
+        return dataclasses.replace(self, version_date=version_date, mods=self._concatenate_mods_by_type())
+
+    def with_mod(self: TeamOrPlayer, mod_name: str, mod_type: ModType, version_date: str) -> TeamOrPlayer:
+        self._mods_by_type[mod_type] = self._mods_by_type[mod_type].intersection({mod_name})
+        return dataclasses.replace(self, version_date=version_date, mods=self._concatenate_mods_by_type())
 
 
-@dataclass
+@dataclass(frozen=True)
 class TeamData(TeamOrPlayerMods):
     id: Optional[str]
-    lineup: List[str]
-    rotation: List[str]
-    shadows: List[str]
+    version_date: str
+    lineup: Tuple[str]
+    rotation: Tuple[str]
+    shadows: Tuple[str]
     eDensity: float = 0
     level: int = 0
     nickname: str = ""
     rotation_slot: int = 0
 
-    def __init__(self, data: Dict[str, Any], version_date: str):
-        self.version_date = version_date
-
-        self.id = data["id"]
-        self.lineup = data["lineup"]
-        self.rotation = data["rotation"]
-        self.shadows = data.get("shadows", []) + data.get("bullpen", []) + data.get("bench", [])
-        self.level = data.get("level") or 0
-        self.eDensity = data.get("eDensity") or 0
-        self.nickname = data.get("nickname") or ""
-        self.rotation_slot = data.get("rotationSlot") or 0
-        self.init_mods(data)
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any], version_date: str):
+        return cls(
+            id=data["id"],
+            version_date=version_date,
+            lineup=tuple(data["lineup"]),
+            rotation=tuple(data["rotation"]),
+            shadows=tuple(data.get("shadows", []) + data.get("bullpen", []) + data.get("bench", [])),
+            level=data.get("level") or 0,
+            eDensity=data.get("eDensity") or 0,
+            nickname=data.get("nickname") or "",
+            rotation_slot=data.get("rotationSlot") or 0,
+            **cls.mods_from_dict(data),
+        )
 
     @staticmethod
     def null():
-        return TeamData(
+        return TeamData.from_dict(
             {
                 "id": None,
                 "nickname": "Null Team",
@@ -505,7 +523,7 @@ class TeamData(TeamOrPlayerMods):
 class StadiumData:
     id: Optional[str]
     version_date: str
-    mods: Set[str]
+    mods: FrozenSet[str]
     name: str
     nickname: str
     mysticism: float
@@ -523,15 +541,15 @@ class StadiumData:
     def has_mod(self, mod: Mod) -> bool:
         return mod.value in self.mods
 
-    def print_mods(self) -> str:
-        return list(set(self.mods))
+    def print_mods(self):
+        return list(self.mods)
 
     @staticmethod
     def from_dict(data, valid_from: str):
         return StadiumData(
             id=data["id"],
             version_date=valid_from,
-            mods=set(data["mods"]),
+            mods=frozenset(data["mods"]),
             name=data["name"],
             nickname=data["nickname"],
             mysticism=data["mysticism"],
@@ -552,7 +570,7 @@ class StadiumData:
         return StadiumData(
             id=None,
             version_date="1970-01-01T00:00:00Z",
-            mods=set(),
+            mods=frozenset(),
             name="Null Stadium",
             nickname="Null Stadium",
             mysticism=0.5,
@@ -568,8 +586,11 @@ class StadiumData:
             hype=0,
         )
 
+    def with_hype(self, new_hype: float, version_date: str) -> "StadiumData":
+        return dataclasses.replace(self, hype=new_hype, version_date=version_date)
 
-@dataclass
+
+@dataclass(frozen=True)
 class ItemData:
     id: Optional[str]
     name: str
@@ -579,7 +600,7 @@ class ItemData:
     hitting_rating: float
     pitching_rating: float
     baserunning_rating: float
-    stats: dict
+    stats: frozendict
 
     @staticmethod
     def from_dict(data):
@@ -604,7 +625,7 @@ class ItemData:
             hitting_rating=data["hittingRating"],
             pitching_rating=data["pitchingRating"],
             baserunning_rating=data["baserunningRating"],
-            stats=stats,
+            stats=frozendict(stats),
         )
 
     @staticmethod
@@ -618,17 +639,20 @@ class ItemData:
             hitting_rating=0,
             pitching_rating=0,
             baserunning_rating=0,
-            stats={},
+            stats=frozendict(),
         )
 
+    def with_health(self, new_health: int) -> "ItemData":
+        return dataclasses.replace(self, health=new_health)
 
-@dataclass
+
+@dataclass(frozen=True)
 class PlayerData(TeamOrPlayerMods):
     id: Optional[str]
     version_date: str
     raw_name: str
     unscattered_name: Optional[str]
-    data: dict
+    data: frozendict
     # Player attributes
     buoyancy: float
     divinity: float
@@ -644,7 +668,7 @@ class PlayerData(TeamOrPlayerMods):
     shakespearianism: float
     suppression: float
     coldness: float
-    baseThirst: float
+    base_thirst: float
     continuation: float
     ground_friction: float
     indulgence: float
@@ -661,29 +685,32 @@ class PlayerData(TeamOrPlayerMods):
     bat: Optional[str]
     soul: int
     eDensity: float
-    items: List[ItemData]
-    season_mod_sources: Dict[str, List[str]]
+    items: Tuple[ItemData]
+    season_mod_sources: frozendict[str, Tuple[str]]
     peanut_allergy: bool
 
-    def __init__(self, data: Dict[str, Any], version_date: str):
-        self.data = data
-        self.version_date = version_date
-
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any], version_date: str):
         data_state = data.get("state", {})
-        self.id = data["id"]
-        self.raw_name = data["name"]
-        self.unscattered_name = data_state.get("unscatteredName")
-        # Player attributes
-        self.items = [ItemData.from_dict(item) for item in data.get("items") or []]
-        self.update_stats()
-        self.blood = data.get("blood") or None
-        self.consecutive_hits = data.get("consecutiveHits") or 0
-        self.bat = data.get("bat") or None
-        self.soul = data.get("soul") or 0
-        self.eDensity = data.get("eDensity") or 0
-        self.season_mod_sources = data_state.get("seasModSources", {})
-        self.peanut_allergy = data.get("peanutAllergy")
-        self.init_mods(data)
+        items = [ItemData.from_dict(item) for item in data.get("items") or []]
+        stats = cls.stats_with_items(data, items)
+        return cls(
+            data=frozendict(data),
+            version_date=version_date,
+            id=data["id"],
+            raw_name=data["name"],
+            unscattered_name=data_state.get("unscatteredName"),
+            items=tuple(items),
+            blood=data.get("blood") or None,
+            consecutive_hits=data.get("consecutiveHits") or 0,
+            bat=data.get("bat") or None,
+            soul=data.get("soul") or 0,
+            eDensity=data.get("eDensity") or 0,
+            season_mod_sources=frozendict(data_state.get("seasModSources", {})),
+            peanut_allergy=data.get("peanutAllergy"),
+            **stats,
+            **cls.mods_from_dict(data),
+        )
 
     @property
     def name(self):
@@ -705,47 +732,20 @@ class PlayerData(TeamOrPlayerMods):
         cinnamon = self.cinnamon or 0
         return 0.5 * ((sin_phase - 1) * pressurization + (sin_phase + 1) * cinnamon)
 
-    def stats_with_items(self) -> dict:
-        stats = {stat: self.data[stat] for stat in stat_indices}
-        for item in self.items:
+    @staticmethod
+    def stats_with_items(data: Dict[str, Any], items: List[ItemData]) -> dict:
+        stats = {camel_to_snake_case(stat): data[stat] for stat in stat_indices}
+        for item in items:
             if item.health != 0:
                 for stat, value in item.stats.items():
-                    stats[stat] += value
+                    stats[camel_to_snake_case(stat)] += value
+
+        stats['cinnamon'] = stats.get('cinnamon') or 0
         return stats
-
-    def update_stats(self):
-        stats = self.stats_with_items()
-
-        self.buoyancy = stats["buoyancy"]
-        self.divinity = stats["divinity"]
-        self.martyrdom = stats["martyrdom"]
-        self.moxie = stats["moxie"]
-        self.musclitude = stats["musclitude"]
-        self.patheticism = stats["patheticism"]
-        self.thwackability = stats["thwackability"]
-        self.tragicness = stats["tragicness"]
-        self.ruthlessness = stats["ruthlessness"]
-        self.overpowerment = stats["overpowerment"]
-        self.unthwackability = stats["unthwackability"]
-        self.shakespearianism = stats["shakespearianism"]
-        self.suppression = stats["suppression"]
-        self.coldness = stats["coldness"]
-        self.baseThirst = stats["baseThirst"]
-        self.continuation = stats["continuation"]
-        self.ground_friction = stats["groundFriction"]
-        self.indulgence = stats["indulgence"]
-        self.laserlikeness = stats["laserlikeness"]
-        self.anticapitalism = stats["anticapitalism"]
-        self.chasiness = stats["chasiness"]
-        self.omniscience = stats["omniscience"]
-        self.tenaciousness = stats["tenaciousness"]
-        self.watchfulness = stats["watchfulness"]
-        self.pressurization = stats["pressurization"]
-        self.cinnamon = stats.get("cinnamon") or 0
 
     @staticmethod
     def null():
-        return PlayerData(
+        return PlayerData.from_dict(
             {
                 "id": None,
                 "name": "Null Player",
@@ -784,6 +784,16 @@ class PlayerData(TeamOrPlayerMods):
             },
             "1970-01-01T00:00:00Z"
         )
+
+    def with_raw_name(self, name: str, version_date: str) -> "PlayerData":
+        if name != self.raw_name:
+            return dataclasses.replace(self, raw_name=name, version_date=version_date)
+        else:
+            return self
+
+    def with_items(self, new_items: List[ItemData], version_date: str) -> "PlayerData":
+        new_stats = self.stats_with_items(self.data, new_items)
+        return dataclasses.replace(self, items=tuple(new_items), version_date=version_date, **new_stats)
 
 
 CHRONICLER_URI = "https://api.sibr.dev/chronicler"
@@ -824,7 +834,7 @@ class GameData:
             key,
             f"{CHRONICLER_URI}/v2/entities?type=team&at={timestamp}&count=1000",
         )
-        self.teams = {e["entityId"]: TeamData(e["data"], e["validFrom"]) for e in resp["items"]}
+        self.teams = {e["entityId"]: TeamData.from_dict(e["data"], e["validFrom"]) for e in resp["items"]}
 
     def fetch_players(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
@@ -833,7 +843,7 @@ class GameData:
             key,
             f"{CHRONICLER_URI}/v2/entities?type=player&at={timestamp}&count=2000",
         )
-        self.players = {e["entityId"]: PlayerData(e["data"], e["validFrom"]) for e in resp["items"]}
+        self.players = {e["entityId"]: PlayerData.from_dict(e["data"], e["validFrom"]) for e in resp["items"]}
 
     def fetch_stadiums(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
@@ -851,7 +861,7 @@ class GameData:
             f"{CHRONICLER_URI}/v2/versions?type=player&id={player_id}&after={timestamp}&count=1&order=asc",
         )
         for item in resp["items"]:
-            self.players[item["entityId"]] = PlayerData(item["data"], item["validFrom"])
+            self.players[item["entityId"]] = PlayerData.from_dict(item["data"], item["validFrom"])
 
     def fetch_game(self, game_id):
         key = f"game_updates_{game_id}"
@@ -862,6 +872,7 @@ class GameData:
         self.games[game_id] = resp["data"]
         for update in resp["data"]:
             play = update["data"]["playCount"]
+            update["data"]["version_date"] = update["timestamp"]
             self.plays[(game_id, play)] = update["data"]
 
     def fetch_league_data(self, timestamp, delta_secs: float = 0):
@@ -883,8 +894,93 @@ class GameData:
     def get_player(self, player_id) -> PlayerData:
         return self.players[player_id] if player_id else PlayerData.null()
 
+    def set_player(self, player_id, new_player):
+        self.players[player_id] = new_player
+
     def get_team(self, team_id) -> TeamData:
         return self.teams[team_id] if team_id else TeamData.null()
 
+    def set_team(self, team_id, new_team):
+        self.teams[team_id] = new_team
+
     def get_stadium(self, stadium_id) -> StadiumData:
         return self.stadiums[stadium_id] if stadium_id else StadiumData.null()
+
+    def set_stadium(self, stadium_id, new_stadium):
+        self.stadiums[stadium_id] = new_stadium
+
+    def add_mod_to_player(self, player_id: str, mod_name: str, mod_type: ModType, version_date: str) -> PlayerData:
+        player = self.get_player(player_id)
+        new_player = player.with_mod(mod_name, mod_type, version_date)
+        self.set_player(player_id, new_player)
+        return new_player
+
+    def add_mod_to_team(self, team_id: str, mod_name: str, mod_type: ModType, version_date: str) -> TeamData:
+        team = self.get_team(team_id)
+        new_team = team.with_mod(mod_name, mod_type, version_date)
+        self.set_team(team_id, new_team)
+        return new_team
+
+    def remove_mod_from_player(self, player_id: str, mod_name: str, mod_type: ModType, version_date: str) -> PlayerData:
+        player = self.get_player(player_id)
+        new_player = player.without_mod(mod_name, mod_type, version_date)
+        self.set_player(player_id, new_player)
+        return new_player
+
+    def remove_mod_from_team(self, team_id: str, mod_name: str, mod_type: ModType, version_date: str) -> TeamData:
+        team = self.get_team(team_id)
+        new_team = team.without_mod(mod_name, mod_type, version_date)
+        self.set_team(team_id, new_team)
+        return new_team
+
+    def replace_player_on_team(self, team_id: str, location: int, player_to_remove: str, player_to_add: str,
+                               version_date: str) -> TeamData:
+        team = self.get_team(team_id)
+        if location == 0:
+            player_list = team.lineup
+        elif location == 1:
+            player_list = team.rotation
+        else:
+            player_list = team.shadows
+        replace_idx = player_list.index(player_to_remove)
+        new_player_list = player_list[:replace_idx] + (player_to_add,) + player_list[replace_idx + 1:]
+        assert len(new_player_list) == len(player_list)
+        return self._replace_player_list(team, location, new_player_list, version_date)
+
+    def _replace_player_list(self, team: TeamData, location: int, new_player_list: Tuple[str],
+                             version_date: str) -> TeamData:
+        if location == 0:
+            new_team = dataclasses.replace(team, lineup=new_player_list, version_date=version_date)
+        elif location == 1:
+            new_team = dataclasses.replace(team, rotation=new_player_list, version_date=version_date)
+        else:
+            new_team = dataclasses.replace(team, shadows=new_player_list, version_date=version_date)
+        self.set_team(team.id, new_team)
+        return new_team
+
+    def remove_player_from_team(self, team_id: str, location: int, player_to_remove: str,
+                                version_date: str) -> TeamData:
+        team = self.get_team(team_id)
+        if location == 0:
+            player_list = team.lineup
+        elif location == 1:
+            player_list = team.rotation
+        else:
+            player_list = team.shadows
+        replace_idx = player_list.index(player_to_remove)
+        new_player_list = player_list[:replace_idx] + player_list[replace_idx + 1:]
+        assert len(new_player_list) == len(player_list) - 1
+        return self._replace_player_list(team, location, new_player_list, version_date)
+
+    def append_player_to_team(self, team_id: str, location: int, player_to_add: str,
+                              version_date: str) -> TeamData:
+        team = self.get_team(team_id)
+        if location == 0:
+            player_list = team.lineup
+        elif location == 1:
+            player_list = team.rotation
+        else:
+            player_list = team.shadows
+        new_player_list = player_list + (player_to_add,)
+        assert len(new_player_list) == len(player_list) + 1
+        return self._replace_player_list(team, location, new_player_list, version_date)

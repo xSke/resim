@@ -171,7 +171,7 @@ def main():
     cached_objects = set()
 
     print("Running resim...")
-    with tqdm(total=total_events, unit=" events", unit_scale=True) as progress:
+    with tqdm(total=total_events, unit=" events", unit_scale=True, smoothing=0.1) as progress:
         all_pool_args = [((args.silent, args.outfile, args.csv), fragment, cached_objects) for fragment in FRAGMENTS]
         if args.no_multiprocessing:
             for pool_args in all_pool_args:

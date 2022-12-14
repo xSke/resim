@@ -1,3 +1,4 @@
+import dataclasses
 import math
 import os
 import sys
@@ -20,7 +21,7 @@ from output import SaveCsv
 from rng import Rng
 from dataclasses import dataclass
 from enum import Enum, unique
-from typing import List
+from typing import List, Tuple
 from formulas import (
     get_contact_strike_threshold,
     get_contact_ball_threshold,
@@ -137,13 +138,14 @@ class Resim:
         if self.game_id == "8577919c-4288-4404-bde2-694f5e7a38d1":
             jands = self.data.get_team("a37f9158-7f82-46bc-908c-c9e2dda7c33b")
             if not jands.has_mod(Mod.OVERPERFORMING):
-                jands.add_mod(Mod.OVERPERFORMING, ModType.PERMANENT)
+                self.data.add_mod_to_team(jands.id, Mod.OVERPERFORMING, ModType.PERMANENT, self.update["version_date"])
 
         # another workaround for bad data
         if self.game_id == "c608b5db-29ad-4216-a703-8f0627057523":
             caleb_novak = self.data.get_player("0eddd056-9d72-4804-bd60-53144b785d5c")
             if caleb_novak.has_mod(Mod.ELSEWHERE):
-                caleb_novak.remove_mod(Mod.ELSEWHERE, ModType.PERMANENT)
+                self.data.remove_mod_from_player(caleb_novak.id, Mod.OVERPERFORMING, ModType.PERMANENT,
+                                                 self.update["version_date"])
 
         # sometimes we start a fragment in the middle of a game and we wanna make sure we have the proper blood type
         a_blood_type_overrides = {
@@ -154,7 +156,7 @@ class Resim:
             blood_type = a_blood_type_overrides[self.game_id]
             shoe_thieves = self.data.get_team("bfd38797-8404-4b38-8b82-341da28b1f83")
             if not shoe_thieves.has_mod(blood_type):
-                shoe_thieves.add_mod(blood_type, ModType.GAME)
+                self.data.add_mod_to_team(shoe_thieves.id, blood_type, ModType.GAME, self.update["version_date"])
 
         self.print()
         if not self.update:
@@ -182,21 +184,21 @@ class Resim:
             "2021-05-18T02:22:44.148Z": 1,  # idk
             "2021-05-18T11:05:58.086Z": -1,  # item damage roll issue with fcs?
 
-            "2021-05-19T05:07:37.850Z": 2, # undertaker roll maybe
-            "2021-05-19T05:08:17.283Z": 2, # undertaker roll maybe
-            "2021-05-19T06:12:19.941Z": 2, # again item damage issue with fcs
+            "2021-05-19T05:07:37.850Z": 2,  # undertaker roll maybe
+            "2021-05-19T05:08:17.283Z": 2,  # undertaker roll maybe
+            "2021-05-19T06:12:19.941Z": 2,  # again item damage issue with fcs
 
-            "2021-05-19T08:24:40.136Z": -1, # bad alignment on fax rolls?
+            "2021-05-19T08:24:40.136Z": -1,  # bad alignment on fax rolls?
 
-            "2021-05-19T11:03:26.307Z": -1, # idk
-            "2021-05-19T14:15:32.723Z": 1, # more item damage stuff i think
+            "2021-05-19T11:03:26.307Z": -1,  # idk
+            "2021-05-19T14:15:32.723Z": 1,  # more item damage stuff i think
 
-            "2021-05-19T15:04:00.568Z": 2, # undertaker roll i think
-            "2021-05-19T16:17:13.969Z": 1, # sigh more item damage
-            "2021-05-19T17:16:43.296Z": 2, # undertaker
+            "2021-05-19T15:04:00.568Z": 2,  # undertaker roll i think
+            "2021-05-19T16:17:13.969Z": 1,  # sigh more item damage
+            "2021-05-19T17:16:43.296Z": 2,  # undertaker
 
-            "2021-05-19T17:25:31.749Z": -1, # also bad alignment on fax rolls
-            "2021-05-19T17:26:24.243Z": -2, # also bad alignment on fax rolls
+            "2021-05-19T17:25:31.749Z": -1,  # also bad alignment on fax rolls
+            "2021-05-19T17:26:24.243Z": -2,  # also bad alignment on fax rolls
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -570,7 +572,7 @@ class Resim:
             if self.ty == EventType.GAME_END and self.weather.is_coffee():
                 # end of coffee game redaction
                 rosters = (
-                    self.home_team.lineup + self.home_team.rotation + self.away_team.lineup + self.away_team.rotation
+                        self.home_team.lineup + self.home_team.rotation + self.away_team.lineup + self.away_team.rotation
                 )
                 for player_id in rosters:
                     player = self.data.get_player(player_id)
@@ -584,9 +586,9 @@ class Resim:
                 self.roll("game start")
 
             if self.event["day"] != 98 and (
-                # These rolls happen before the Second Wyatt Masoning
-                self.event["season"] != 13
-                or self.event["day"] != 72
+                    # These rolls happen before the Second Wyatt Masoning
+                    self.event["season"] != 13
+                    or self.event["day"] != 72
             ):
                 # *why*
                 self.roll("game start")
@@ -846,7 +848,7 @@ class Resim:
                     electric_roll,
                     True
                 )
-            if self .ty != EventType.STRIKE_ZAPPED:
+            if self.ty != EventType.STRIKE_ZAPPED:
                 self.log_roll(Csv.MODPROC, "NoZap", electric_roll, False)
 
         if self.ty == EventType.STRIKE_ZAPPED:
@@ -983,10 +985,10 @@ class Resim:
 
                 bsychic_roll = self.roll("bsychic")
                 self.log_roll(Csv.BSYCHIC,
-                                "Success",
-                                bsychic_roll,
-                                True
-                                )
+                              "Success",
+                              bsychic_roll,
+                              True
+                              )
 
                 if "draws a walk." in self.desc:
                     # a walk converted to a strikeout, that still registers as a walk type
@@ -1563,13 +1565,14 @@ class Resim:
 
     def get_stat_meta(self):
         is_maximum_blaseball = (
-            self.strikes == self.max_strikes - 1
-            and self.balls == self.max_balls - 1
-            and self.outs == self.max_outs - 1
-            and self.update["basesOccupied"] == [Base.THIRD, Base.SECOND, Base.FIRST]
+                self.strikes == self.max_strikes - 1
+                and self.balls == self.max_balls - 1
+                and self.outs == self.max_outs - 1
+                and self.update["basesOccupied"] == [Base.THIRD, Base.SECOND, Base.FIRST]
         )
-        batter_count = self.update["awayTeamBatterCount"] if self.update["topOfInning"] else self.update["homeTeamBatterCount"]
-        batter_at_bats = batter_count // len(self.batting_team.lineup) # todo: +1?
+        batter_count = self.update["awayTeamBatterCount"] if self.update["topOfInning"] else self.update[
+            "homeTeamBatterCount"]
+        batter_at_bats = batter_count // len(self.batting_team.lineup)  # todo: +1?
         return StatRelevantData(
             self.weather,
             self.season,
@@ -1624,7 +1627,8 @@ class Resim:
         if self.ty == EventType.BATTER_SKIPPED:
             # find the batter that *would* have been at bat
             lineup = self.batting_team.lineup
-            index = self.next_update["awayTeamBatterCount"] if self.next_update["topOfInning"] else self.next_update["homeTeamBatterCount"]
+            index = self.next_update["awayTeamBatterCount"] if self.next_update["topOfInning"] else self.next_update[
+                "homeTeamBatterCount"]
             batter_id = lineup[index % len(lineup)]
             batter = self.data.get_player(batter_id)
 
@@ -1691,10 +1695,10 @@ class Resim:
                     self.roll("target")
                     return True
 
-            fire_eater_eligible = self.pitching_team.lineup + [
+            fire_eater_eligible = self.pitching_team.lineup + (
                 self.batter.id,
                 self.pitcher.id,
-            ]
+            )
             for player_id in fire_eater_eligible:
                 player = self.data.get_player(player_id)
 
@@ -1875,10 +1879,10 @@ class Resim:
 
             has_shelled_player = False
             for player_id in (
-                self.pitching_team.lineup
-                + self.pitching_team.rotation
-                + self.batting_team.lineup
-                + self.batting_team.rotation
+                    self.pitching_team.lineup
+                    + self.pitching_team.rotation
+                    + self.batting_team.lineup
+                    + self.batting_team.rotation
             ):
                 # if low roll and shelled player present, roll again
                 # in s14 this doesn't seem to check (inactive) pitchers
@@ -1948,7 +1952,7 @@ class Resim:
                 return True
 
             if self.weather.can_echo() and (
-                (self.batter and self.batter.has_mod(Mod.ECHO)) or (self.pitcher and self.pitcher.has_mod(Mod.ECHO))
+                    (self.batter and self.batter.has_mod(Mod.ECHO)) or (self.pitcher and self.pitcher.has_mod(Mod.ECHO))
             ):
                 # echo vs static, or batter echo vs pitcher echo?
                 if self.ty in [EventType.ECHO_MESSAGE, EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
@@ -2057,7 +2061,7 @@ class Resim:
                 self.roll("echo?")
 
                 if self.ty in [EventType.ECHO_MESSAGE, EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
-                    eligible_players = self.batting_team.lineup + self.batting_team.rotation
+                    eligible_players = list(self.batting_team.lineup + self.batting_team.rotation)
                     eligible_players.remove(self.batter.id)
                     self.handle_echo_target_selection(eligible_players)
 
@@ -2068,7 +2072,7 @@ class Resim:
                 self.roll("echo?")
 
                 if self.ty in [EventType.ECHO_MESSAGE, EventType.ECHO_INTO_STATIC, EventType.RECEIVER_BECOMES_ECHO]:
-                    eligible_players = self.pitching_team.lineup + self.pitching_team.rotation
+                    eligible_players = list(self.pitching_team.lineup + self.pitching_team.rotation)
                     eligible_players.remove(self.pitcher.id)
                     self.handle_echo_target_selection(eligible_players)
                     return True
@@ -2307,7 +2311,6 @@ class Resim:
                 if player.has_mod(Mod.SEEKER):
                     self.roll(f"seeker ({player.raw_name})")
 
-
     def do_elsewhere_return(self, player):
         scatter_times = 0
         should_scatter = False
@@ -2383,9 +2386,11 @@ class Resim:
                                 # lost their last soul, redact :<
                                 self.print(f"!!! {attacked_player.name} lost last soul, " f"redacting")
                                 if attacked_player_id in team.lineup:
-                                    team.lineup.remove(attacked_player_id)
+                                    team = self.data.remove_player_from_team(team.id, 0, attacked_player_id,
+                                                                             self.update["version_date"])
                                 if attacked_player_id in team.rotation:
-                                    team.rotation.remove(attacked_player_id)
+                                    team = self.data.remove_player_from_team(team.id, 1, attacked_player_id,
+                                                                             self.update["version_date"])
 
                         return True
                     else:
@@ -2463,24 +2468,24 @@ class Resim:
                 # fmt: off
                 glitter_lengths = {
                     "2021-04-13T23:09:03.266Z": 11,  # Inflatable Sunglasses
-                    "2021-04-13T23:15:49.175Z": 5,   # Cap
-                    "2021-04-14T03:02:56.577Z": 5,   # Cap
-                    "2021-04-14T03:08:02.423Z": 4,   # Sunglasses
-                    "2021-04-14T11:03:16.318Z": 4,   # Sunglasses
+                    "2021-04-13T23:15:49.175Z": 5,  # Cap
+                    "2021-04-14T03:02:56.577Z": 5,  # Cap
+                    "2021-04-14T03:08:02.423Z": 4,  # Sunglasses
+                    "2021-04-14T11:03:16.318Z": 4,  # Sunglasses
                     "2021-04-14T11:11:16.266Z": 11,  # Bat of Vanity
-                    "2021-04-14T15:11:14.466Z": 5,   # Bat
-                    "2021-04-14T21:13:25.144Z": 4,   # Necklace
-                    "2021-04-15T07:04:22.275Z": 5,   # Shoes
+                    "2021-04-14T15:11:14.466Z": 5,  # Bat
+                    "2021-04-14T21:13:25.144Z": 4,  # Necklace
+                    "2021-04-15T07:04:22.275Z": 5,  # Shoes
                     "2021-04-15T07:08:27.800Z": 10,  # Leg Glove
                     "2021-04-15T07:09:02.365Z": 12,  # Cryogenic Shoes
-                    "2021-04-15T07:11:27.306Z": 5,   # Ring
-                    "2021-04-15T09:21:46.071Z": 9,   # Golden Bat
-                    "2021-04-15T15:11:08.363Z": 5,   # Shoes
-                    "2021-04-15T22:21:35.826Z": 9,   # Shoes of Blaserunning
-                    "2021-04-16T04:02:46.484Z": 9,   # Parasitic Ring
+                    "2021-04-15T07:11:27.306Z": 5,  # Ring
+                    "2021-04-15T09:21:46.071Z": 9,  # Golden Bat
+                    "2021-04-15T15:11:08.363Z": 5,  # Shoes
+                    "2021-04-15T22:21:35.826Z": 9,  # Shoes of Blaserunning
+                    "2021-04-16T04:02:46.484Z": 9,  # Parasitic Ring
                     "2021-04-16T04:11:23.475Z": 13,  # Chaotic Jersey
                     "2021-04-16T13:06:47.014Z": 14,  # Metaphorical Shoes
-                    "2021-05-18T15:03:17.013Z": 5,   # Socks
+                    "2021-05-18T15:03:17.013Z": 5,  # Socks
                 }
                 # fmt: on
                 for _ in range(glitter_lengths[self.event["created"]]):
@@ -2511,9 +2516,9 @@ class Resim:
         if self.season == 14:
             # if an attractor appeared between this tick and next, and this isn't a "real" enter...
             did_attractor_enter_this_tick = (
-                not self.update["secretBaserunner"]
-                and self.next_update["secretBaserunner"]
-                and self.ty != EventType.ENTER_SECRET_BASE
+                    not self.update["secretBaserunner"]
+                    and self.next_update["secretBaserunner"]
+                    and self.ty != EventType.ENTER_SECRET_BASE
             )
             if did_attractor_enter_this_tick:
                 secret_runner_id = self.next_update["secretBaserunner"]
@@ -2534,7 +2539,8 @@ class Resim:
                 secret_base_exit_eligible = False
 
         # todo: figure out how to query "player in active team's shadow" and exclude those properly
-        if (17, 0) <= (self.season, self.day) and secret_runner_id == "070758a0-092a-4a2c-8a16-253c835887cb" and self.game_id != "377f87df-36aa-4fac-bc97-59c24efb684b":
+        if (17, 0) <= (self.season,
+                       self.day) and secret_runner_id == "070758a0-092a-4a2c-8a16-253c835887cb" and self.game_id != "377f87df-36aa-4fac-bc97-59c24efb684b":
             secret_base_exit_eligible = False
         if self.season >= 18 and secret_runner_id == "114100a4-1bf7-4433-b304-6aad75904055" and self.game_id != "2a314b60-a36b-4e22-bee8-5da17c8e0d05":
             secret_base_exit_eligible = False
@@ -2605,8 +2611,10 @@ class Resim:
 
                 # remove baserunner from roster so fielder math works.
                 # should probably move this logic into a function somehow
-                self.batting_team.lineup.remove(runner_id)
-                runner.add_mod(Mod.REDACTED, ModType.PERMANENT)
+                self.batting_team = self.data.remove_player_from_team(self.batting_team.id, 0, self.batter.id,
+                                                                      self.update["version_date"])
+                self.batter = self.data.add_mod_to_player(self.batter.id, Mod.REDACTED, ModType.PERMANENT,
+                                                          self.update["version_date"])
 
                 # and just as a cherry on top let's hack this so we don't roll for steal as well
                 self.update["basesOccupied"].remove(1)
@@ -2720,10 +2728,10 @@ class Resim:
 
         for i, base in enumerate(bases):
             if base + 1 not in bases or (
-                # This is weird, but adding an extra roll here seems like the only way to get S15D75 to line up.
-                # https://reblase.sibr.dev/game/9d224696-6775-42c0-8259-b4de84f850a8#b65483bc-a07f-88e3-9e30-6ff9365f865b
-                bases == [Base.THIRD, Base.FIRST, Base.SECOND]
-                and base == Base.FIRST
+                    # This is weird, but adding an extra roll here seems like the only way to get S15D75 to line up.
+                    # https://reblase.sibr.dev/game/9d224696-6775-42c0-8259-b4de84f850a8#b65483bc-a07f-88e3-9e30-6ff9365f865b
+                    bases == [Base.THIRD, Base.FIRST, Base.SECOND]
+                    and base == Base.FIRST
             ):
                 runner = self.data.get_player(self.update["baseRunners"][i])
 
@@ -2763,9 +2771,9 @@ class Resim:
                     return True
 
             if (
-                bases == [Base.THIRD, Base.THIRD]
-                or bases == [Base.THIRD, Base.SECOND, Base.THIRD]
-                or bases == [Base.SECOND, Base.FIRST, Base.SECOND]
+                    bases == [Base.THIRD, Base.THIRD]
+                    or bases == [Base.THIRD, Base.SECOND, Base.THIRD]
+                    or bases == [Base.SECOND, Base.FIRST, Base.SECOND]
             ):
                 # don't roll twice when holding hands
                 break
@@ -2868,16 +2876,16 @@ class Resim:
         self.roll(f"item damage ({player.name})")
 
     def log_roll(
-        self,
-        csv: Csv,
-        event_type: str,
-        roll: float,
-        passed: bool,
-        relevant_batter=None,
-        relevant_runner=None,
-        fielder_roll=None,
-        fielder=None,
-        attacked_team=None,
+            self,
+            csv: Csv,
+            event_type: str,
+            roll: float,
+            passed: bool,
+            relevant_batter=None,
+            relevant_runner=None,
+            fielder_roll=None,
+            fielder=None,
+            attacked_team=None,
     ):
         if csv not in self.csvs:
             return
@@ -3001,22 +3009,26 @@ class Resim:
         # handle player name unscattering etc, not perfect but helps a lot
         if self.batter and self.pitcher:
             if update["topOfInning"]:
-                self.batter.raw_name = self.update["awayBatterName"]
-                self.pitcher.raw_name = self.update["homePitcherName"]
+                self.batter = self.batter.with_raw_name(self.update["awayBatterName"], self.update["version_date"])
+                self.pitcher = self.pitcher.with_raw_name(self.update["homePitcherName"], self.update["version_date"])
             else:
-                self.batter.raw_name = self.update["homeBatterName"]
-                self.pitcher.raw_name = self.update["awayPitcherName"]
+                self.batter = self.batter.with_raw_name(self.update["homePitcherName"], self.update["version_date"])
+                self.pitcher = self.pitcher.with_raw_name(self.update["awayBatterName"], self.update["version_date"])
 
         # hardcoding another fix - if we missed the "perks up" event apply it "manually". but not to ghosts
         if (
-            self.batter
-            and self.batter.has_mod(Mod.PERK)
-            and self.weather.is_coffee()
-            and not self.batter.has_mod(Mod.OVERPERFORMING, ModType.GAME)
-            and not self.batter.has_mod(Mod.INHABITING)
-            and self.ty != EventType.BATTER_UP
+                self.batter
+                and self.batter.has_mod(Mod.PERK)
+                and self.weather.is_coffee()
+                and not self.batter.has_mod(Mod.OVERPERFORMING, ModType.GAME)
+                and not self.batter.has_mod(Mod.INHABITING)
+                and self.ty != EventType.BATTER_UP
         ):
-            self.batter.add_mod(Mod.OVERPERFORMING, ModType.GAME)
+            self.batter = self.batter.with_mod(Mod.OVERPERFORMING, ModType.GAME, self.update["version_date"])
+
+        # Just in case anything changed
+        self.data.set_player(self.batter.id, self.batter)
+        self.data.set_player(self.pitcher.id, self.pitcher)
 
     def apply_event_changes(self, event):
         # maybe move this function to data.py?
@@ -3029,11 +3041,10 @@ class Resim:
             EventType.ADDED_MOD_FROM_OTHER_MOD,
         ]:
             if event["playerTags"]:
-                player = self.data.get_player(event["playerTags"][0])
-                player.add_mod(meta["mod"], meta["type"])
+                player = self.data.add_mod_to_player(event["playerTags"][0], meta["mod"], meta["type"],
+                                                     event["created"])
             else:
-                team = self.data.get_team(event["teamTags"][0])
-                team.add_mod(meta["mod"], meta["type"])
+                team = self.data.add_mod_to_team(event["teamTags"][0], meta["mod"], meta["type"], event["created"])
 
         # player or team mod removed
         if event["type"] in [
@@ -3046,25 +3057,25 @@ class Resim:
                 if not player.has_mod(meta["mod"], meta["type"]):
                     self.print(f"!!! warn: trying to remove mod {meta['mod']} but can't find it")
                 else:
-                    player.remove_mod(meta["mod"], meta["type"])
+                    player = self.data.remove_mod_from_player(event["playerTags"][0], meta["mod"], meta["type"],
+                                                              event["created"])
             else:
                 team = self.data.get_team(event["teamTags"][0])
 
                 if not team.has_mod(meta["mod"], meta["type"]):
                     self.print(f"!!! warn: trying to remove mod {meta['mod']} but can't find it")
                 else:
-                    team.remove_mod(meta["mod"], meta["type"])
+                    team = self.data.remove_mod_from_team(event["teamTags"][0], meta["mod"], meta["type"],
+                                                          event["created"])
 
         # mod replaced
         if event["type"] in [EventType.CHANGED_MODIFIER]:
             if event["playerTags"]:
-                player = self.data.get_player(event["playerTags"][0])
-                player.remove_mod(meta["from"], meta["type"])
-                player.add_mod(meta["to"], meta["type"])
+                self.data.remove_mod_from_player(event["playerTags"][0], meta["from"], meta["type"], event["created"])
+                self.data.add_mod_to_player(event["playerTags"][0], meta["to"], meta["type"], event["created"])
             else:
-                team = self.data.get_team(event["teamTags"][0])
-                team.remove_mod(meta["from"], meta["type"])
-                team.add_mod(meta["to"], meta["type"])
+                self.data.remove_mod_from_team(event["teamTags"][0], meta["from"], meta["type"], event["created"])
+                self.data.add_mod_to_team(event["teamTags"][0], meta["to"], meta["type"], event["created"])
 
         # timed mods wore off
         if event["type"] in [EventType.MOD_EXPIRES]:
@@ -3074,12 +3085,11 @@ class Resim:
                     if not player.has_mod(mod, meta["type"]):
                         self.print(f"!!! warn: trying to remove mod {mod} but can't find it")
                     else:
-                        player.remove_mod(mod, meta["type"])
+                        player = self.data.remove_mod_from_player(player.id, mod, meta["type"], event["created"])
 
             else:
                 for mod in meta["mods"]:
-                    team = self.data.get_team(event["teamTags"][0])
-                    team.remove_mod(mod, meta["type"])
+                    team = self.data.remove_mod_from_team(event["teamTags"][0], mod, meta["type"], event["created"])
 
         # echo mods added/removed
         if event["type"] in [
@@ -3088,9 +3098,9 @@ class Resim:
         ]:
             player = self.data.get_player(event["playerTags"][0])
             for mod in meta.get("adds", []):
-                player.add_mod(mod["mod"], mod["type"])
+                player = self.data.add_mod_to_player(player.id, mod["mod"], mod["type"], event["created"])
             for mod in meta.get("removes", []):
-                player.remove_mod(mod["mod"], mod["type"])
+                player = self.data.remove_mod_from_player(player.id, mod["mod"], mod["type"], event["created"])
 
         # cases where the tagged player needs to be refetched (party, consumer, incin replacement)
         if event["type"] in [
@@ -3105,7 +3115,8 @@ class Resim:
         if event["type"] == EventType.ADDED_MOD and "was Scattered..." in desc:
             new_name = desc.split(" was Scattered")[0]
             player = self.data.get_player(event["playerTags"][0])
-            player.raw_name = new_name
+            player_new = player.with_raw_name(new_name, event["created"])
+            self.data.set_player(player.id, player_new)
 
         # player removed from roster
         if event["type"] == EventType.PLAYER_REMOVED_FROM_TEAM:
@@ -3113,35 +3124,31 @@ class Resim:
             player_id = meta["playerId"]
             team = self.data.get_team(team_id)
             if player_id in team.lineup:
-                team.lineup.remove(player_id)
+                self.data.remove_player_from_team(team_id, 0, player_id, event["created"])
             if player_id in team.rotation:
-                team.rotation.remove(player_id)
+                self.data.remove_player_from_team(team_id, 1, player_id, event["created"])
 
         # mod changed from one to other
         if event["type"] == EventType.MODIFICATION_CHANGE:
             player = self.data.get_player(event["playerTags"][0])
-            player.remove_mod(meta["from"], meta["type"])
-            player.add_mod(meta["to"], meta["type"])
+            player = self.data.remove_mod_from_player(player.id, meta["from"], meta["type"], event["created"])
+            player = self.data.add_mod_to_player(player.id, meta["to"], meta["type"], event["created"])
 
             # todo: do this in other cases too?
             if meta["from"] == "RECEIVER":
                 for mod, source in player.season_mod_sources.items():
                     if source == ["RECEIVER"]:
-                        player.remove_mod(mod, ModType.SEASON)
+                        player = self.data.remove_mod_from_player(player.id, mod, ModType.SEASON, event["created"])
 
         # roster swap
         if event["type"] == EventType.PLAYER_TRADED:
-            a_team = self.data.get_team(meta["aTeamId"])
-            b_team = self.data.get_team(meta["bTeamId"])
-            a_player = meta["aPlayerId"]
-            b_player = meta["bPlayerId"]
-            a_location = a_team.rotation if meta["aLocation"] else a_team.lineup
-            b_location = b_team.rotation if meta["bLocation"] else b_team.lineup
-            a_idx = a_location.index(a_player)
-            b_idx = b_location.index(b_player)
+            a_player: str = meta["aPlayerId"]
+            b_player: str = meta["bPlayerId"]
 
-            b_location[b_idx] = a_player
-            a_location[a_idx] = b_player
+            a_team = self.data.replace_player_on_team(meta["aTeamId"], meta["aLocation"], a_player, b_player,
+                                                      event["created"])
+            b_team = self.data.replace_player_on_team(meta["bTeamId"], meta["bLocation"], b_player, a_player,
+                                                      event["created"])
 
         # carcinization etc
         if event["type"] == EventType.PLAYER_MOVE:
@@ -3150,34 +3157,33 @@ class Resim:
             player_id = meta["playerId"]
 
             if player_id in send_team.lineup:
-                send_team.lineup.remove(player_id)
-                receive_team.lineup.append(player_id)
+                self.data.remove_player_from_team(send_team.id, 0, player_id, event["created"])
+                self.data.append_player_to_team(receive_team.id, 0, player_id, event["created"])
             if player_id in send_team.rotation:
-                send_team.rotation.remove(player_id)
-                receive_team.rotation.append(player_id)
+                self.data.remove_player_from_team(send_team.id, 1, player_id, event["created"])
+                self.data.append_player_to_team(receive_team.id, 1, player_id, event["created"])
 
         if event["type"] == EventType.PLAYER_SWAP:
-            team = self.data.get_team(meta["teamId"])
-
             a_player = meta["aPlayerId"]
             b_player = meta["bPlayerId"]
-            a_location = team.rotation if meta["aLocation"] == 1 else (team.lineup if meta["aLocation"] == 0 else team.shadows)
-            b_location = team.rotation if meta["bLocation"] == 1 else (team.lineup if meta["bLocation"] == 0 else team.shadows)
-            a_idx = a_location.index(a_player)
-            b_idx = b_location.index(b_player)
-            b_location[b_idx] = a_player
-            a_location[a_idx] = b_player
+            a_team = self.data.replace_player_on_team(meta["teamId"], meta["aLocation"], a_player, b_player,
+                                                      event["created"])
+            b_team = self.data.replace_player_on_team(meta["teamId"], meta["bLocation"], b_player, a_player,
+                                                      event["created"])
 
-        if event["type"] in [EventType.ITEM_BREAKS, EventType.ITEM_DAMAGE, EventType.BROKEN_ITEM_REPAIRED, EventType.DAMAGED_ITEM_REPAIRED]:
+        if event["type"] in [EventType.ITEM_BREAKS, EventType.ITEM_DAMAGE, EventType.BROKEN_ITEM_REPAIRED,
+                             EventType.DAMAGED_ITEM_REPAIRED]:
             player_id = event["playerTags"][0]
             player = self.data.get_player(player_id)
-            for item in player.items:
-                if item.id == meta["itemId"]:
-                    item.health = meta["itemHealthAfter"]
-            player.update_stats()
+            new_items = [item.with_health(meta["itemHealthAfter"])
+                         if item.id == meta["itemId"] else item
+                         for item in player.items]
+            player = player.with_items(new_items, event["created"])
+            self.data.set_player(player.id, player)
 
         if event["type"] == EventType.HYPE_BUILT:
-            self.stadium.hype = meta["after"]
+            self.stadium = self.stadium.with_hype(meta["after"], event["created"])
+            self.data.set_stadium(self.stadium.id, self.stadium)
 
     def find_start_of_inning_score(self, game_id, inning):
         for play in range(1000):

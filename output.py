@@ -5,11 +5,13 @@ import os
 from csv import DictWriter
 from typing import Set, Dict
 
+
 # https://stackoverflow.com/a/22281062
 def set_to_list_default_fn(obj):
-    if isinstance(obj, set):
+    if isinstance(obj, set) or isinstance(obj, frozenset):
         return list(obj)
     raise TypeError
+
 
 class SaveCsv:
     def __init__(self, run_name: str, category_name: str, cached_objects: Set[str]):
