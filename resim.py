@@ -2553,9 +2553,9 @@ class Resim:
                     "2021-04-20T09:00:31.366Z": 9,   # Parasitic Cap
                     "2021-04-20T09:12:45.083Z": 15,  # Inflatable Plastic Bat
                     "2021-04-20T13:00:31.463Z": 11,  # Brambly Glove
+                    "2021-04-20T13:23:25.792Z": 13,  # Metaphorical Shoes - why is this 13 when the other metaphorical shoes are 14???
                     "2021-04-22T05:22:34.529Z": 9,   # Paper Shoes
                     "2021-05-18T15:03:17.013Z": 5,   # Socks
-                    "2021-04-20T13:23:25.792Z": 13,  # Metaphorical Shoes - why is this 13 when the other metaphorical shoes are 14???
                 }
                 # fmt: on
                 for _ in range(glitter_lengths.get(self.event["created"], 5)):
