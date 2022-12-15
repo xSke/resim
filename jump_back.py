@@ -66,9 +66,9 @@ DAY_INDEXES = [
     (17, 10),
     (17, 26),
     (17, 32),
+    (17, 61),
     (18, 12),
     (19, 7),
-    (19, 24),
     (19, 28),
 ]
 FRAGMENT_MAP = dict(zip(DAY_INDEXES, FRAGMENTS))

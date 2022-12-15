@@ -184,6 +184,8 @@ class Resim:
             "2021-04-20T15:31:03.368Z": 1,  # ???
             "2021-04-21T02:11:17.735Z": 2,
             "2021-04-21T04:24:42.674Z": 1,
+            "2021-04-22T12:05:46.669Z": -2,  # item damage on fc
+            "2021-04-22T13:17:07.780Z": 2,  # item damage on fc
             "2021-05-10T19:28:42.723Z": 1,
             "2021-05-11T05:03:22.874Z": 1,
             "2021-05-17T23:10:48.902Z": 1,  # something wrong with item damage rolls
@@ -192,14 +194,15 @@ class Resim:
             "2021-05-19T05:07:37.850Z": 2,  # undertaker roll maybe
             "2021-05-19T05:08:17.283Z": 2,  # undertaker roll maybe
             "2021-05-19T06:12:19.941Z": 2,  # again item damage issue with fcs
-            "2021-05-19T08:24:40.136Z": -1,  # bad alignment on fax rolls?
             "2021-05-19T11:03:26.307Z": -1,  # idk
             "2021-05-19T14:15:32.723Z": 1,  # more item damage stuff i think
             "2021-05-19T15:04:00.568Z": 2,  # undertaker roll i think
             "2021-05-19T16:17:13.969Z": 1,  # sigh more item damage
             "2021-05-19T17:16:43.296Z": 2,  # undertaker
-            "2021-05-19T17:25:31.749Z": -1,  # also bad alignment on fax rolls
-            "2021-05-19T17:26:24.243Z": -2,  # also bad alignment on fax rolls
+            # "2021-05-11T16:07:08.398Z": -1,
+            # "2021-05-11T16:07:23.341Z": -1,
+            # "2021-05-11T16:08:03.473Z": -2,  # item damage on flyout and tagup?
+            # "2021-05-11T16:12:04.016Z": -2,
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -254,9 +257,6 @@ class Resim:
 
         if self.ty == EventType.HIGH_PRESSURE_ON_OFF:
             # s14 high pressure proc, not sure when this should interrupt
-            return
-        if self.ty == EventType.FAX_MACHINE_ACTIVATION:
-            # this also interrupts late
             return
 
         if self.handle_steal():
@@ -660,6 +660,10 @@ class Resim:
                 "72b41d5c-7e97-4ee1-b5a3-5a01aaf5f043": 2,
                 "54055971-2287-4f34-abb1-0a21aeb1a994": 1,
                 "de996e83-6584-4312-8e2b-613e4c8bb0ee": 1,
+                "78838e9a-16b2-4733-8194-c629eb57d803": 1,
+                "4ed7ce17-f47d-41ce-aad3-1089ab54bd2c": 2,
+                "9a5b1658-0924-43ef-a417-e7de8076a57c": 1,
+                "e1c383ab-efc0-49ad-91e2-3d29cca47a90": 8,  # prize match
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -754,14 +758,24 @@ class Resim:
             # todo
             chests = {
                 "2021-04-20T21:43:13.835Z": 375,
+                "2021-04-22T06:15:48.986Z": 362,
+                "2021-05-11T16:05:03.662Z": 398,
+                "2021-05-18T13:07:33.068Z": 350,
             }
             time = self.event["created"]
             to_step = chests.get(time)
             if to_step:
                 self.print(f"!!! stepping {to_step} @ {time} for Community Chest")
                 self.rng.step(to_step)
-            else:
-                self.print(f"!!! Community Chest of unknown length")
+
+            # todo: properly handle the item changes
+            if self.event["created"] == "2021-05-11T16:05:03.662Z":
+                steph_weeks = self.data.get_player("18f45a1b-76eb-4b59-a275-c64cf62afce0")
+                steph_weeks.add_mod(Mod.CAREFUL, ModType.ITEM)
+
+            if self.event["created"] == "2021-05-18T13:07:33.068Z":
+                aldon_cashmoney_ii = self.data.get_player("194a78fd-3aa7-4356-8ba0-b9fdcbc0ea85")
+                aldon_cashmoney_ii.add_mod(Mod.CAREFUL, ModType.ITEM)
             return True
 
     def handle_polarity(self):
@@ -2073,6 +2087,7 @@ class Resim:
                         "2021-04-15T01:08:22.391Z": 9,
                         "2021-04-19T17:17:55.926Z": 7,
                         "2021-04-20T15:01:43.618Z": 11,
+                        "2021-04-22T18:12:16.362Z": 11,
                     }
                     amount = shuffles.get(self.event["created"], 9)
 
@@ -2083,11 +2098,13 @@ class Resim:
                     self.print(f"(lineup length: {len(self.pitching_team.lineup)})")
 
                     shuffles = {
-                        "2021-05-11T02:19:07.285Z": 8,
-                        "2021-05-18T03:10:44.033Z": 11,
                         "2021-04-20T03:27:54.205Z": 9,
                         "2021-04-20T11:13:14.757Z": 13,
                         "2021-04-16T02:10:17.885Z": 11,
+                        "2021-04-22T04:16:58.215Z": 8,
+                        "2021-04-22T14:02:46.069Z": 9,
+                        "2021-05-11T02:19:07.285Z": 8,
+                        "2021-05-18T03:10:44.033Z": 11,
                     }
                     amount = shuffles.get(self.event["created"], 10)
 
@@ -2536,16 +2553,21 @@ class Resim:
                     "2021-04-20T09:00:31.366Z": 9,   # Parasitic Cap
                     "2021-04-20T09:12:45.083Z": 15,  # Inflatable Plastic Bat
                     "2021-04-20T13:00:31.463Z": 11,  # Brambly Glove
+                    "2021-04-22T05:22:34.529Z": 9,   # Paper Shoes
                     "2021-05-18T15:03:17.013Z": 5,   # Socks
                     "2021-04-20T13:23:25.792Z": 13,  # Metaphorical Shoes - why is this 13 when the other metaphorical shoes are 14???
                 }
                 # fmt: on
-                for _ in range(glitter_lengths[self.event["created"]]):
+                for _ in range(glitter_lengths.get(self.event["created"], 5)):
                     self.roll("item")
                 return True
 
             else:
                 self.log_roll(Csv.WEATHERPROC, "NootDrop", glitter_roll, False)
+
+        if self.ty == EventType.FAX_MACHINE_ACTIVATION:
+            # this is definitely before secret base and after smithy
+            return True
 
         if self.stadium.has_mod(Mod.SECRET_BASE):
             if self.handle_secret_base():
@@ -2877,6 +2899,7 @@ class Resim:
             # ideally we'd get rid of these and our formula would just guess right but alas
             double_strike_overrides = {
                 "2021-05-18T02:11:28.635Z": True,
+                "2021-05-18T14:00:51.704Z": True,
                 "2021-05-18T14:15:14.700Z": True,
                 "2021-05-18T16:06:13.149Z": True,
                 "2021-05-18T16:09:43.915Z": True,

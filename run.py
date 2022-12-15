@@ -128,6 +128,8 @@ FRAGMENTS = [
         "2021-04-21T23:14:44.758Z",
     ),  # gets errors shortly after this
     # deploy at 2021-04-22T03:50:00Z
+    ((12546856154551792590, 1162678545057283425), 13, 0, "2021-04-22T04:00:00Z", "2021-04-22T19:45:00.000Z"),
+    # deploy at 2021-04-22T19:45:00Z
     # SEASON 18
     # deploy at 2021-05-11T01:45:00Z
     (
@@ -135,8 +137,8 @@ FRAGMENTS = [
         12,
         0,
         "2021-05-11T02:00:00Z",
-        "2021-05-11T16:05:03.167Z",
-    ),  # there's a community chest proc right after this event and i really don't wanna deal with it
+        "2021-05-11T16:50:00.000Z",
+    ),
     # deploy at 2021-05-11T17:00:00Z
     # SEASON 19
     # deploy at 2021-05-17T18:45:00Z
@@ -145,9 +147,8 @@ FRAGMENTS = [
         14,
         0,
         "2021-05-17T21:00:00Z",
-        "2021-05-18T13:07:32.680Z",
-    ),  # there's a community chest proc right after this event and i really don't wanna deal with it
-    ((12111692005190486950, 375030352896532084), 37, -28, "2021-05-18T14:07:07.856Z", "2021-05-18T16:59:02.002172Z"),
+        "2021-05-18T16:59:02.002172Z",
+    ),
     # deploy at 2021-05-18T18:25:00Z
     # deploy at 2021-05-18T18:40:00Z
     ((7888161043874514753, 16266359688230399901), 21, -6, "2021-05-18T19:13:26.489Z", "2021-05-19T17:28:04.375Z")
