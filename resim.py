@@ -149,6 +149,7 @@ class Resim:
         a_blood_type_overrides = {
             "0aa57b7d-d78f-4090-8f0e-9273c285e698": Mod.PSYCHIC,
             "d2e75d15-0348-4a2b-88ad-5a9205173494": Mod.PSYCHIC,
+            "bb5ad5c8-22b7-41a4-83f9-47b8ed8825b2": Mod.LOVE,
         }
         if self.game_id in a_blood_type_overrides:
             blood_type = a_blood_type_overrides[self.game_id]
@@ -189,7 +190,14 @@ class Resim:
             "2021-05-20T12:19:08.611Z": 1,  # drumsolo walk
             "2021-05-20T12:20:13.495Z": 1,  # drumsolo walk
             "2021-05-20T12:29:39.279Z": 1,  # drumsolo walk?
+            "2021-05-21T18:27:35.164Z": 1,  # another walk with bases loaded
             "2021-05-21T01:02:36.430Z": 1,  # party time align?
+
+
+            # these three all seem double strike related, but i can't figure out why
+            "2021-05-21T15:11:59.315Z": -1,
+            "2021-05-21T15:18:16.240Z": -1,
+            "2021-05-21T16:03:01.690Z": -1,
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -669,6 +677,7 @@ class Resim:
                 "0b82745a-e797-4256-9ce7-9868253a9e4b": 1,
                 "7cc6dbc2-a07f-48f9-8761-fddfbc0fcf66": 16,  # prize match
                 "95cf5ed9-4cec-44f2-8316-926c044b91e7": 10,  # prize match
+                "bcccb4bc-d725-489e-b4e8-b745040a7226": 11,  # prize match
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -1822,6 +1831,7 @@ class Resim:
                     "2021-04-07T18:07:53.969Z",
                     "2021-04-13T17:17:24.293Z",
                     "2021-05-20T08:01:11.485Z",
+                    "2021-05-21T11:02:56.754Z",
                 ]:
                     self.roll("siphon proc 5?")
                 return True
@@ -2027,6 +2037,7 @@ class Resim:
                     "2021-04-21T04:22:00.021Z",
                     "2021-04-21T23:07:47.685Z",
                     "2021-05-19T08:22:14.987Z",
+                    "2021-05-21T11:08:22.441Z",
                 ]:
                     self.roll("feedback???")
                     self.roll("feedback???")
@@ -2395,7 +2406,7 @@ class Resim:
                     15: 0.0004,
                     16: 0.0004,  # todo: we don't know
                     17: 0.00041,  # we have a 0.0004054748749369175
-                    18: 0.00041,  # todo: we don't know
+                    18: 0.00042,  # we have a 0.00041710056345256596
                 }[self.season]
 
                 if unscatter_roll < threshold:
@@ -2470,7 +2481,7 @@ class Resim:
                             if item.health > 0:
                                 # pick item to break maybe? or something??
                                 self.roll("???")
-                                if self.event["created"] in ["2021-04-16T15:00:51.494Z"]:
+                                if self.event["created"] in ["2021-04-16T15:00:51.494Z", "2021-05-21T19:03:02.065Z"]:
                                     self.roll("??????")
                                 return True
 
@@ -2608,6 +2619,7 @@ class Resim:
                     "2021-04-20T13:23:25.792Z": 13,  # Metaphorical Shoes - why is this 13 when the other metaphorical shoes are 14???
                     "2021-04-22T05:22:34.529Z": 9,   # Paper Shoes
                     "2021-05-18T15:03:17.013Z": 5,   # Socks
+                    "2021-05-21T08:06:07.589Z": 8,   # Flickering Bat
                 }
                 # fmt: on
                 for _ in range(glitter_lengths.get(self.event["created"], 5)):
@@ -2984,6 +2996,10 @@ class Resim:
                 "2021-05-21T02:26:48.533Z": False,
                 "2021-05-21T05:13:17.792Z": False,
                 "2021-05-21T05:18:07.854Z": False,
+                "2021-05-21T08:07:15.422Z": False,
+                "2021-05-21T08:16:50.192Z": False,
+                "2021-05-21T11:22:13.815Z": False,
+                "2021-05-21T15:11:44.709Z": False,
             }
 
             if self.event["created"] in double_strike_overrides:
