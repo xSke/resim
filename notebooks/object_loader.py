@@ -15,10 +15,15 @@ def combine_mods(data: Dict[str, Any]) -> Set[str]:
     return set(data['permAttr'] + data['seasAttr'] + data['weekAttr'] + data['gameAttr'])
 
 
-def get_attribute(objects: DataObjectMap, attr_key: str):
+def get_attribute(objects: DataObjectMap, attr_key: str, use_items: bool, use_broken_items: bool):
     def attribute_extractor(object_key: str):
-        # not super jazzed about getattr but the alternatives seem worse
-        return getattr(objects[object_key], attr_key)
+        attr = objects[object_key].data[attr_key] or 0  # for cinnamon
+        if use_items:
+            for item in objects[object_key].items:
+                if use_broken_items or item.health != 0:
+                    attr += item.stats.get(attr_key, 0)
+
+        return attr
 
     return attribute_extractor
 
@@ -85,10 +90,10 @@ class ObjectLoader:
         self.vibe_cache: Dict[str, pd.Series] = {}
         self.multiplier_cache: Dict[str, Dict[str, pd.Series]] = defaultdict(lambda: {})
 
-    def __call__(self, object_key, attr_key, *, vibes=True, mods=True):
+    def __call__(self, object_key, attr_key, *, vibes=True, mods=True, items=True, broken_items=False):
         objects = self._get_cached(object_key)
         object_paths = self.df[object_key + "_path"]
-        attr = object_paths.apply(get_attribute(objects, attr_key))
+        attr = object_paths.apply(get_attribute(objects, attr_key, items, broken_items))
         if vibes:
             if object_key in self.vibe_cache:
                 vibe = self.vibe_cache[object_key]
@@ -136,13 +141,19 @@ class ObjectLoader:
 def _test():
     import glob
     all_files = glob.glob("../roll_data/*-strikes.csv")
+    print("Globbed files")
 
     df = pd.concat((pd.read_csv(f, dtype={"stadium_id": "string"}) for f in all_files), ignore_index=True)
-    df = df[df['season'] == 14]
+    print("Loaded full dataframe")
+    df = df[df['season'] == 17]
+    print("Chopped dataframe")
 
     load = ObjectLoader(df)
+    print("Made loader")
     df["ruth_scaled"] = load('pitcher', 'ruthlessness')
-    df["musc_scaled"] = load('batter', 'musclitude')
+    print("Got ruth")
+    df["musc_scaled"] = load('batter', 'musclitude', items=False)
+    print("Got musc")
 
     pass
 
