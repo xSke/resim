@@ -174,35 +174,16 @@ class Resim:
             self.roll("???")
 
         event_adjustments = {
-            "2021-04-13T18:17:40.576Z": 2,
-            "2021-04-14T15:11:07.771Z": -1,
-            "2021-04-14T15:08:13.155Z": -1,  # item damage?
-            "2021-04-14T17:06:28.047Z": -2,
-            "2021-04-14T19:07:51.129Z": -2,
+            "2021-04-14T15:11:07.771Z": -1, # fix for missing data
+            "2021-04-14T15:08:13.155Z": -1, # fix for missing data
+            "2021-04-14T17:06:28.047Z": -2, # i don't know
+            "2021-04-14T19:07:51.129Z": -2, # may be attractor-relayed?
             "2021-04-20T12:00:00.931Z": -1,  # item damage at end of game??
-            "2021-04-20T13:10:59.968Z": -1,  # item damage?
             "2021-04-20T15:31:03.368Z": 1,  # ???
-            "2021-04-21T02:11:17.735Z": 2,
             "2021-04-21T04:24:42.674Z": 1,
-            "2021-04-22T12:05:46.669Z": -2,  # item damage on fc
-            "2021-04-22T13:17:07.780Z": 2,  # item damage on fc
             "2021-05-10T19:28:42.723Z": 1,
-            "2021-05-11T05:03:22.874Z": 1,
-            "2021-05-17T23:10:48.902Z": 1,  # something wrong with item damage rolls
+            "2021-05-17T23:10:48.902Z": 1,  # dp item damage rolls...?
             "2021-05-18T02:22:44.148Z": 1,  # idk
-            "2021-05-18T11:05:58.086Z": -1,  # item damage roll issue with fcs?
-            "2021-05-19T05:07:37.850Z": 2,  # undertaker roll maybe
-            "2021-05-19T05:08:17.283Z": 2,  # undertaker roll maybe
-            "2021-05-19T06:12:19.941Z": 2,  # again item damage issue with fcs
-            "2021-05-19T11:03:26.307Z": -1,  # idk
-            "2021-05-19T14:15:32.723Z": 1,  # more item damage stuff i think
-            "2021-05-19T15:04:00.568Z": 2,  # undertaker roll i think
-            "2021-05-19T16:17:13.969Z": 1,  # sigh more item damage
-            "2021-05-19T17:16:43.296Z": 2,  # undertaker
-            # "2021-05-11T16:07:08.398Z": -1,
-            # "2021-05-11T16:07:23.341Z": -1,
-            # "2021-05-11T16:08:03.473Z": -2,  # item damage on flyout and tagup?
-            # "2021-05-11T16:12:04.016Z": -2,
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -929,6 +910,11 @@ class Resim:
                 if base == Base.THIRD:
                     self.damage(runner, "runner")
 
+            if "draws a walk." in self.desc:
+                # todo: what are these? we may never know... sample size etc
+                self.damage(self.batter, "batter")
+                self.damage(self.batter, "batter")
+
             return True
 
         elif self.pitcher.has_mod(Mod.WILD) and self.ty != EventType.MILD_PITCH:
@@ -1370,20 +1356,23 @@ class Resim:
                     self.log_roll(Csv.GROUNDOUT_FORMULAS, "Sac", fc_roll, not is_fc, fielder=fielder)
 
                     if is_fc:
-                        if Base.THIRD in self.update["basesOccupied"]:
-                            third_id = self.update["baseRunners"][0]
-                            third = self.data.get_player(third_id)
-                            if self.event["created"] != "2021-04-20T21:27:58.811Z":
-                                self.damage(third, "batter")
-                                self.damage(third, "batter")
-                            else:
-                                self.roll("item damage???")
-                                self.roll("item damage???")
-                        elif Base.SECOND in self.update["basesOccupied"]:
-                            second_id = self.update["baseRunners"][0]
-                            second = self.data.get_player(second_id)
-                            # uhhhhhhh also needed for careful but this prob isn't the right way
-                            self.damage(self.batter, "batter")
+                        # so this is a rough outline, we could probably clean up this logic
+                        damage_runners = []
+                        
+                        if self.update["basesOccupied"] == [2, 1, 0]:
+                            damage_runners = [1, 0] # does not include a 2 atvl
+                        elif self.update["basesOccupied"] == [1, 0]:
+                            damage_runners = [0] # unsure
+                        elif self.update["basesOccupied"] == [2, 0]:
+                            damage_runners = [2, 2] # this one is correct
+                        elif self.update["basesOccupied"] == [0]:
+                            damage_runners = []
+
+                        for rbase in damage_runners:
+                            idx = self.update['basesOccupied'].index(rbase)
+                            runner_id = self.update["baseRunners"][idx]
+                            runner = self.data.get_player(runner_id)
+                            self.damage(runner, "runner")
                         return
 
             self.try_roll_batter_debt(fielder)
@@ -2285,6 +2274,7 @@ class Resim:
 
             if self.ty == EventType.FLOODING_SWEPT:
                 # handle flood
+                did_sweep = False
                 for runner_id in self.update["baseRunners"]:
                     runner = self.data.get_player(runner_id)
 
@@ -2294,8 +2284,25 @@ class Resim:
                     if not runner.has_any(*exempt_mods):
                         self.roll(f"sweep ({runner.name})")
 
+                        if f"{runner.raw_name} was swept Elsewhere" in self.desc:
+                            did_sweep = True
+
                 if self.stadium.id and not self.stadium.has_mod(Mod.FLOOD_PUMPS):
                     self.roll("filthiness")
+
+                if did_sweep:
+                    # todo: what are the criteria here
+                    has_undertaker = False
+                    players = self.batting_team.lineup + self.batting_team.rotation# + self.pitching_team.lineup + self.pitching_team.rotation
+                    for player_id in players:
+                        player = self.data.get_player(player_id)
+                        if player.has_mod(Mod.UNDERTAKER):
+                            has_undertaker = True
+
+                    if has_undertaker:
+                        self.roll("undertaker")
+                        self.roll("undertaker")
+
                 return True
 
     def handle_elsewhere_scattered(self):

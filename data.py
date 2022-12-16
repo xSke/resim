@@ -142,6 +142,7 @@ class Mod(Enum):
     TRAVELING = auto()
     TRIPLE_THREAT = auto()
     UNDERPERFORMING = auto()
+    UNDERTAKER = auto()
     WILD = auto()
 
     @classmethod
