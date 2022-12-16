@@ -89,7 +89,8 @@ class SaveCsv:
         self.csv.writerow(row)
 
     def close(self):
-        print(f"This csv saved objects {100 * self.n_saved/self.n_referenced}% of the time")
+        if self.n_referenced > 0:
+            print(f"This csv saved objects {100 * self.n_saved/self.n_referenced}% of the time")
         if not self.file:
             return
         self.file.close()
