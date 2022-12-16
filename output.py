@@ -69,7 +69,7 @@ class SaveCsv:
 
         for save_key, obj in save_objects.items():
             self.n_referenced += 1
-            file_path = f"{self.object_dir}/{obj.id}-{obj.last_update_time}.json"
+            file_path = f"{self.object_dir}/{obj.id}-{obj.last_update_time}.json".replace(":", "_")
             if (
                 obj.id not in self.last_saved_object
                 or self.last_saved_object[obj.id].last_update_time != obj.last_update_time
