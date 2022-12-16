@@ -115,6 +115,7 @@ class Mod(Enum):
     HAUNTED = auto()
     HIGH_PRESSURE = auto()
     HONEY_ROASTED = auto()
+    HOOPS = auto()
     HOTEL_MOTEL = auto()
     INHABITING = auto()
     LOVE = auto()
@@ -316,6 +317,7 @@ class EventType(IntEnum):
     PLAYER_HIDDEN_STAT_DECREASE = 180
     ENTERING_CRIMESCENE = 181
     AMBITIOUS = 182
+    COASTING = 184
     ITEM_BREAKS = 185
     ITEM_DAMAGE = 186
     BROKEN_ITEM_REPAIRED = 187
