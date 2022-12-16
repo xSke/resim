@@ -3097,6 +3097,7 @@ class Resim:
             self.strike_threshold,
             fielder_roll,
             self.next_update["basesOccupied"] if self.next_update else None,
+            self.get_stat_meta(),
             save_objects,
         )
 
