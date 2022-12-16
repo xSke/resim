@@ -1,9 +1,11 @@
+import copy
 import json
 import os
 from csv import DictWriter
-from typing import Dict, Union, Tuple
+from typing import Dict
 
-from data import DataObject, cacheable, UNCACHEABLE_PLAYER_KEYS
+from data import DataObject, cacheable
+from formulas import StatRelevantData
 
 
 class SaveCsv:
@@ -17,23 +19,21 @@ class SaveCsv:
         self.csv = None
         self.last_saved_object = last_saved_update
 
-        self.n_saved = 0
-        self.n_referenced = 0
-
     def write(
-        self,
-        event_type: str,
-        roll: float,
-        passed: bool,
-        update,
-        what1: float,
-        what2: float,
-        is_strike: bool,
-        strike_roll: float,
-        strike_threshold: float,
-        fielder_roll,
-        baserunners_next,
-        save_objects: Dict[str, DataObject],
+            self,
+            event_type: str,
+            roll: float,
+            passed: bool,
+            update,
+            what1: float,
+            what2: float,
+            is_strike: bool,
+            strike_roll: float,
+            strike_threshold: float,
+            fielder_roll,
+            baserunners_next,
+            meta: StatRelevantData,
+            save_objects: Dict[str, DataObject],
     ):
         # fmt: off
         row = {
@@ -46,13 +46,9 @@ class SaveCsv:
             "pitching_team_hype": save_objects['stadium'].hype if update["topOfInning"] else 0,
             "game_id": update["id"],
             "play_count": update["playCount"],
-            "weather": update["weather"],
             "ball_count": update["atBatBalls"],
             "strike_count": update["atBatStrikes"],
             "out_count": update["halfInningOuts"],
-            "season": update["season"],
-            "day": update["day"],
-            "top_of_inning": update["topOfInning"],
             "home_score": update["homeScore"],
             "away_score": update["awayScore"],
             "inning": update["inning"],
@@ -64,21 +60,30 @@ class SaveCsv:
             "strike_threshold": strike_threshold,
             "fielder_roll": fielder_roll,
             "batter_consecutive_hits": save_objects['batter'].consecutive_hits,
+            "weather": meta.weather,
+            "season": meta.season,
+            "day": meta.day,
+            "runner_count": meta.runner_count,
+            "top_of_inning": meta.top_of_inning,
+            "is_maximum_blaseball": meta.is_maximum_blaseball,
+            "batter_at_bats": meta.batter_at_bats,
         }
         # fmt: on
 
         for save_key, obj in save_objects.items():
-            self.n_referenced += 1
             file_path = f"{self.object_dir}/{obj.id}-{obj.last_update_time}.json".replace(":", "_")
             if (
-                obj.id not in self.last_saved_object
-                or self.last_saved_object[obj.id].last_update_time != obj.last_update_time
+                    obj.id not in self.last_saved_object
+                    or self.last_saved_object[obj.id].last_update_time != obj.last_update_time
             ):
-                self.n_saved += 1
-                to_save = cacheable(obj.data, UNCACHEABLE_PLAYER_KEYS)
+                to_save = {
+                    "type": obj.object_type,
+                    "last_update_time": obj.last_update_time,
+                    "data": cacheable(obj.data, obj.object_type),
+                }
                 with open(file_path, "w") as f:
                     json.dump(to_save, f)
-                self.last_saved_object[obj.id] = obj
+                self.last_saved_object[obj.id] = copy.deepcopy(obj)
             row[save_key + "_path"] = file_path
 
         if self.csv is None:
@@ -89,8 +94,6 @@ class SaveCsv:
         self.csv.writerow(row)
 
     def close(self):
-        if self.n_referenced > 0:
-            print(f"This csv saved objects {100 * self.n_saved/self.n_referenced}% of the time")
         if not self.file:
             return
         self.file.close()

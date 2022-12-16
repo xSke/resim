@@ -3,14 +3,16 @@ from dataclasses import dataclass
 import os
 import json
 import requests
-from typing import Any, List, Dict, Iterable, Mapping, Optional, Set, Union, Tuple
+from typing import Any, List, Dict, Iterable, Mapping, Optional, Set, Union, Tuple, ClassVar
 from datetime import datetime, timedelta
 from enum import Enum, IntEnum, auto, unique
 from sin_values import SIN_PHASES
 
-UNCACHEABLE_PLAYER_KEYS = {"consecutiveHits", "eDensity"}
-UNCACHEABLE_TEAM_KEYS = {"runs", "wins", "eDensity"}
-UNCACHEABLE_STADIUM_KEYS = {"hype"}
+EXCLUDE_FROM_CACHE = {
+    "team": {"runs", "wins", "eDensity"},
+    "player": {"consecutiveHits", "eDensity"},
+    "stadium": {"hype"},
+}
 
 stat_indices = [
     "tragicness",
@@ -172,8 +174,8 @@ def get_game_feed(game_id):
     return resp
 
 
-def cacheable(data: Dict[str, Any], uncached_keys: Set[str]) -> Dict[str, Any]:
-    return {k: v for k, v in data.items() if k not in uncached_keys}
+def cacheable(data: Dict[str, Any], object_type: str) -> Dict[str, Any]:
+    return {k: v for k, v in data.items() if k not in EXCLUDE_FROM_CACHE[object_type]}
 
 
 @unique
@@ -475,6 +477,7 @@ class TeamOrPlayerMods:
 
 @dataclass
 class TeamData(TeamOrPlayerMods):
+    object_type: ClassVar[str] = "team"
     data: Dict[str, Any]
     id: Optional[str]
     last_update_time: str
@@ -490,8 +493,8 @@ class TeamData(TeamOrPlayerMods):
         self.data = data
 
         if prev_version is not None:
-            new_cacheable_data = cacheable(data, UNCACHEABLE_TEAM_KEYS)
-            prev_cacheable_data = cacheable(prev_version.data, UNCACHEABLE_TEAM_KEYS)
+            new_cacheable_data = cacheable(data, self.object_type)
+            prev_cacheable_data = cacheable(prev_version.data, self.object_type)
             if new_cacheable_data == prev_cacheable_data:
                 last_update_time = prev_version.last_update_time
 
@@ -524,6 +527,7 @@ class TeamData(TeamOrPlayerMods):
 
 @dataclass
 class StadiumData:
+    object_type: ClassVar[str] = "stadium"
     data: Dict[str, Any]
     id: Optional[str]
     last_update_time: str
@@ -548,11 +552,11 @@ class StadiumData:
     def print_mods(self) -> str:
         return list(set(self.mods))
 
-    @staticmethod
-    def from_dict(data, last_update_time: str, prev_version: Optional["StadiumData"]):
+    @classmethod
+    def from_dict(cls, data, last_update_time: str, prev_version: Optional["StadiumData"]):
         if prev_version is not None:
-            new_cacheable_data = cacheable(data, UNCACHEABLE_TEAM_KEYS)
-            prev_cacheable_data = cacheable(prev_version.data, UNCACHEABLE_TEAM_KEYS)
+            new_cacheable_data = cacheable(data, cls.object_type)
+            prev_cacheable_data = cacheable(prev_version.data, cls.object_type)
             if new_cacheable_data == prev_cacheable_data:
                 last_update_time = prev_version.last_update_time
         return StadiumData(
@@ -653,6 +657,7 @@ class ItemData:
 
 @dataclass
 class PlayerData(TeamOrPlayerMods):
+    object_type: ClassVar[str] = "player"
     id: Optional[str]
     last_update_time: str
     raw_name: str
@@ -698,8 +703,8 @@ class PlayerData(TeamOrPlayerMods):
         self.data = data
 
         if prev_version is not None:
-            new_cacheable_data = cacheable(data, UNCACHEABLE_PLAYER_KEYS)
-            prev_cacheable_data = cacheable(prev_version.data, UNCACHEABLE_PLAYER_KEYS)
+            new_cacheable_data = cacheable(data, self.object_type)
+            prev_cacheable_data = cacheable(prev_version.data, self.object_type)
             if new_cacheable_data == prev_cacheable_data:
                 last_update_time = prev_version.last_update_time
 
