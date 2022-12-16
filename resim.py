@@ -138,12 +138,14 @@ class Resim:
             jands = self.data.get_team("a37f9158-7f82-46bc-908c-c9e2dda7c33b")
             if not jands.has_mod(Mod.OVERPERFORMING):
                 jands.add_mod(Mod.OVERPERFORMING, ModType.PERMANENT)
+                jands.last_update_time = self.event["created"]
 
         # another workaround for bad data
         if self.game_id == "c608b5db-29ad-4216-a703-8f0627057523":
             caleb_novak = self.data.get_player("0eddd056-9d72-4804-bd60-53144b785d5c")
             if caleb_novak.has_mod(Mod.ELSEWHERE):
                 caleb_novak.remove_mod(Mod.ELSEWHERE, ModType.PERMANENT)
+                caleb_novak.last_update_time = self.event["created"]
 
         # sometimes we start a fragment in the middle of a game and we wanna make sure we have the proper blood type
         a_blood_type_overrides = {
@@ -156,6 +158,7 @@ class Resim:
             shoe_thieves = self.data.get_team("bfd38797-8404-4b38-8b82-341da28b1f83")
             if not shoe_thieves.has_mod(blood_type):
                 shoe_thieves.add_mod(blood_type, ModType.GAME)
+                shoe_thieves.last_update_time = self.event["created"]
 
         self.print()
         if not self.update and self.play > 1:
@@ -787,10 +790,12 @@ class Resim:
             if self.event["created"] == "2021-05-11T16:05:03.662Z":
                 steph_weeks = self.data.get_player("18f45a1b-76eb-4b59-a275-c64cf62afce0")
                 steph_weeks.add_mod(Mod.CAREFUL, ModType.ITEM)
+                steph_weeks.last_update_time = self.event["created"]
 
             if self.event["created"] == "2021-05-18T13:07:33.068Z":
                 aldon_cashmoney_ii = self.data.get_player("194a78fd-3aa7-4356-8ba0-b9fdcbc0ea85")
                 aldon_cashmoney_ii.add_mod(Mod.CAREFUL, ModType.ITEM)
+                aldon_cashmoney_ii.last_update_time = self.event["created"]
             return True
 
     def handle_polarity(self):
@@ -2507,6 +2512,7 @@ class Resim:
                                     team.lineup.remove(attacked_player_id)
                                 if attacked_player_id in team.rotation:
                                     team.rotation.remove(attacked_player_id)
+                                team.last_update_time = self.event["created"]
 
                         return True
                     else:
@@ -2756,6 +2762,8 @@ class Resim:
                 # should probably move this logic into a function somehow
                 self.batting_team.lineup.remove(runner_id)
                 runner.add_mod(Mod.REDACTED, ModType.PERMANENT)
+                self.batting_team.last_update_time = self.event["created"]
+                runner.last_update_time = self.event["created"]
 
                 # and just as a cherry on top let's hack this so we don't roll for steal as well
                 self.update["basesOccupied"].remove(1)
@@ -3216,6 +3224,7 @@ class Resim:
             and self.ty != EventType.BATTER_UP
         ):
             self.batter.add_mod(Mod.OVERPERFORMING, ModType.GAME)
+            self.batter.last_update_time = self.event["created"]
 
     def apply_event_changes(self, event):
         # maybe move this function to data.py?
@@ -3230,9 +3239,11 @@ class Resim:
             if event["playerTags"]:
                 player = self.data.get_player(event["playerTags"][0])
                 player.add_mod(meta["mod"], meta["type"])
+                player.last_update_time = self.event["created"]
             else:
                 team = self.data.get_team(event["teamTags"][0])
                 team.add_mod(meta["mod"], meta["type"])
+                team.last_update_time = self.event["created"]
 
         # player or team mod removed
         if event["type"] in [
@@ -3246,6 +3257,8 @@ class Resim:
                     self.print(f"!!! warn: trying to remove mod {meta['mod']} but can't find it")
                 else:
                     player.remove_mod(meta["mod"], meta["type"])
+                player.last_update_time = self.event["created"]
+
             else:
                 team = self.data.get_team(event["teamTags"][0])
 
@@ -3253,6 +3266,7 @@ class Resim:
                     self.print(f"!!! warn: trying to remove mod {meta['mod']} but can't find it")
                 else:
                     team.remove_mod(meta["mod"], meta["type"])
+                team.last_update_time = self.event["created"]
 
         # mod replaced
         if event["type"] in [EventType.CHANGED_MODIFIER]:
@@ -3260,25 +3274,28 @@ class Resim:
                 player = self.data.get_player(event["playerTags"][0])
                 player.remove_mod(meta["from"], meta["type"])
                 player.add_mod(meta["to"], meta["type"])
+                player.last_update_time = self.event["created"]
             else:
                 team = self.data.get_team(event["teamTags"][0])
                 team.remove_mod(meta["from"], meta["type"])
                 team.add_mod(meta["to"], meta["type"])
+                team.last_update_time = self.event["created"]
 
         # timed mods wore off
         if event["type"] in [EventType.MOD_EXPIRES]:
             if event["playerTags"]:
+                player = self.data.get_player(event["playerTags"][0])
                 for mod in meta["mods"]:
-                    player = self.data.get_player(event["playerTags"][0])
                     if not player.has_mod(mod, meta["type"]):
                         self.print(f"!!! warn: trying to remove mod {mod} but can't find it")
                     else:
                         player.remove_mod(mod, meta["type"])
-
+                player.last_update_time = self.event["created"]
             else:
+                team = self.data.get_team(event["teamTags"][0])
                 for mod in meta["mods"]:
-                    team = self.data.get_team(event["teamTags"][0])
                     team.remove_mod(mod, meta["type"])
+                team.last_update_time = self.event["created"]
 
         # echo mods added/removed
         if event["type"] in [
@@ -3290,6 +3307,7 @@ class Resim:
                 player.add_mod(mod["mod"], mod["type"])
             for mod in meta.get("removes", []):
                 player.remove_mod(mod["mod"], mod["type"])
+            player.last_update_time = self.event["created"]
 
         # cases where the tagged player needs to be refetched (party, consumer, incin replacement)
         if event["type"] in [
@@ -3315,6 +3333,7 @@ class Resim:
                 team.lineup.remove(player_id)
             if player_id in team.rotation:
                 team.rotation.remove(player_id)
+            team.last_update_time = self.event["created"]
 
         # mod changed from one to other
         if event["type"] == EventType.MODIFICATION_CHANGE:
@@ -3327,6 +3346,7 @@ class Resim:
                 for mod, source in player.season_mod_sources.items():
                     if source == ["RECEIVER"]:
                         player.remove_mod(mod, ModType.SEASON)
+            player.last_update_time = self.event["created"]
 
         # roster swap
         if event["type"] == EventType.PLAYER_TRADED:
@@ -3341,6 +3361,8 @@ class Resim:
 
             b_location[b_idx] = a_player
             a_location[a_idx] = b_player
+            a_team.last_update_time = self.event["created"]
+            b_team.last_update_time = self.event["created"]
 
         # carcinization etc
         if event["type"] == EventType.PLAYER_MOVE:
@@ -3354,6 +3376,8 @@ class Resim:
             if player_id in send_team.rotation:
                 send_team.rotation.remove(player_id)
                 receive_team.rotation.append(player_id)
+            send_team.last_update_time = self.event["created"]
+            receive_team.last_update_time = self.event["created"]
 
         if event["type"] == EventType.PLAYER_SWAP:
             # For some reason, this swap doesn't actually happen.
@@ -3373,6 +3397,7 @@ class Resim:
             b_idx = b_location.index(b_player)
             b_location[b_idx] = a_player
             a_location[a_idx] = b_player
+            team.last_update_time = self.event["created"]
 
         if event["type"] in [
             EventType.ITEM_BREAKS,
@@ -3386,9 +3411,11 @@ class Resim:
                 if item.id == meta["itemId"]:
                     item.health = meta["itemHealthAfter"]
             player.update_stats()
+            player.last_update_time = self.event["created"]
 
         if event["type"] == EventType.HYPE_BUILT:
             self.stadium.hype = meta["after"]
+            self.stadium.last_update_time = self.event["created"]
 
     def find_start_of_inning_score(self, game_id, inning):
         for play in range(1000):
