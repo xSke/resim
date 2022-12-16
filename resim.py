@@ -175,10 +175,10 @@ class Resim:
             self.roll("???")
 
         event_adjustments = {
-            "2021-04-14T15:11:07.771Z": -1, # fix for missing data
-            "2021-04-14T15:08:13.155Z": -1, # fix for missing data
-            "2021-04-14T17:06:28.047Z": -2, # i don't know
-            "2021-04-14T19:07:51.129Z": -2, # may be attractor-relayed?
+            "2021-04-14T15:11:07.771Z": -1,  # fix for missing data
+            "2021-04-14T15:08:13.155Z": -1,  # fix for missing data
+            "2021-04-14T17:06:28.047Z": -2,  # i don't know
+            "2021-04-14T19:07:51.129Z": -2,  # may be attractor-relayed?
             "2021-04-20T12:00:00.931Z": -1,  # item damage at end of game??
             "2021-04-20T15:31:03.368Z": 1,  # ???
             "2021-04-21T04:24:42.674Z": 1,
@@ -539,7 +539,12 @@ class Resim:
             if self.event["created"] == "2021-05-20T23:02:11.327Z":
                 self.roll("extra for some reason")
 
-            if "was restored!" in self.desc or "were restored!" in self.desc or "was repaired." in self.desc or "were repaired." in self.desc:
+            if (
+                "was restored!" in self.desc
+                or "were restored!" in self.desc
+                or "was repaired." in self.desc
+                or "were repaired." in self.desc
+            ):
                 self.roll("restore item??")
                 self.roll("restore item??")
                 self.roll("restore item??")
@@ -665,10 +670,10 @@ class Resim:
                 "4ed7ce17-f47d-41ce-aad3-1089ab54bd2c": 2,
                 "9a5b1658-0924-43ef-a417-e7de8076a57c": 1,
                 "e1c383ab-efc0-49ad-91e2-3d29cca47a90": 8,  # prize match
-                "aa55aab8-cb03-4483-b5b9-393060310e76": 35, # prize match x2
+                "aa55aab8-cb03-4483-b5b9-393060310e76": 35,  # prize match x2
                 "b62e2bd0-333e-4462-a84d-5aecabd0c1bc": 1,
                 "45f65a7f-ed58-4482-8139-92d2e2ef7bfa": 1,
-                "7c52ac86-1994-4b99-9b9c-ff8850bd4608": 32, # prize match x2
+                "7c52ac86-1994-4b99-9b9c-ff8850bd4608": 32,  # prize match x2
                 "9291e5ce-a49f-44dc-9bb4-747bc783c351": 1,
                 "33415dda-9822-4bfd-b943-b8f7c4fb3af4": 1,
                 "0b82745a-e797-4256-9ce7-9868253a9e4b": 1,
@@ -861,7 +866,6 @@ class Resim:
                     self.roll("charm item damage???")
                     self.roll("charm item damage???")
                     # self.roll("charm item damage???")
-
 
                 # okay so this might need to be a proper "handle_batter_reverb" but i don't trust this
                 # so uhhh
@@ -1397,16 +1401,16 @@ class Resim:
                         damage_runners = []
 
                         if self.update["basesOccupied"] == [2, 1, 0]:
-                            damage_runners = [1, 0] # does not include a 2 atvl
+                            damage_runners = [1, 0]  # does not include a 2 atvl
                         elif self.update["basesOccupied"] == [1, 0]:
-                            damage_runners = [0] # unsure
+                            damage_runners = [0]  # unsure
                         elif self.update["basesOccupied"] == [2, 0]:
-                            damage_runners = [2, 2] # this one is correct
+                            damage_runners = [2, 2]  # this one is correct
                         elif self.update["basesOccupied"] == [0]:
                             damage_runners = []
 
                         for rbase in damage_runners:
-                            idx = self.update['basesOccupied'].index(rbase)
+                            idx = self.update["basesOccupied"].index(rbase)
                             runner_id = self.update["baseRunners"][idx]
                             runner = self.data.get_player(runner_id)
                             self.damage(runner, "runner")
@@ -2342,10 +2346,16 @@ class Resim:
                 if swept_players:
                     # todo: what are the criteria here
                     has_undertaker = False
-                    players = self.batting_team.lineup + self.batting_team.rotation# + self.pitching_team.lineup + self.pitching_team.rotation
+                    players = (
+                        self.batting_team.lineup + self.batting_team.rotation
+                    )  # + self.pitching_team.lineup + self.pitching_team.rotation
                     for player_id in players:
                         player = self.data.get_player(player_id)
-                        if player.has_mod(Mod.UNDERTAKER) and not player.has_any(Mod.ELSEWHERE) and player_id not in swept_players:
+                        if (
+                            player.has_mod(Mod.UNDERTAKER)
+                            and not player.has_any(Mod.ELSEWHERE)
+                            and player_id not in swept_players
+                        ):
                             has_undertaker = True
 
                     if has_undertaker:
@@ -2673,7 +2683,6 @@ class Resim:
         if (
             (17, 0) <= (self.season, self.day)
             and secret_runner_id == "070758a0-092a-4a2c-8a16-253c835887cb"
-
             # both firefighters games, where alx is in the ffs shadows
             and self.game_id not in ["377f87df-36aa-4fac-bc97-59c24efb684b", "bfd8dc98-f35a-49d0-b810-2ee38fb6886f"]
         ):
@@ -2993,6 +3002,7 @@ class Resim:
                 "2021-05-20T17:02:04.119Z": True,
                 "2021-05-20T17:22:31.407Z": True,
                 "2021-05-20T17:24:46.963Z": True,
+                "2021-05-20T21:16:46.924Z": True,
                 "2021-05-21T02:26:48.533Z": False,
                 "2021-05-21T05:13:17.792Z": False,
                 "2021-05-21T05:18:07.854Z": False,
