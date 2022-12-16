@@ -3,10 +3,14 @@ from dataclasses import dataclass
 import os
 import json
 import requests
-from typing import Any, List, Dict, Iterable, Mapping, Optional, Set, Union
+from typing import Any, List, Dict, Iterable, Mapping, Optional, Set, Union, Tuple
 from datetime import datetime, timedelta
 from enum import Enum, IntEnum, auto, unique
 from sin_values import SIN_PHASES
+
+UNCACHEABLE_PLAYER_KEYS = {"consecutiveHits", "eDensity"}
+UNCACHEABLE_TEAM_KEYS = {"runs", "wins", "eDensity"}
+UNCACHEABLE_STADIUM_KEYS = {"hype"}
 
 stat_indices = [
     "tragicness",
@@ -166,6 +170,10 @@ def get_game_feed(game_id):
     key = f"feed_game_{game_id}"
     resp = get_cached(key, f"https://api.sibr.dev/eventually/v2/events?gameTags={game_id}&sortorder=asc&limit=1000")
     return resp
+
+
+def cacheable(data: Dict[str, Any], uncached_keys: Set[str]) -> Dict[str, Any]:
+    return {k: v for k, v in data.items() if k not in uncached_keys}
 
 
 @unique
@@ -467,7 +475,9 @@ class TeamOrPlayerMods:
 
 @dataclass
 class TeamData(TeamOrPlayerMods):
+    data: Dict[str, Any]
     id: Optional[str]
+    last_update_time: str
     lineup: List[str]
     rotation: List[str]
     shadows: List[str]
@@ -476,8 +486,17 @@ class TeamData(TeamOrPlayerMods):
     nickname: str = ""
     rotation_slot: int = 0
 
-    def __init__(self, data: Dict[str, Any]):
+    def __init__(self, data: Dict[str, Any], last_update_time: str, prev_version: Optional["TeamData"]):
+        self.data = data
+
+        if prev_version is not None:
+            new_cacheable_data = cacheable(data, UNCACHEABLE_TEAM_KEYS)
+            prev_cacheable_data = cacheable(prev_version.data, UNCACHEABLE_TEAM_KEYS)
+            if new_cacheable_data == prev_cacheable_data:
+                last_update_time = prev_version.last_update_time
+
         self.id = data["id"]
+        self.last_update_time = last_update_time
         self.lineup = data["lineup"]
         self.rotation = data["rotation"]
         self.shadows = data.get("shadows", []) + data.get("bullpen", []) + data.get("bench", [])
@@ -497,13 +516,17 @@ class TeamData(TeamOrPlayerMods):
                 # won't get an index error
                 "lineup": [None],
                 "rotation": [None],
-            }
+            },
+            "1970-01-01T00:00:00.000Z",
+            None,
         )
 
 
 @dataclass
 class StadiumData:
+    data: Dict[str, Any]
     id: Optional[str]
+    last_update_time: str
     mods: Set[str]
     name: str
     nickname: str
@@ -526,9 +549,16 @@ class StadiumData:
         return list(set(self.mods))
 
     @staticmethod
-    def from_dict(data):
+    def from_dict(data, last_update_time: str, prev_version: Optional["StadiumData"]):
+        if prev_version is not None:
+            new_cacheable_data = cacheable(data, UNCACHEABLE_TEAM_KEYS)
+            prev_cacheable_data = cacheable(prev_version.data, UNCACHEABLE_TEAM_KEYS)
+            if new_cacheable_data == prev_cacheable_data:
+                last_update_time = prev_version.last_update_time
         return StadiumData(
+            data=data,
             id=data["id"],
+            last_update_time=last_update_time,
             mods=set(data["mods"]),
             name=data["name"],
             nickname=data["nickname"],
@@ -548,6 +578,8 @@ class StadiumData:
     @staticmethod
     def null():
         return StadiumData(
+            data={},
+            last_update_time="1970-01-01T00:00:00.000Z",
             id=None,
             mods=set(),
             name="Null Stadium",
@@ -622,6 +654,7 @@ class ItemData:
 @dataclass
 class PlayerData(TeamOrPlayerMods):
     id: Optional[str]
+    last_update_time: str
     raw_name: str
     unscattered_name: Optional[str]
     data: dict
@@ -661,11 +694,18 @@ class PlayerData(TeamOrPlayerMods):
     season_mod_sources: Dict[str, List[str]]
     peanut_allergy: bool
 
-    def __init__(self, data: Dict[str, Any]):
+    def __init__(self, data: Dict[str, Any], last_update_time: str, prev_version: Optional["PlayerData"]):
         self.data = data
+
+        if prev_version is not None:
+            new_cacheable_data = cacheable(data, UNCACHEABLE_PLAYER_KEYS)
+            prev_cacheable_data = cacheable(prev_version.data, UNCACHEABLE_PLAYER_KEYS)
+            if new_cacheable_data == prev_cacheable_data:
+                last_update_time = prev_version.last_update_time
 
         data_state = data.get("state", {})
         self.id = data["id"]
+        self.last_update_time = last_update_time
         self.raw_name = data["name"]
         self.unscattered_name = data_state.get("unscatteredName")
         # Player attributes
@@ -788,9 +828,13 @@ class PlayerData(TeamOrPlayerMods):
                 "soul": 0,
                 "eDensity": 0,
                 "items": [],
-            }
+            },
+            "1970-01-01T00:00:00.000Z",
+            None,
         )
 
+
+DataObject = Union[PlayerData, TeamData, StadiumData]
 
 CHRONICLER_URI = "https://api.sibr.dev/chronicler"
 
@@ -830,7 +874,9 @@ class GameData:
             key,
             f"{CHRONICLER_URI}/v2/entities?type=team&at={timestamp}&count=1000",
         )
-        self.teams = {e["entityId"]: TeamData(e["data"]) for e in resp["items"]}
+        self.teams = {
+            e["entityId"]: TeamData(e["data"], e["validFrom"], self.teams.get(e["entityId"])) for e in resp["items"]
+        }
 
     def fetch_players(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
@@ -839,7 +885,9 @@ class GameData:
             key,
             f"{CHRONICLER_URI}/v2/entities?type=player&at={timestamp}&count=2000",
         )
-        self.players = {e["entityId"]: PlayerData(e["data"]) for e in resp["items"]}
+        self.players = {
+            e["entityId"]: PlayerData(e["data"], e["validFrom"], self.players.get(e["entityId"])) for e in resp["items"]
+        }
 
     def fetch_stadiums(self, timestamp, delta_secs: float = 0):
         timestamp = offset_timestamp(timestamp, delta_secs)
@@ -848,7 +896,10 @@ class GameData:
             key,
             f"{CHRONICLER_URI}/v2/entities?type=stadium&at={timestamp}&count=1000",
         )
-        self.stadiums = {e["entityId"]: StadiumData.from_dict(e["data"]) for e in resp["items"]}
+        self.stadiums = {
+            e["entityId"]: StadiumData.from_dict(e["data"], e["validFrom"], self.stadiums.get(e["entityId"]))
+            for e in resp["items"]
+        }
 
     def fetch_player_after(self, player_id, timestamp):
         key = f"player_{player_id}_after_{timestamp}"
@@ -857,7 +908,9 @@ class GameData:
             f"{CHRONICLER_URI}/v2/versions?type=player&id={player_id}&after={timestamp}&count=1&order=asc",
         )
         for item in resp["items"]:
-            self.players[item["entityId"]] = PlayerData(item["data"])
+            self.players[item["entityId"]] = PlayerData(
+                item["data"], item["validFrom"], self.players.get(item["entityId"])
+            )
 
     def fetch_game(self, game_id):
         key = f"game_updates_{game_id}"
