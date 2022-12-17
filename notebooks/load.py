@@ -20,8 +20,8 @@ TEAM_OBJECTS = ['batting_team', 'pitching_team']
 OBJECTS = [*PLAYER_OBJECTS, *TEAM_OBJECTS, 'stadium']
 
 
-def _get_attribute(attr_key: str, use_items: bool, use_broken_items: bool):
-    def attribute_extractor(player: PlayerData):
+def _get_player_attribute(attr_key: str, use_items: bool, use_broken_items: bool):
+    def player_attribute_extractor(player: PlayerData):
         attr = player.data.get(attr_key) or 0  # for cinnamon
         if use_items:
             for item in player.items:
@@ -30,7 +30,13 @@ def _get_attribute(attr_key: str, use_items: bool, use_broken_items: bool):
 
         return attr
 
-    return attribute_extractor
+    return player_attribute_extractor
+
+def _get_stadium_attribute(attr_key: str):
+    def stadium_attribute_extractor(stadium: StadiumData):
+        return stadium.data.get(attr_key)
+
+    return stadium_attribute_extractor
 
 
 def _get_vibes(row):
@@ -85,7 +91,7 @@ def _load_objects(df: pd.DataFrame, object_key: str) -> DataObjectMap:
     filenames = df[object_key + '_file'].unique()
     object_map: DataObjectMap = {}
     for i, filename in enumerate(filenames):
-        with open(f"../{filename}", "r") as f:
+        with open("../" + filename, "r") as f:
             obj = json.load(f)
         # Fill in the data that's excluded from cache with dummy data to prevent key errors
         for key in EXCLUDE_FROM_CACHE[obj["type"]]:
@@ -127,9 +133,9 @@ def data(roll_type: str, season: Union[None, int, list[int]]) -> pd.DataFrame:
     return df
 
 
-def attribute(df: pd.DataFrame, object_key: str, attr_key: str, *,
-              vibes: bool = True, mods: bool = True, items: bool = True, broken_items: bool = False):
-    attr = df[object_key + "_object"].apply(_get_attribute(attr_key, items, broken_items))
+def player_attribute(df: pd.DataFrame, object_key: str, attr_key: str, *,
+                     vibes: bool = True, mods: bool = True, items: bool = True, broken_items: bool = False):
+    attr = df[object_key + "_object"].apply(_get_player_attribute(attr_key, items, broken_items))
     if vibes:
         vibe = df[object_key + "_vibes"]
         attr = attr * (1 + 0.2 * vibe)
@@ -139,3 +145,7 @@ def attribute(df: pd.DataFrame, object_key: str, attr_key: str, *,
         attr = attr * multiplier
 
     return attr
+
+
+def stadium_attribute(df: pd.DataFrame, attr_key: str, *, center: bool = True):
+    return df["stadium_object"].apply(_get_stadium_attribute(attr_key)) - 0.5 * center
