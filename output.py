@@ -84,7 +84,7 @@ class SaveCsv:
                 with open(file_path, "w") as f:
                     json.dump(to_save, f)
                 self.last_saved_object[obj.id] = copy.deepcopy(obj)
-            row[save_key + "_path"] = file_path
+            row[save_key + "_file"] = file_path
 
         if self.csv is None:
             self.file = open(self.partial_filename, "w", newline="", encoding="utf-8")
