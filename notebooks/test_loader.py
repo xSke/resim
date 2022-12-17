@@ -1,4 +1,4 @@
-from notebooks import load
+import load
 
 
 def _test():
