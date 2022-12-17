@@ -3,6 +3,10 @@ from collections import defaultdict
 from typing import Dict, Any, Set
 
 import pandas as pd
+import sys
+
+# I don't want this to be required, but I don't know how to make the import work otherwise
+sys.path.append('../')
 
 import formulas
 from data import PlayerData, TeamData, StadiumData, DataObject
@@ -90,15 +94,19 @@ class ObjectLoader:
         self.vibe_cache: Dict[str, pd.Series] = {}
         self.multiplier_cache: Dict[str, Dict[str, pd.Series]] = defaultdict(lambda: {})
 
+        for object_key in {"batter", "pitcher"}:
+            objects = self._get_cached(object_key)
+            self.df[object_key + "_object"] = self.df[object_key + "_file"].apply(lambda k: objects[k])
+
     def __call__(self, object_key, attr_key, *, vibes=True, mods=True, items=True, broken_items=False):
         objects = self._get_cached(object_key)
-        object_paths = self.df[object_key + "_path"]
-        attr = object_paths.apply(get_attribute(objects, attr_key, items, broken_items))
+        object_files = self.df[object_key + "_file"]
+        attr = object_files.apply(get_attribute(objects, attr_key, items, broken_items))
         if vibes:
             if object_key in self.vibe_cache:
                 vibe = self.vibe_cache[object_key]
             else:
-                vibe = self.df[[object_key + "_path", "day"]].apply(get_vibe(objects), axis=1)
+                vibe = self.df[[object_key + "_file", "day"]].apply(get_vibe(objects), axis=1)
                 self.vibe_cache[object_key] = vibe
             attr = attr * (1 + 0.2 * vibe)
 
@@ -108,7 +116,7 @@ class ObjectLoader:
             else:
                 team_key = team_for_object(object_key)
                 team_objects = self._get_cached(team_key)
-                cols = [object_key + "_path", team_key + "_path", "weather", "season", "day", "runner_count",
+                cols = [object_key + "_file", team_key + "_file", "weather", "season", "day", "runner_count",
                         "top_of_inning", "is_maximum_blaseball", "batter_at_bats"]
                 multiplier = self.df[cols].apply(get_multiplier(objects, team_objects, attr_key), axis=1)
                 self.multiplier_cache[object_key][attr_key] = multiplier
@@ -120,7 +128,7 @@ class ObjectLoader:
         if object_key in self.object_cache:
             return self.object_cache[object_key]
 
-        filenames = self.df[object_key + '_path'].unique()
+        filenames = self.df[object_key + '_file'].unique()
         object_map: DataObjectMap = {}
         for i, filename in enumerate(filenames):
             with open(f"../{filename}", "r") as f:
@@ -145,10 +153,11 @@ def _test():
 
     df = pd.concat((pd.read_csv(f, dtype={"stadium_id": "string"}) for f in all_files), ignore_index=True)
     print("Loaded full dataframe")
-    df = df[df['season'] == 17]
+    # df = df[df['season'] == 17]
     print("Chopped dataframe")
 
     load = ObjectLoader(df)
+    print(df.columns)
     print("Made loader")
     df["ruth_scaled"] = load('pitcher', 'ruthlessness')
     print("Got ruth")
