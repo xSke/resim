@@ -5,8 +5,6 @@ from typing import Dict, Union
 import pandas as pd
 import sys
 
-from notebooks.test_loader import _test
-
 # I don't want this to be required, but I don't know how to make the import work otherwise
 sys.path.append('../')
 
@@ -114,23 +112,17 @@ def data(roll_type: str, season: Union[None, int, list[int]]) -> pd.DataFrame:
     all_files = glob.glob(f"../roll_data/s{season}*-{roll_type}.csv")
 
     df = pd.concat((pd.read_csv(f, dtype={"stadium_id": "string"}) for f in all_files), ignore_index=True)
-    print(df.columns)
 
-    print("Loading extras")
     df["stat_relevant_data"] = df.apply(_get_stat_relevant_data, axis=1)
-    print("Loaded stat relevant data")
     for object_key in OBJECTS:
         objects = _load_objects(df, object_key)
         df[object_key + "_object"] = df[object_key + "_file"].apply(lambda k: objects[k])
     # df.drop(f"{label}_file" for label in OBJECTS)
-    print("Loaded objects")
     for player_key in PLAYER_OBJECTS:
         df[player_key + "_vibes"] = df[[player_key + "_object", "day"]].apply(_get_vibes, axis=1)
         df[player_key + "_mods"] = df[player_key + "_object"].apply(_get_mods)
-    print("Loaded player extras")
     for team_key in TEAM_OBJECTS:
         df[team_key + "_mods"] = df[team_key + "_object"].apply(_get_mods)
-    print("Loaded team extras")
 
     return df
 
