@@ -1668,6 +1668,9 @@ class Resim:
         if known_outcome is not None:
             if known_outcome and foul_roll > threshold:
                 self.print(f"!!! too high foul roll ({foul_roll} > {threshold})")
+
+                if foul_roll > 0.5:
+                    self.print(f"!!! very too high foul roll")
             elif not known_outcome and foul_roll < threshold:
                 self.print(f"!!! too low foul roll ({foul_roll} < {threshold})")
         outcomestr = "Foul" if known_outcome else "Fair"
@@ -3010,6 +3013,7 @@ class Resim:
                 "2021-05-21T08:16:50.192Z": False,
                 "2021-05-21T11:22:13.815Z": False,
                 "2021-05-21T15:11:44.709Z": False,
+                "2021-05-20T09:13:42.884Z": False,
             }
 
             if self.event["created"] in double_strike_overrides:
