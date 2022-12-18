@@ -1,6 +1,7 @@
 import glob
+import itertools
 import json
-from typing import Dict, Union
+from typing import Dict, Union, Iterable
 
 import pandas as pd
 import sys
@@ -17,7 +18,9 @@ DataObjectMap = Dict[str, DataObject]
 PLAYER_OBJECTS = ['batter', 'pitcher', 'fielder', 'relevant_runner', 'runner_on_first', 'runner_on_second',
                   'runner_on_third', 'runner_on_third_hh']
 TEAM_OBJECTS = ['batting_team', 'pitching_team']
-OBJECTS = [*PLAYER_OBJECTS, *TEAM_OBJECTS, 'stadium']
+OTHER_OBJECTS = ['stadium']
+STAT_RELEVANT_DATA_KEYS = ["weather", "season", "day", "runner_count", "top_of_inning", "is_maximum_blaseball",
+                           "batter_at_bats"]
 
 
 def _get_player_attribute(attr_key: str, use_items: bool, use_broken_items: bool):
@@ -31,6 +34,7 @@ def _get_player_attribute(attr_key: str, use_items: bool, use_broken_items: bool
         return attr
 
     return player_attribute_extractor
+
 
 def _get_stadium_attribute(attr_key: str):
     def stadium_attribute_extractor(stadium: StadiumData):
@@ -58,23 +62,24 @@ def _get_mods(item: Union[PlayerData, TeamData]):
     return ";".join(item.mods)
 
 
-def _get_multiplier(attr_key: str, player_key: str, team_key: str):
+def _get_multiplier(position, attr):
     def multiplier_extractor(row):
-        return formulas.get_multiplier(row[player_key + "_object"], row[team_key + "_object"], player_key, attr_key,
-                                       row['stat_relevant_data'])
+        player, team, meta = row
+        return formulas.get_multiplier(player, team, position, attr, meta)
 
     return multiplier_extractor
 
 
 def _get_stat_relevant_data(row):
+    (weather, season, day, runner_count, top_of_inning, is_maximum_blaseball, batter_at_bats) = row
     return formulas.StatRelevantData(
-        weather=row["weather"],
-        season=row["season"],
-        day=row["day"],
-        runner_count=row["runner_count"],
-        top_of_inning=row["top_of_inning"],
-        is_maximum_blaseball=row["is_maximum_blaseball"],
-        batter_at_bats=row["batter_at_bats"],
+        weather=weather,
+        season=season,
+        day=day,
+        runner_count=runner_count,
+        top_of_inning=top_of_inning,
+        is_maximum_blaseball=is_maximum_blaseball,
+        batter_at_bats=batter_at_bats,
     )
 
 
@@ -108,7 +113,18 @@ def _load_objects(df: pd.DataFrame, object_key: str) -> DataObjectMap:
     return object_map
 
 
-def data(roll_type: str, season: Union[None, int, list[int]]) -> pd.DataFrame:
+def data(roll_type: str, season: Union[None, int, list[int]], roles: Iterable[str] = ("pitcher", "batter")) \
+        -> pd.DataFrame:
+    """
+    Loads a dataframe with all the roll data for a particular type of roll
+    :param roll_type: Type of roll. This is the thing that appears in the csv filenames, like "strikes" or "party"
+    :param season: Which season to load. Can be an integer, list, or None, for one season, multiple seasons, or all
+        seasons respectively
+    :param roles: Which player roles to load. Valid values of this are listed in PLAYER_OBJECTS. Defaults to loading
+        pitcher and batter
+    :return: A populated dataframe
+    """
+
     if season is None:
         season_str = ""
     elif isinstance(season, int):
@@ -119,16 +135,20 @@ def data(roll_type: str, season: Union[None, int, list[int]]) -> pd.DataFrame:
 
     df = pd.concat((pd.read_csv(f, dtype={"stadium_id": "string"}) for f in all_files), ignore_index=True)
 
-    df["stat_relevant_data"] = df.apply(_get_stat_relevant_data, axis=1)
-    for object_key in OBJECTS:
+    df["stat_relevant_data"] = df[STAT_RELEVANT_DATA_KEYS].apply(_get_stat_relevant_data, axis=1)
+    for object_key in itertools.chain(roles, TEAM_OBJECTS, OTHER_OBJECTS):
         objects = _load_objects(df, object_key)
         df[object_key + "_object"] = df[object_key + "_file"].apply(lambda k: objects[k])
     # df.drop(f"{label}_file" for label in OBJECTS)
-    for player_key in PLAYER_OBJECTS:
+    for player_key in roles:
+        if player_key not in PLAYER_OBJECTS:
+            raise ValueError(f"Unknown player key '{player_key}'")
         df[player_key + "_vibes"] = df[[player_key + "_object", "day"]].apply(_get_vibes, axis=1)
         df[player_key + "_mods"] = df[player_key + "_object"].apply(_get_mods)
+        df[player_key + "_name"] = df[player_key + "_object"].apply(lambda obj: obj.name)
     for team_key in TEAM_OBJECTS:
         df[team_key + "_mods"] = df[team_key + "_object"].apply(_get_mods)
+        df[team_key + "_name"] = df[team_key + "_object"].apply(lambda obj: obj.nickname)
 
     return df
 
@@ -141,7 +161,8 @@ def player_attribute(df: pd.DataFrame, object_key: str, attr_key: str, *,
         attr = attr * (1 + 0.2 * vibe)
 
     if mods:
-        multiplier = df.apply(_get_multiplier(attr_key, object_key, _team_for_object(object_key)), axis=1)
+        cols = [object_key + "_object", _team_for_object(object_key) + "_object", 'stat_relevant_data']
+        multiplier = df[cols].apply(_get_multiplier(object_key, attr_key), axis=1)
         attr = attr * multiplier
 
     return attr
