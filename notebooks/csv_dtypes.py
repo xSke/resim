@@ -1,7 +1,7 @@
 column_dtypes = {
     "event_type": "string",
     "roll": "float",
-    # "passed": "boolean",
+    # "passed": "bool",
     "batter_buoyancy": "float",
     "batter_divinity": "float",
     "batter_martyrdom": "float",

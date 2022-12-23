@@ -102,20 +102,24 @@ def get_strike_threshold(
 ):
     vibes = pitcher.vibes(meta.day)
     ruth = pitcher.ruthlessness * get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)
+    cold = pitcher.coldness * get_multiplier(pitcher, pitching_team, "pitcher", "coldness", meta)
     musc = batter.musclitude * get_multiplier(batter, batting_team, "batter", "musclitude", meta)
     mox = batter.moxie * get_multiplier(batter, batting_team, "batter", "moxie", meta)
     fwd = stadium.forwardness
 
+    batter_hype = stadium.hype if not meta.top_of_inning else 0
+    pitcher_hype = stadium.hype if meta.top_of_inning else 0
+
     # fmt: off
-    constant, ruth_factor, fwd_factor, musc_factor, mox_factor, roll_cap = {
-        11: (0.2,  0.35,  0.2,   0.1,    0,   0.9),
-        12: (0.2,  0.3,   0.2,   0.1,    0,   0.85),
-        13: (0.2,  0.3,   0.2,   0.1,    0,   0.85),
-        14: (0.2,  0.285, 0.2,   0.1,    0,   0.86),
-        15: (0.2,  0.285, 0.2,   0.1,    0,   0.86),  # todo: not sure but seems right
-        16: (0.2,  0.285, 0.2,   0.1,    0,   0.86),  # todo: not sure but seems right
-        17: (0.2,  0.285, 0.2,   0.1,    0,   0.86),  # todo: not sure but seems right
-        18: (0.28, 0.29,  0.125, 0.075, -0.1, 0.86),  # todo: a solid starter guess
+    constant, ruth_factor, cold_factor, fwd_factor, musc_factor, mox_factor, abs_factor, roll_cap = {
+        11: (0.2,  0.35,  0,    0.2,   0.1,    0,   0,  0.9),
+        12: (0.2,  0.3,   0,    0.2,   0.1,    0,   0,  0.85),
+        13: (0.2,  0.3,   0,    0.2,   0.1,    0,   0,  0.85),
+        14: (0.2,  0.285, 0,    0.2,   0.1,    0,   0,  0.86),
+        15: (0.2,  0.285, 0,    0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
+        16: (0.2,  0.285, 0,    0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
+        17: (0.2,  0.285, 0,    0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
+        18: (0.285, 0.2583, 0.0287, 0.12, 0.085, -0.085, -0.035,  0.86),  # todo: a solid starter guess
     }[meta.season]
     # fmt: on
 
@@ -123,7 +127,15 @@ def get_strike_threshold(
         constant += 0.2
 
     threshold = (
-        constant + ruth_factor * (ruth * (1 + 0.2 * vibes)) + fwd_factor * fwd + musc_factor * musc + mox_factor * mox
+        constant
+        + ruth_factor * (ruth * (1 + 0.2 * vibes))
+        + cold_factor * (cold * (1 + 0.2 * vibes))
+        + fwd_factor * fwd
+        + musc_factor * musc
+        + mox_factor * mox
+        + abs_factor * abs(musc - mox)
+        + 0.06 * pitcher_hype
+        - 0.06 * batter_hype
     )
     threshold = min(threshold, roll_cap)
     return threshold
