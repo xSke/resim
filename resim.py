@@ -184,13 +184,15 @@ class Resim:
             "2021-04-21T04:24:42.674Z": 1,
             "2021-05-10T19:28:42.723Z": 1,
             "2021-05-17T23:10:48.902Z": 1,  # dp item damage rolls...?
+            "2021-05-18T02:14:12.542Z": 1,  # AA blood roll on the previous event needs to be fixed
             "2021-05-18T02:22:44.148Z": 1,  # idk
             "2021-05-20T12:18:08.800Z": 1,  # drumsolo walk
             "2021-05-20T12:19:08.611Z": 1,  # drumsolo walk
             "2021-05-20T12:20:13.495Z": 1,  # drumsolo walk
             "2021-05-20T12:29:39.279Z": 1,  # drumsolo walk?
             "2021-05-21T18:27:35.164Z": 1,  # another walk with bases loaded
-            "2021-05-21T01:02:36.430Z": 1,  # party time align?
+            # "2021-05-21T01:02:36.430Z": 1,  # party time align?
+            "2021-05-21T01:02:40.772Z": 1,
             # these three all seem double strike related, but i can't figure out why
             "2021-05-21T15:11:59.315Z": -1,
             "2021-05-21T15:18:16.240Z": -1,
@@ -1656,7 +1658,7 @@ class Resim:
 
     def roll_foul(self, known_outcome: bool):
         is_0_no_eligible = self.batting_team.has_mod(Mod.O_NO) and self.strikes == 2 and self.balls == 0
-        if is_0_no_eligible or self.batter.has_any(Mod.CHUNKY, Mod.SMOOTH):
+        if is_0_no_eligible:  # or self.batter.has_any(Mod.CHUNKY, Mod.SMOOTH):
             known_outcome = None
 
         meta = self.get_stat_meta()
@@ -2969,51 +2971,23 @@ class Resim:
             # event where our formula registers a ball but we know it's a strike by roll count
             # ideally we'd get rid of these and our formula would just guess right but alas
             double_strike_overrides = {
-                "2021-05-18T02:11:28.635Z": True,
-                "2021-05-18T14:00:51.704Z": True,
-                "2021-05-18T14:15:14.700Z": True,
-                "2021-05-18T16:06:13.149Z": True,
-                "2021-05-18T16:09:43.915Z": True,
-                "2021-05-18T21:01:25.977Z": True,
-                "2021-05-18T23:07:53.240Z": True,
-                "2021-05-19T01:09:58.718Z": True,
-                "2021-05-18T02:14:14.532Z": True,
+                # fragment 1:
+                "2021-05-18T00:00:55.970Z": True,
+                "2021-05-18T00:12:17.263Z": True,
+                "2021-05-18T01:07:53.312Z": True,
+                # "2021-05-18T02:14:14.532Z": True,  # I REALLY don't like this one!!!! Something else is wrong!!!
                 "2021-05-18T02:17:39.455Z": True,
-                "2021-05-18T03:20:25.483Z": True,
-                "2021-05-18T16:01:01.346Z": True,
-                "2021-05-19T02:22:30.724Z": False,
-                "2021-05-19T03:17:52.633Z": True,
-                "2021-05-19T03:25:43.040Z": False,
-                "2021-05-19T06:17:30.212Z": True,
-                "2021-05-19T10:00:16.106Z": True,
-                "2021-05-19T11:24:35.382Z": True,
-                "2021-05-19T12:03:36.905Z": True,
-                "2021-05-19T12:08:53.216Z": True,
-                "2021-05-19T12:17:50.106Z": True,
-                "2021-05-19T12:24:25.920Z": True,
+                # fragment 2:
+                "2021-05-19T05:20:20.513Z": True,
                 "2021-05-19T13:11:36.731Z": True,
-                "2021-05-19T16:10:47.907Z": True,
-                "2021-05-19T16:16:29.241Z": True,
-                "2021-05-19T16:26:20.125Z": True,
-                "2021-05-19T17:01:06.420Z": True,
-                "2021-05-19T17:07:37.279Z": True,
-                "2021-05-19T17:11:42.669Z": True,
-                "2021-05-20T10:09:22.501Z": False,
-                "2021-05-20T13:03:47.007Z": True,
-                "2021-05-20T13:25:35.029Z": True,
-                "2021-05-20T15:10:58.338Z": True,
+                # fragment 3:
+                "2021-05-20T14:18:35.226Z": True,
+                # fragment 4:
                 "2021-05-20T17:02:04.119Z": True,
+                "2021-05-20T17:21:41.644Z": True,
                 "2021-05-20T17:22:31.407Z": True,
                 "2021-05-20T17:24:46.963Z": True,
-                "2021-05-20T21:16:46.924Z": True,
-                "2021-05-21T02:26:48.533Z": False,
-                "2021-05-21T05:13:17.792Z": False,
-                "2021-05-21T05:18:07.854Z": False,
-                "2021-05-21T08:07:15.422Z": False,
-                "2021-05-21T08:16:50.192Z": False,
-                "2021-05-21T11:22:13.815Z": False,
-                "2021-05-21T15:11:44.709Z": False,
-                "2021-05-20T09:13:42.884Z": False,
+                # fragment 5: none anymore!
             }
 
             if self.event["created"] in double_strike_overrides:
