@@ -4,6 +4,8 @@ import os
 from csv import DictWriter
 from typing import Dict
 
+import pandas as pd
+
 from data import DataObject, cacheable
 from formulas import StatRelevantData
 
@@ -18,6 +20,12 @@ class SaveCsv:
         self.file = None
         self.csv = None
         self.last_saved_object = last_saved_update
+        try:
+            (_, old_run_name) = run_name.split("-", maxsplit=1)
+            self.reference_csv = pd.read_csv(f"roll_data_reference/{old_run_name}-{category_name}.csv")
+        except FileNotFoundError:
+            self.reference_csv = None
+        self.i = 0
 
     def write(
             self,
@@ -34,10 +42,12 @@ class SaveCsv:
             baserunners_next,
             meta: StatRelevantData,
             save_objects: Dict[str, DataObject],
+            event_time,
     ):
         # fmt: off
         row = {
             "event_type": event_type,
+            "event_time": event_time,
             "roll": roll,
             "passed": passed,
             "what1": what1,
@@ -71,6 +81,19 @@ class SaveCsv:
         # fmt: on
 
         for save_key, obj in save_objects.items():
+            if save_key == "pitcher" and self.reference_csv is not None and self.final_filename.endswith("-strikes.csv"):
+                # Make sure we got the right row
+                if abs(self.reference_csv.loc[self.i, "roll"] - roll) < 1e-12:
+                    print("Right roll")
+                    reference_mods = self.reference_csv.loc[self.i, "pitcher_mods"]
+                    if pd.isna(reference_mods):
+                        assert not obj.mods  # assert that it's empty
+                    else:
+                        assert set(reference_mods.split(";")) == obj.mods
+                else:
+                    print("WRONG ROLL", abs(self.reference_csv.loc[self.i, "roll"] - roll))
+                    # print("WRONG ROLL", event_time, self.final_filename)
+
             file_path = f"{self.object_dir}/{obj.id}-{obj.last_update_time}.json".replace(":", "_")
             if (
                     obj.id not in self.last_saved_object
@@ -92,6 +115,7 @@ class SaveCsv:
             self.csv.writeheader()
 
         self.csv.writerow(row)
+        self.i += 1
 
     def close(self):
         if not self.file:

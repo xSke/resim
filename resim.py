@@ -3099,6 +3099,7 @@ class Resim:
             self.next_update["basesOccupied"] if self.next_update else None,
             self.get_stat_meta(),
             save_objects,
+            self.event['created'],
         )
 
     def setup_data(self, event):
