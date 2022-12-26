@@ -545,8 +545,11 @@ class Resim:
             if self.event["created"] == "2021-05-20T23:02:11.327Z":
                 self.roll("extra for some reason")
 
+            if self.event["created"] == "2021-05-20T23:02:11.327Z":
+                self.roll("extra for some reason")
+
             if (
-                "was restored!" in self.desc
+                "was restored!" in self.desc or "were restored!" in self.desc
                 or "were restored!" in self.desc
                 or "was repaired." in self.desc
                 or "were repaired." in self.desc
@@ -1418,7 +1421,7 @@ class Resim:
                             damage_runners = []
 
                         for rbase in damage_runners:
-                            idx = self.update["basesOccupied"].index(rbase)
+                            idx = self.update['basesOccupied'].index(rbase)
                             runner_id = self.update["baseRunners"][idx]
                             runner = self.data.get_player(runner_id)
                             self.damage(runner, "runner")
@@ -2981,6 +2984,7 @@ class Resim:
             # ideally we'd get rid of these and our formula would just guess right but alas
             double_strike_overrides = {
                 # fragment 1:
+                "2021-05-18T14:00:51.704Z": True,
                 "2021-05-18T00:00:55.970Z": True,
                 "2021-05-18T00:12:17.263Z": True,
                 "2021-05-18T01:07:53.312Z": True,
