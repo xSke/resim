@@ -62,7 +62,6 @@ class Csv(Enum):
     ENTER = "enter"
     TRICK_ONE = "trick_one"
     TRICK_TWO = "trick_two"
-    FLAVOR = "flavor"
     SWEET1 = "sweet1"
     SWEET2 = "sweet2"
     WEATHERPROC = "weatherproc"
@@ -1043,7 +1042,8 @@ class Resim:
 
     def handle_ball(self):
         value = self.throw_pitch("ball")
-        self.log_roll(Csv.STRIKES, "Ball", value, False)
+        if "uses a Mind Trick" not in self.desc:
+            self.log_roll(Csv.STRIKES, "Ball", value, False)
 
         if not self.is_flinching():
             swing_roll = self.roll_swing(False)
@@ -1127,7 +1127,10 @@ class Resim:
             self.log_roll(Csv.CONTACT, "StrikeSwinging", contact_roll, False)
         elif ", looking" in self.desc or "strikes out looking." in self.desc:
             value = self.throw_pitch("strike")
-            self.log_roll(Csv.STRIKES, "StrikeLooking", value, True)
+            if "uses a Mind Trick" not in self.desc:
+                self.log_roll(Csv.STRIKES, "StrikeLooking", value, True)
+            if "uses a Mind Trick" in self.desc:
+                self.log_roll(Csv.STRIKES, "PsyBall", value, False)
 
             if not self.is_flinching():
                 swing_roll = self.roll_swing(False)
@@ -1888,20 +1891,6 @@ class Resim:
 
         elif self.weather == Weather.PEANUTS:
             flavor_roll = self.roll("peanuts")
-            if self.ty == EventType.PEANUT_FLAVOR_TEXT:
-                self.log_roll(
-                    Csv.FLAVOR,
-                    "Text",
-                    flavor_roll,
-                    True,
-                )
-            else:
-                self.log_roll(
-                    Csv.FLAVOR,
-                    "NoText",
-                    flavor_roll,
-                    False,
-                )
 
             if self.ty == EventType.PEANUT_FLAVOR_TEXT:
                 self.roll("peanut message")
