@@ -517,12 +517,23 @@ class TeamData(TeamOrPlayerMods):
         )
 
         if prev_team_data is not None:
-            new_cacheable_data = cacheable(team_data.to_dict(), cls.object_type)
-            prev_cacheable_data = cacheable(prev_team_data.to_dict(), cls.object_type)
-            if new_cacheable_data == prev_cacheable_data:
+            if prev_team_data.is_cache_equivalent(team_data):
                 team_data.last_update_time = prev_team_data.last_update_time
 
         return team_data
+
+    def is_cache_equivalent(self, other: "TeamData") -> bool:
+        return (
+                self.id == other.id and
+                # Excluding last update time
+                self.lineup == other.lineup and
+                self.rotation == other.rotation and
+                self.shadows == other.shadows and
+                # Excluding eDensity
+                self.level == other.level and
+                self.nickname == other.nickname
+            # Excluding rotation slot
+        )
 
     @staticmethod
     def null():
@@ -543,7 +554,6 @@ class TeamData(TeamOrPlayerMods):
 @dataclass
 class StadiumData(DataClassJsonMixin):
     object_type: ClassVar[str] = "stadium"
-    data: Dict[str, Any]
     id: Optional[str]
     last_update_time: str
     mods: Set[str]
@@ -570,7 +580,6 @@ class StadiumData(DataClassJsonMixin):
     @classmethod
     def from_chron(cls, data, last_update_time: str, prev_stadium_data: Optional["StadiumData"]):
         stadium_data = StadiumData(
-            data=data,
             id=data["id"],
             last_update_time=last_update_time,
             mods=set(data["mods"]),
@@ -590,17 +599,34 @@ class StadiumData(DataClassJsonMixin):
         )
 
         if prev_stadium_data is not None:
-            new_cacheable_data = cacheable(stadium_data.to_dict(), cls.object_type)
-            prev_cacheable_data = cacheable(prev_stadium_data.to_dict(), cls.object_type)
-            if new_cacheable_data == prev_cacheable_data:
+            if prev_stadium_data.is_cache_equivalent(stadium_data):
                 stadium_data.last_update_time = prev_stadium_data.last_update_time
 
         return stadium_data
 
+    def is_cache_equivalent(self, other: "StadiumData") -> bool:
+        return (
+                self.id == other.id and
+                # Excluding last update time
+                self.mods == other.mods and
+                self.name == other.name and
+                self.nickname == other.nickname and
+                self.mysticism == other.mysticism and
+                self.viscosity == other.viscosity and
+                self.elongation == other.elongation and
+                # Excluding filthiness
+                self.obtuseness == other.obtuseness and
+                self.forwardness == other.forwardness and
+                self.grandiosity == other.grandiosity and
+                self.ominousness == other.ominousness and
+                self.fortification == other.fortification and
+                self.inconvenience == other.inconvenience
+                # Excluding hype
+        )
+
     @staticmethod
     def null():
         return StadiumData(
-            data={},
             last_update_time="1970-01-01T00:00:00.000Z",
             id=None,
             mods=set(),
@@ -741,9 +767,7 @@ class PlayerData(TeamOrPlayerMods):
         )
 
         if prev_player_data is not None:
-            new_cacheable_data = cacheable(player_data.to_dict(), cls.object_type)
-            prev_cacheable_data = cacheable(prev_player_data.to_dict(), cls.object_type)
-            if new_cacheable_data == prev_cacheable_data:
+            if prev_player_data.is_cache_equivalent(player_data):
                 player_data.last_update_time = prev_player_data.last_update_time
 
         return player_data
@@ -770,6 +794,49 @@ class PlayerData(TeamOrPlayerMods):
 
     def stats_with_items(self) -> Dict[str, float]:
         return self._get_stats_with_items(self.data, self.items)
+
+    def is_cache_equivalent(self, other: "PlayerData") -> bool:
+        return (
+                self.id == other.id and
+                # Excluding last update time
+                self.raw_name == other.raw_name and
+                self.unscattered_name == other.unscattered_name and
+                # Excluding data
+                self.buoyancy == other.buoyancy and
+                self.divinity == other.divinity and
+                self.martyrdom == other.martyrdom and
+                self.moxie == other.moxie and
+                self.musclitude == other.musclitude and
+                self.patheticism == other.patheticism and
+                self.thwackability == other.thwackability and
+                self.tragicness == other.tragicness and
+                self.ruthlessness == other.ruthlessness and
+                self.overpowerment == other.overpowerment and
+                self.unthwackability == other.unthwackability and
+                self.shakespearianism == other.shakespearianism and
+                self.suppression == other.suppression and
+                self.coldness == other.coldness and
+                self.baseThirst == other.baseThirst and
+                self.continuation == other.continuation and
+                self.ground_friction == other.ground_friction and
+                self.indulgence == other.indulgence and
+                self.laserlikeness == other.laserlikeness and
+                self.anticapitalism == other.anticapitalism and
+                self.chasiness == other.chasiness and
+                self.omniscience == other.omniscience and
+                self.tenaciousness == other.tenaciousness and
+                self.watchfulness == other.watchfulness and
+                self.pressurization == other.pressurization and
+                self.cinnamon == other.cinnamon and
+                self.blood == other.blood and
+                # Excluding consecutive hits
+                self.bat == other.bat and
+                self.soul == other.soul and
+                # Excluding eDensity
+                self.items == other.items and
+                self.season_mod_sources == other.season_mod_sources and
+                self.peanut_allergy == other.peanut_allergy
+        )
 
     @staticmethod
     def _get_stats_with_items(data: Dict[str, Any], items: List[ItemData]) -> Dict[str, float]:
@@ -940,8 +1007,8 @@ class GameData:
             f"{CHRONICLER_URI}/v2/entities?type=team&at={timestamp}&count=1000",
         )
         self.teams = {
-            e["entityId"]: TeamData.from_chron(e["data"], e["validFrom"], self.teams.get(e["entityId"])) for e in
-            resp["items"]
+            e["entityId"]: TeamData.from_chron(e["data"], e["validFrom"], self.teams.get(e["entityId"]))
+            for e in resp["items"]
         }
 
     def fetch_players(self, timestamp, delta_secs: float = 0):
@@ -952,8 +1019,8 @@ class GameData:
             f"{CHRONICLER_URI}/v2/entities?type=player&at={timestamp}&count=2000",
         )
         self.players = {
-            e["entityId"]: PlayerData.from_chron(e["data"], e["validFrom"], self.players.get(e["entityId"])) for e in
-            resp["items"]
+            e["entityId"]: PlayerData.from_chron(e["data"], e["validFrom"], self.players.get(e["entityId"]))
+            for e in resp["items"]
         }
 
     def fetch_stadiums(self, timestamp, delta_secs: float = 0):
