@@ -746,7 +746,8 @@ class PlayerData(TeamOrPlayerMods):
     eDensity: float
     items: List[ItemData]
     season_mod_sources: Dict[str, List[str]]
-    peanut_allergy: bool
+    # Old incinerations don't have a peanut allergy field
+    peanut_allergy: Optional[bool]
 
     @classmethod
     def from_chron(cls, data: Dict[str, Any], last_update_time: str, prev_player_data: Optional["PlayerData"]):
