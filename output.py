@@ -11,7 +11,7 @@ from formulas import StatRelevantData
 
 
 class SaveCsv:
-    def __init__(self, run_name: str, category_name: str, last_saved_update: Dict[str, DataObject]):
+    def __init__(self, run_name: str, category_name: str, last_saved_update: Dict[str, str]):
         self.object_dir = f"object_data/{run_name}"
         os.makedirs(self.object_dir, exist_ok=True)
         self.final_filename = f"roll_data/{run_name}-{category_name}.csv"
@@ -20,13 +20,6 @@ class SaveCsv:
         self.file = None
         self.csv = None
         self.last_saved_object = last_saved_update
-        self.last_saved_object_mods = {}
-        try:
-            (_, old_run_name) = run_name.split("-", maxsplit=1)
-            self.reference_csv = pd.read_csv(f"roll_data_reference/{old_run_name}-{category_name}.csv")
-        except FileNotFoundError:
-            self.reference_csv = None
-        self.i = 0
 
     def write(
             self,
@@ -82,15 +75,10 @@ class SaveCsv:
         # fmt: on
 
         for save_key, obj in save_objects.items():
-            saved_new_json = False
-            if obj.id in self.last_saved_object:
-                prev_last_saved_object_mods = ";".join(self.last_saved_object[obj.id].mods)
-            else:
-                prev_last_saved_object_mods = None
             file_path = f"{self.object_dir}/{obj.id}-{obj.last_update_time}.json".replace(":", "_")
             if (
                     obj.id not in self.last_saved_object
-                    or self.last_saved_object[obj.id].last_update_time != obj.last_update_time
+                    or self.last_saved_object[obj.id] != obj.last_update_time
             ):
                 to_save = {
                     "type": obj.object_type,
@@ -100,30 +88,8 @@ class SaveCsv:
                 }
                 with open(file_path, "w") as f:
                     json.dump(to_save, f)
-                saved_new_json = True
-                self.last_saved_object[obj.id] = copy.deepcopy(obj)
-                self.last_saved_object_mods[obj.id] = ";".join(obj.mods)
+                self.last_saved_object[obj.id] = obj.last_update_time
             row[save_key + "_file"] = file_path
-
-            if save_key == "pitcher" and self.reference_csv is not None and self.final_filename.endswith("-strikes.csv"):
-
-                # Read it right back again to check
-                with open(file_path, "r") as f:
-                    saved = json.load(f)
-
-                saved_player = PlayerData.from_json(saved["data"])
-
-                # Make sure we got the right row
-                if abs(self.reference_csv.loc[self.i, "roll"] - roll) < 1e-12:
-                    # print("Right roll")
-                    reference_mods = self.reference_csv.loc[self.i, "pitcher_mods"]
-                    if pd.isna(reference_mods):
-                        assert not obj.mods  # assert that it's empty
-                    else:
-                        assert set(reference_mods.split(";")) == saved_player.mods
-                else:
-                    print("WRONG ROLL", abs(self.reference_csv.loc[self.i, "roll"] - roll))
-                # print("WRONG ROLL", event_time, self.final_filename)
 
         if self.csv is None:
             self.file = open(self.partial_filename, "w", newline="", encoding="utf-8")
@@ -131,7 +97,6 @@ class SaveCsv:
             self.csv.writeheader()
 
         self.csv.writerow(row)
-        self.i += 1
 
     def close(self):
         if not self.file:

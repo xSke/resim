@@ -38,7 +38,7 @@ def _get_player_attribute(attr_key: str, use_items: bool, use_broken_items: bool
 
 def _get_stadium_attribute(attr_key: str):
     def stadium_attribute_extractor(stadium: StadiumData):
-        return stadium.data.get(attr_key)
+        return getattr(stadium, attr_key)
 
     return stadium_attribute_extractor
 
@@ -98,15 +98,12 @@ def _load_objects(df: pd.DataFrame, object_key: str) -> DataObjectMap:
     for i, filename in enumerate(filenames):
         with open("../" + filename, "r") as f:
             obj = json.load(f)
-        # Fill in the data that's excluded from cache with dummy data to prevent key errors
-        for key in EXCLUDE_FROM_CACHE[obj["type"]]:
-            obj["data"][key] = None
         if obj["type"] == "player":
-            object_map[filename] = PlayerData.from_chron(obj["data"], obj["last_update_time"], None)
+            object_map[filename] = PlayerData.from_json(obj["data"])
         elif obj["type"] == "team":
-            object_map[filename] = TeamData.from_chron(obj["data"], obj["last_update_time"], None)
+            object_map[filename] = TeamData.from_json(obj["data"])
         elif obj["type"] == "stadium":
-            object_map[filename] = StadiumData.from_chron(obj["data"], obj["last_update_time"], None)
+            object_map[filename] = StadiumData.from_json(obj["data"])
         else:
             raise ValueError(f"Cannot load object of unknown type '{obj['type']}'")
 
