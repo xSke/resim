@@ -1,6 +1,7 @@
 # Required for run.py
 requests~=2.28.1
 tqdm~=4.64.0
+dataclasses_json~=0.5.7
 
 # Required for the notebooks
 jupyter~=1.0.0
