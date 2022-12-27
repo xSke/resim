@@ -192,7 +192,7 @@ class Resim:
             "2021-05-20T12:18:08.800Z": 1,  # drumsolo walk
             "2021-05-20T12:19:08.611Z": 1,  # drumsolo walk
             "2021-05-20T12:20:13.495Z": 1,  # drumsolo walk
-            "2021-05-20T12:29:39.279Z": 1,  # drumsolo walk?
+            # "2021-05-20T12:29:39.279Z": 1,  # drumsolo walk?
             "2021-05-21T18:27:35.164Z": 1,  # another walk with bases loaded
             # "2021-05-21T01:02:36.430Z": 1,  # party time align?
             "2021-05-21T01:02:40.772Z": 1,
@@ -2970,22 +2970,22 @@ class Resim:
             # ideally we'd get rid of these and our formula would just guess right but alas
             double_strike_overrides = {
                 # fragment 1:
-                "2021-05-18T14:00:51.704Z": True,
-                "2021-05-18T00:00:55.970Z": True,
-                "2021-05-18T00:12:17.263Z": True,
-                "2021-05-18T01:07:53.312Z": True,
+                # "2021-05-18T14:00:51.704Z": True,
+                # "2021-05-18T00:00:55.970Z": True,
+                # "2021-05-18T00:12:17.263Z": True,
+                # "2021-05-18T01:07:53.312Z": True,
                 # "2021-05-18T02:14:14.532Z": True,  # I REALLY don't like this one!!!! Something else is wrong!!!
-                "2021-05-18T02:17:39.455Z": True,
+                # "2021-05-18T02:17:39.455Z": True,
                 # fragment 2:
-                "2021-05-19T05:20:20.513Z": True,
-                "2021-05-19T13:11:36.731Z": True,
+                # "2021-05-19T05:20:20.513Z": True,
+                # "2021-05-19T13:11:36.731Z": True,
                 # fragment 3:
-                "2021-05-20T14:18:35.226Z": True,
+                # "2021-05-20T14:18:35.226Z": True,
                 # fragment 4:
-                "2021-05-20T17:02:04.119Z": True,
-                "2021-05-20T17:21:41.644Z": True,
-                "2021-05-20T17:22:31.407Z": True,
-                "2021-05-20T17:24:46.963Z": True,
+                # "2021-05-20T17:02:04.119Z": True,
+                # "2021-05-20T17:21:41.644Z": True,
+                # "2021-05-20T17:22:31.407Z": True,
+                # "2021-05-20T17:24:46.963Z": True,
                 # fragment 5: none anymore!
             }
 
