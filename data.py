@@ -121,6 +121,7 @@ class Mod(Enum):
     HOOPS = auto()
     HOTEL_MOTEL = auto()
     INHABITING = auto()
+    LATE_TO_PARTY = auto()
     LOVE = auto()
     MARKED = auto()
     MAXIMALIST = auto()

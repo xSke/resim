@@ -18,23 +18,27 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
     multiplier = 1
     for mod in itertools.chain(player.mods, team.mods):
         mod = Mod.coerce(mod)
+        if mod == Mod.LATE_TO_PARTY:
+            # fix for late to party silently activating...
+            if meta.day == 72:
+                multiplier += 0.2
         if mod == Mod.OVERPERFORMING:
             multiplier += 0.2
         elif mod == Mod.UNDERPERFORMING:
             multiplier -= 0.2
         elif mod == Mod.GROWTH:
             # todo: do we ever want this for other positions?
-            if attr not in ["patheticism", "thwackability", "ruthlessness"]:
+            if attr not in ["patheticism", "thwackability"]:  # , "ruthlessness"]:  #, "coldness"]:
                 multiplier += min(0.05, 0.05 * (meta.day / 99))
         elif mod == Mod.HIGH_PRESSURE:
             # checks for flooding weather and baserunners
-            if meta.weather == Weather.FLOODING and meta.runner_count > 0:
+            if meta.weather == "Weather.FLOODING" and meta.runner_count > 0:
                 # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
                 # "should we really boost the pitcher when the *other* team's batters are on base" yes.
                 multiplier += 0.25
         elif mod == Mod.TRAVELING:
             if (meta.top_of_inning and position == "batter") or (not meta.top_of_inning and position == "pitcher"):
-                if attr not in ["patheticism", "thwackability", "ruthlessness"]:
+                if attr not in ["patheticism", "thwackability", "ruthlessness", "coldness"]:
                     multiplier += 0.05
 
             # todo: do we ever want this?
@@ -45,9 +49,9 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
 
             if attr not in []:
                 multiplier += (14 - roster_size) * 0.01
-        elif mod == Mod.AFFINITY_FOR_CROWS and meta.weather == Weather.BIRDS:
+        elif mod == Mod.AFFINITY_FOR_CROWS and meta.weather == "Weather.BIRDS":
             multiplier += 0.5
-        elif mod == Mod.CHUNKY and meta.weather == Weather.PEANUTS:
+        elif mod == Mod.CHUNKY and meta.weather == "Weather.PEANUTS":
             # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
             #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
             # gfric boost hasn't been "tested" necessarily
@@ -55,7 +59,7 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
                 multiplier += 1.0
             elif attr == "ground_friction":
                 multiplier += 0.5
-        elif mod == Mod.SMOOTH and meta.weather == Weather.PEANUTS:
+        elif mod == Mod.SMOOTH and meta.weather == "Weather.PEANUTS":
             # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted everything in
             #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
             # the musc boost here has been "tested in the data", the others have not
@@ -80,11 +84,11 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             # not "seen in the data" yet
             if meta.is_maximum_blaseball:
                 multiplier += 2.50
-        elif mod == Mod.SLOW_BUILD:
+        elif mod == Mod.SLOW_BUILD and position == "batter":
             # guessing at how this works
             multiplier += meta.batter_at_bats * 0.01
 
-    if player.bat == "NIGHT_VISION_GOGGLES" and meta.weather == Weather.ECLIPSE:
+    if player.bat == "NIGHT_VISION_GOGGLES" and meta.weather == "Weather.ECLIPSE":
         # Blessing description: Item. Random player on your team hits 50% better during Solar Eclipses.
         if attr == "thwackability":
             multiplier += 0.5
@@ -119,24 +123,37 @@ def get_strike_threshold(
         15: (0.2,  0.285, 0,    0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
         16: (0.2,  0.285, 0,    0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
         17: (0.2,  0.285, 0,    0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
-        18: (0.285, 0.2583, 0.0287, 0.12, 0.085, -0.085, -0.035,  0.86),  # todo: a solid starter guess
+        18: (0.25, 0.285*10/11, 0.285/11, 0.2, 0.085, -0.085, -0.035,  0.86),  # todo: a solid starter guess
     }[meta.season]
     # fmt: on
 
     if is_flinching:
         constant += 0.2
 
-    threshold = (
-        constant
-        + ruth_factor * (ruth * (1 + 0.2 * vibes))
-        + cold_factor * (cold * (1 + 0.2 * vibes))
-        + fwd_factor * fwd
-        + musc_factor * musc
-        + mox_factor * mox
-        + abs_factor * abs(musc - mox)
-        + 0.06 * pitcher_hype
-        - 0.06 * batter_hype
-    )
+    if meta.season >= 18:
+        threshold = (
+                (constant if fwd < 0.5 else constant + 0.05)
+                + ruth_factor * (ruth * (1 + 0.2 * vibes))
+                + cold_factor * (cold * (1 + 0.2 * vibes))
+                + (fwd_factor * fwd if fwd < 0.5 else (fwd_factor - 0.1) * fwd)
+                + musc_factor * musc
+                + mox_factor * mox
+                + abs_factor * abs(musc - mox)
+                + 0.06 * pitcher_hype * (1 + 0.2 * vibes)
+                - 0.06 * batter_hype * (1 + 0.2 * vibes)
+        )
+    else:
+        threshold = (
+            constant
+            + ruth_factor * (ruth * (1 + 0.2 * vibes))
+            # + cold_factor * (cold * (1 + 0.2 * vibes))
+            + fwd_factor * fwd
+            + musc_factor * musc
+            # + mox_factor * mox
+            # + abs_factor * abs(musc - mox)
+            + 0.06 * pitcher_hype * (1 + 0.2 * vibes)
+            - 0.06 * batter_hype * (1 + 0.2 * vibes)
+        )
     threshold = min(threshold, roll_cap)
     return threshold
 
