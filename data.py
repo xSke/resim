@@ -491,6 +491,7 @@ class TeamOrPlayerMods(DataClassJsonMixin):
 @dataclass
 class TeamData(TeamOrPlayerMods):
     object_type: ClassVar[str] = "team"
+    null: ClassVar["TeamData"]
     id: Optional[str]
     last_update_time: str
     lineup: List[str]
@@ -536,7 +537,7 @@ class TeamData(TeamOrPlayerMods):
         )
 
     @staticmethod
-    def null():
+    def make_null():
         return TeamData.from_chron(
             {
                 "id": None,
@@ -549,11 +550,12 @@ class TeamData(TeamOrPlayerMods):
             "1970-01-01T00:00:00.000Z",
             None,
         )
-
+TeamData.null = TeamData.make_null()
 
 @dataclass
 class StadiumData(DataClassJsonMixin):
     object_type: ClassVar[str] = "stadium"
+    null: ClassVar["StadiumData"]
     id: Optional[str]
     last_update_time: str
     mods: Set[str]
@@ -625,7 +627,7 @@ class StadiumData(DataClassJsonMixin):
         )
 
     @staticmethod
-    def null():
+    def make_null():
         return StadiumData(
             last_update_time="1970-01-01T00:00:00.000Z",
             id=None,
@@ -644,7 +646,7 @@ class StadiumData(DataClassJsonMixin):
             inconvenience=0.5,
             hype=0,
         )
-
+StadiumData.null = StadiumData.make_null()
 
 @dataclass
 class ItemData:
@@ -703,6 +705,7 @@ class ItemData:
 @dataclass
 class PlayerData(TeamOrPlayerMods):
     object_type: ClassVar[str] = "player"
+    null: ClassVar["PlayerData"]
     id: Optional[str]
     last_update_time: str
     raw_name: str
@@ -923,7 +926,7 @@ class PlayerData(TeamOrPlayerMods):
         )
 
     @staticmethod
-    def null():
+    def make_null():
         return PlayerData.from_chron(
             {
                 "id": None,
@@ -964,7 +967,7 @@ class PlayerData(TeamOrPlayerMods):
             "1970-01-01T00:00:00.000Z",
             None,
         )
-
+PlayerData.null = PlayerData.make_null()
 
 DataObject = Union[PlayerData, TeamData, StadiumData]
 
@@ -1074,10 +1077,10 @@ class GameData:
         return player_id in self.players
 
     def get_player(self, player_id) -> PlayerData:
-        return self.players[player_id] if player_id else PlayerData.null()
+        return self.players[player_id] if player_id else PlayerData.null
 
     def get_team(self, team_id) -> TeamData:
-        return self.teams[team_id] if team_id else TeamData.null()
+        return self.teams[team_id] if team_id else TeamData.null
 
     def get_stadium(self, stadium_id) -> StadiumData:
-        return self.stadiums[stadium_id] if stadium_id else StadiumData.null()
+        return self.stadiums[stadium_id] if stadium_id else StadiumData.null

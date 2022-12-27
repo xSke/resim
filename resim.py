@@ -3073,8 +3073,8 @@ class Resim:
             runner_on_third_hh_multiplier = self.get_runner_multiplier(runner_on_third_hh)
         else:
             runner_on_third_hh, runner_on_third_hh_multiplier = None, 1
-        null_player = PlayerData.null()
-        null_team = TeamData.null()
+        null_player = PlayerData.null
+        null_team = TeamData.null
         save_objects = {
             "batter": relevant_batter or self.batter or null_player,
             "batting_team": self.batting_team,
