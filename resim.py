@@ -545,9 +545,6 @@ class Resim:
             if self.event["created"] == "2021-05-20T23:02:11.327Z":
                 self.roll("extra for some reason")
 
-            if self.event["created"] == "2021-05-20T23:02:11.327Z":
-                self.roll("extra for some reason")
-
             if (
                 "was restored!" in self.desc or "were restored!" in self.desc
                 or "were restored!" in self.desc
