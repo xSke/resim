@@ -2975,7 +2975,6 @@ class Resim:
                 "2021-05-18T00:00:55.970Z": True,
                 "2021-05-18T00:12:17.263Z": True,
                 "2021-05-18T01:07:53.312Z": True,
-                # "2021-05-18T02:14:14.532Z": True,  # I REALLY don't like this one!!!! Something else is wrong!!!
                 "2021-05-18T02:17:39.455Z": True,
                 # fragment 2:
                 "2021-05-19T05:20:20.513Z": True,
