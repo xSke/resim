@@ -6,7 +6,7 @@ from typing import Dict
 
 import pandas as pd
 
-from data import DataObject, cacheable
+from data import DataObject, cacheable, PlayerData
 from formulas import StatRelevantData
 
 
@@ -20,6 +20,7 @@ class SaveCsv:
         self.file = None
         self.csv = None
         self.last_saved_object = last_saved_update
+        self.last_saved_object_mods = {}
         try:
             (_, old_run_name) = run_name.split("-", maxsplit=1)
             self.reference_csv = pd.read_csv(f"roll_data_reference/{old_run_name}-{category_name}.csv")
@@ -81,19 +82,11 @@ class SaveCsv:
         # fmt: on
 
         for save_key, obj in save_objects.items():
-            if save_key == "pitcher" and self.reference_csv is not None and self.final_filename.endswith("-strikes.csv"):
-                # Make sure we got the right row
-                if abs(self.reference_csv.loc[self.i, "roll"] - roll) < 1e-12:
-                    print("Right roll")
-                    reference_mods = self.reference_csv.loc[self.i, "pitcher_mods"]
-                    if pd.isna(reference_mods):
-                        assert not obj.mods  # assert that it's empty
-                    else:
-                        assert set(reference_mods.split(";")) == obj.mods
-                else:
-                    print("WRONG ROLL", abs(self.reference_csv.loc[self.i, "roll"] - roll))
-                    # print("WRONG ROLL", event_time, self.final_filename)
-
+            saved_new_json = False
+            if obj.id in self.last_saved_object:
+                prev_last_saved_object_mods = ";".join(self.last_saved_object[obj.id].mods)
+            else:
+                prev_last_saved_object_mods = None
             file_path = f"{self.object_dir}/{obj.id}-{obj.last_update_time}.json".replace(":", "_")
             if (
                     obj.id not in self.last_saved_object
@@ -102,12 +95,35 @@ class SaveCsv:
                 to_save = {
                     "type": obj.object_type,
                     "last_update_time": obj.last_update_time,
-                    "data": cacheable(obj.data, obj.object_type),
+                    # yes, there's JSON in the JSON. yo dawg
+                    "data": obj.to_json(),
                 }
                 with open(file_path, "w") as f:
                     json.dump(to_save, f)
+                saved_new_json = True
                 self.last_saved_object[obj.id] = copy.deepcopy(obj)
+                self.last_saved_object_mods[obj.id] = ";".join(obj.mods)
             row[save_key + "_file"] = file_path
+
+            if save_key == "pitcher" and self.reference_csv is not None and self.final_filename.endswith("-strikes.csv"):
+
+                # Read it right back again to check
+                with open(file_path, "r") as f:
+                    saved = json.load(f)
+
+                saved_player = PlayerData.from_json(saved["data"])
+
+                # Make sure we got the right row
+                if abs(self.reference_csv.loc[self.i, "roll"] - roll) < 1e-12:
+                    # print("Right roll")
+                    reference_mods = self.reference_csv.loc[self.i, "pitcher_mods"]
+                    if pd.isna(reference_mods):
+                        assert not obj.mods  # assert that it's empty
+                    else:
+                        assert set(reference_mods.split(";")) == saved_player.mods
+                else:
+                    print("WRONG ROLL", abs(self.reference_csv.loc[self.i, "roll"] - roll))
+                # print("WRONG ROLL", event_time, self.final_filename)
 
         if self.csv is None:
             self.file = open(self.partial_filename, "w", newline="", encoding="utf-8")
