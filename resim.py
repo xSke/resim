@@ -32,7 +32,6 @@ from formulas import (
     get_swing_strike_threshold,
 )
 
-
 @unique
 class Csv(Enum):
     """
@@ -3189,11 +3188,15 @@ class Resim:
         # handle player name unscattering etc, not perfect but helps a lot
         if self.batter and self.pitcher:
             if update["topOfInning"]:
-                self.batter.raw_name = self.update["awayBatterName"]
-                self.pitcher.raw_name = self.update["homePitcherName"]
+                if self.update["awayBatterName"]:
+                    self.batter.raw_name = self.update["awayBatterName"]
+                if self.update["homePitcherName"]:
+                    self.pitcher.raw_name = self.update["homePitcherName"]
             else:
-                self.batter.raw_name = self.update["homeBatterName"]
-                self.pitcher.raw_name = self.update["awayPitcherName"]
+                if self.update["homeBatterName"]:
+                    self.batter.raw_name = self.update["homeBatterName"]
+                if self.update["awayPitcherName"]:
+                    self.pitcher.raw_name = self.update["awayPitcherName"]
 
         # hardcoding another fix - if we missed the "perks up" event apply it "manually". but not to ghosts
         if (
