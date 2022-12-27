@@ -1,4 +1,5 @@
 import json
+import time
 from argparse import ArgumentParser
 from collections import defaultdict
 from enum import Enum, auto
@@ -264,7 +265,7 @@ def main():
     print("Finished")
 
 
-def _total_events_for_seasons(season_events: Dict[int, int], seasons: Optional[List[int]]):
+def _total_events_for_seasons(season_events: Dict[str, int], seasons: Optional[List[int]]):
     if seasons is None:
         return sum(season_events.values())
     return sum(season_events[str(season)] for season in seasons)
@@ -319,13 +320,16 @@ def run_fragment(pool_args, progress_callback=None):
     unreported_progress = 0
 
     if progress_callback is None:
+        last_progress_report_time = time.perf_counter()
 
         def progress_callback():
-            nonlocal unreported_progress
+            nonlocal unreported_progress, last_progress_report_time
             unreported_progress += 1
-            if PROGRESS_QUEUE and unreported_progress > 100:
+            now = time.perf_counter()
+            if PROGRESS_QUEUE and now - last_progress_report_time > 0.25:  # report progress every quarter-second
                 PROGRESS_QUEUE.put((ProgressEventType.EVENTS, unreported_progress))
                 unreported_progress = 0
+                last_progress_report_time = now
 
     resim.run(start_time, end_time, progress_callback)
 
