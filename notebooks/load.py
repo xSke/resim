@@ -102,11 +102,11 @@ def _load_objects(df: pd.DataFrame, object_key: str) -> DataObjectMap:
         for key in EXCLUDE_FROM_CACHE[obj["type"]]:
             obj["data"][key] = None
         if obj["type"] == "player":
-            object_map[filename] = PlayerData(obj["data"], obj["last_update_time"], None)
+            object_map[filename] = PlayerData.from_chron(obj["data"], obj["last_update_time"], None)
         elif obj["type"] == "team":
-            object_map[filename] = TeamData(obj["data"], obj["last_update_time"], None)
+            object_map[filename] = TeamData.from_chron(obj["data"], obj["last_update_time"], None)
         elif obj["type"] == "stadium":
-            object_map[filename] = StadiumData.from_dict(obj["data"], obj["last_update_time"], None)
+            object_map[filename] = StadiumData.from_chron(obj["data"], obj["last_update_time"], None)
         else:
             raise ValueError(f"Cannot load object of unknown type '{obj['type']}'")
 

@@ -1,9 +1,10 @@
 import collections
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
 import json
 import requests
-from typing import Any, List, Dict, Iterable, Mapping, Optional, Set, Union, Tuple, ClassVar
+from dataclasses_json import DataClassJsonMixin, config, Exclude
+from typing import Any, List, Dict, Iterable, Mapping, Optional, Set, Union, Tuple, ClassVar, Type
 from datetime import datetime, timedelta
 from enum import Enum, IntEnum, auto, unique
 from sin_values import SIN_PHASES
@@ -426,13 +427,18 @@ class ModType(IntEnum):
     ITEM = 4
 
 
+def mods_by_type_decoder(raw: Dict[str, List[str]]):
+    return {ModType(int(k)): v for k, v in raw.items()}
+
+
 @dataclass
-class TeamOrPlayerMods:
+class TeamOrPlayerMods(DataClassJsonMixin):
     mods: Set[str]
     # Used internally only
-    __mods_by_type: Dict[ModType, Set[str]]
+    _mods_by_type: Dict[ModType, Set[str]] = field(metadata=config(decoder=mods_by_type_decoder))
 
-    def init_mods(self, data: Dict[str, Any]):
+    @classmethod
+    def mods_init_args(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         MOD_KEYS = {
             ModType.PERMANENT: "permAttr",
             ModType.SEASON: "seasAttr",
@@ -440,45 +446,51 @@ class TeamOrPlayerMods:
             ModType.GAME: "gameAttr",
             ModType.ITEM: "itemAttr",
         }
-        self.__mods_by_type = {}
+        mods_by_type = {}
         for (mod_type, key) in MOD_KEYS.items():
-            self.__mods_by_type[mod_type] = set(data.get(key, []))
-        self.__update_mods()
+            mods_by_type[mod_type] = set(data.get(key, []))
+        return dict(
+            _mods_by_type=mods_by_type,
+            mods=cls._concatenate_mods(mods_by_type)
+        )
 
     def add_mod(self, mod: Union[Mod, str], mod_type: ModType):
         mod = str(mod)
-        if mod in self.__mods_by_type[mod_type]:
+        if mod in self._mods_by_type[mod_type]:
             return
-        self.__mods_by_type[mod_type].add(mod)
-        self.__update_mods()
+        self._mods_by_type[mod_type].add(mod)
+        self._update_mods()
 
     def remove_mod(self, mod: Union[Mod, str], mod_type: ModType):
         mod = str(mod)
-        if mod not in self.__mods_by_type[mod_type]:
+        if mod not in self._mods_by_type[mod_type]:
             return
-        self.__mods_by_type[mod_type].remove(mod)
-        self.__update_mods()
+        self._mods_by_type[mod_type].remove(mod)
+        self._update_mods()
 
     def has_mod(self, mod: Union[Mod, str], mod_type: Optional[ModType] = None) -> bool:
         mod = str(mod)
         if mod_type is None:
             return mod in self.mods
-        return mod in self.__mods_by_type[mod_type]
+        return mod in self._mods_by_type[mod_type]
 
     def has_any(self, *mods: Mod) -> bool:
         return any(self.has_mod(mod) for mod in mods)
 
     def print_mods(self, mod_type: Optional[ModType] = None) -> str:
-        return str(list(self.__mods_by_type.get(mod_type) or self.mods))
+        return str(list(self._mods_by_type.get(mod_type) or self.mods))
 
-    def __update_mods(self):
-        self.mods = set().union(*self.__mods_by_type.values())
+    def _update_mods(self):
+        self.mods = self._concatenate_mods(self._mods_by_type)
+
+    @staticmethod
+    def _concatenate_mods(mods_by_type: Dict[ModType, Set[str]]) -> Set[str]:
+        return set().union(*mods_by_type.values())
 
 
 @dataclass
 class TeamData(TeamOrPlayerMods):
     object_type: ClassVar[str] = "team"
-    data: Dict[str, Any]
     id: Optional[str]
     last_update_time: str
     lineup: List[str]
@@ -489,29 +501,32 @@ class TeamData(TeamOrPlayerMods):
     nickname: str = ""
     rotation_slot: int = 0
 
-    def __init__(self, data: Dict[str, Any], last_update_time: str, prev_version: Optional["TeamData"]):
-        self.data = data
+    @classmethod
+    def from_chron(cls, data: Dict[str, Any], last_update_time: str, prev_team_data: Optional["TeamData"]):
+        team_data = TeamData(
+            id=data["id"],
+            last_update_time=last_update_time,
+            lineup=data["lineup"],
+            rotation=data["rotation"],
+            shadows=data.get("shadows", []) + data.get("bullpen", []) + data.get("bench", []),
+            level=data.get("level") or 0,
+            eDensity=data.get("eDensity") or 0,
+            nickname=data.get("nickname") or "",
+            rotation_slot=data.get("rotationSlot") or 0,
+            **cls.mods_init_args(data),
+        )
 
-        if prev_version is not None:
-            new_cacheable_data = cacheable(data, self.object_type)
-            prev_cacheable_data = cacheable(prev_version.data, self.object_type)
+        if prev_team_data is not None:
+            new_cacheable_data = cacheable(team_data.to_dict(), cls.object_type)
+            prev_cacheable_data = cacheable(prev_team_data.to_dict(), cls.object_type)
             if new_cacheable_data == prev_cacheable_data:
-                last_update_time = prev_version.last_update_time
+                team_data.last_update_time = prev_team_data.last_update_time
 
-        self.id = data["id"]
-        self.last_update_time = last_update_time
-        self.lineup = data["lineup"]
-        self.rotation = data["rotation"]
-        self.shadows = data.get("shadows", []) + data.get("bullpen", []) + data.get("bench", [])
-        self.level = data.get("level") or 0
-        self.eDensity = data.get("eDensity") or 0
-        self.nickname = data.get("nickname") or ""
-        self.rotation_slot = data.get("rotationSlot") or 0
-        self.init_mods(data)
+        return team_data
 
     @staticmethod
     def null():
-        return TeamData(
+        return TeamData.from_chron(
             {
                 "id": None,
                 "nickname": "Null Team",
@@ -526,7 +541,7 @@ class TeamData(TeamOrPlayerMods):
 
 
 @dataclass
-class StadiumData:
+class StadiumData(DataClassJsonMixin):
     object_type: ClassVar[str] = "stadium"
     data: Dict[str, Any]
     id: Optional[str]
@@ -553,13 +568,8 @@ class StadiumData:
         return list(set(self.mods))
 
     @classmethod
-    def from_dict(cls, data, last_update_time: str, prev_version: Optional["StadiumData"]):
-        if prev_version is not None:
-            new_cacheable_data = cacheable(data, cls.object_type)
-            prev_cacheable_data = cacheable(prev_version.data, cls.object_type)
-            if new_cacheable_data == prev_cacheable_data:
-                last_update_time = prev_version.last_update_time
-        return StadiumData(
+    def from_chron(cls, data, last_update_time: str, prev_stadium_data: Optional["StadiumData"]):
+        stadium_data = StadiumData(
             data=data,
             id=data["id"],
             last_update_time=last_update_time,
@@ -578,6 +588,14 @@ class StadiumData:
             inconvenience=data["inconvenience"],
             hype=data["hype"],
         )
+
+        if prev_stadium_data is not None:
+            new_cacheable_data = cacheable(stadium_data.to_dict(), cls.object_type)
+            prev_cacheable_data = cacheable(prev_stadium_data.to_dict(), cls.object_type)
+            if new_cacheable_data == prev_cacheable_data:
+                stadium_data.last_update_time = prev_stadium_data.last_update_time
+
+        return stadium_data
 
     @staticmethod
     def null():
@@ -608,10 +626,11 @@ class ItemData:
     name: str
     health: int
     durability: int
-    defense_rating: float
-    hitting_rating: float
-    pitching_rating: float
-    baserunning_rating: float
+    # Some Items have None ratings (e.g. Lucky Air Bat)
+    defense_rating: Optional[float]
+    hitting_rating: Optional[float]
+    pitching_rating: Optional[float]
+    baserunning_rating: Optional[float]
     stats: dict
 
     @staticmethod
@@ -662,7 +681,7 @@ class PlayerData(TeamOrPlayerMods):
     last_update_time: str
     raw_name: str
     unscattered_name: Optional[str]
-    data: dict
+    data: Dict[str, Any]
     # Player attributes
     buoyancy: float
     divinity: float
@@ -699,31 +718,35 @@ class PlayerData(TeamOrPlayerMods):
     season_mod_sources: Dict[str, List[str]]
     peanut_allergy: bool
 
-    def __init__(self, data: Dict[str, Any], last_update_time: str, prev_version: Optional["PlayerData"]):
-        self.data = data
-
-        if prev_version is not None:
-            new_cacheable_data = cacheable(data, self.object_type)
-            prev_cacheable_data = cacheable(prev_version.data, self.object_type)
-            if new_cacheable_data == prev_cacheable_data:
-                last_update_time = prev_version.last_update_time
-
+    @classmethod
+    def from_chron(cls, data: Dict[str, Any], last_update_time: str, prev_player_data: Optional["PlayerData"]):
         data_state = data.get("state", {})
-        self.id = data["id"]
-        self.last_update_time = last_update_time
-        self.raw_name = data["name"]
-        self.unscattered_name = data_state.get("unscatteredName")
-        # Player attributes
-        self.items = [ItemData.from_dict(item) for item in data.get("items") or []]
-        self.update_stats()
-        self.blood = data.get("blood") or None
-        self.consecutive_hits = data.get("consecutiveHits") or 0
-        self.bat = data.get("bat") or None
-        self.soul = data.get("soul") or 0
-        self.eDensity = data.get("eDensity") or 0
-        self.season_mod_sources = data_state.get("seasModSources", {})
-        self.peanut_allergy = data.get("peanutAllergy")
-        self.init_mods(data)
+        items = [ItemData.from_dict(item) for item in data.get("items") or []]
+        player_data = PlayerData(
+            id=data["id"],
+            last_update_time=last_update_time,
+            raw_name=data["name"],
+            unscattered_name=data_state.get("unscatteredName"),
+            data=data,
+            items=items,
+            blood=data.get("blood") or None,
+            consecutive_hits=data.get("consecutiveHits") or 0,
+            bat=data.get("bat") or None,
+            soul=data.get("soul") or 0,
+            eDensity=data.get("eDensity") or 0,
+            season_mod_sources=data_state.get("seasModSources", {}),
+            peanut_allergy=data.get("peanutAllergy"),
+            **cls.mods_init_args(data),
+            **cls.stats_init_args(data, items)
+        )
+
+        if prev_player_data is not None:
+            new_cacheable_data = cacheable(player_data.to_dict(), cls.object_type)
+            prev_cacheable_data = cacheable(prev_player_data.to_dict(), cls.object_type)
+            if new_cacheable_data == prev_cacheable_data:
+                player_data.last_update_time = prev_player_data.last_update_time
+
+        return player_data
 
     @property
     def name(self):
@@ -745,9 +768,13 @@ class PlayerData(TeamOrPlayerMods):
         cinnamon = self.cinnamon or 0
         return 0.5 * ((sin_phase - 1) * pressurization + (sin_phase + 1) * cinnamon)
 
-    def stats_with_items(self) -> dict:
-        stats = {stat: self.data[stat] for stat in stat_indices}
-        for item in self.items:
+    def stats_with_items(self) -> Dict[str, float]:
+        return self._get_stats_with_items(self.data, self.items)
+
+    @staticmethod
+    def _get_stats_with_items(data: Dict[str, Any], items: List[ItemData]) -> Dict[str, float]:
+        stats = {stat: data[stat] for stat in stat_indices}
+        for item in items:
             if item.health != 0:
                 for stat, value in item.stats.items():
                     if stat in ["patheticism", "tragicness"]:
@@ -795,9 +822,42 @@ class PlayerData(TeamOrPlayerMods):
         self.pressurization = stats["pressurization"]
         self.cinnamon = stats.get("cinnamon") or 0
 
+    @classmethod
+    def stats_init_args(cls, data: Dict[str, Any], items: List[ItemData]) -> Dict[str, float]:
+        stats = cls._get_stats_with_items(data, items)
+
+        return dict(
+            buoyancy=stats["buoyancy"],
+            divinity=stats["divinity"],
+            martyrdom=stats["martyrdom"],
+            moxie=stats["moxie"],
+            musclitude=stats["musclitude"],
+            patheticism=stats["patheticism"],
+            thwackability=stats["thwackability"],
+            tragicness=stats["tragicness"],
+            ruthlessness=stats["ruthlessness"],
+            overpowerment=stats["overpowerment"],
+            unthwackability=stats["unthwackability"],
+            shakespearianism=stats["shakespearianism"],
+            suppression=stats["suppression"],
+            coldness=stats["coldness"],
+            baseThirst=stats["baseThirst"],
+            continuation=stats["continuation"],
+            ground_friction=stats["groundFriction"],
+            indulgence=stats["indulgence"],
+            laserlikeness=stats["laserlikeness"],
+            anticapitalism=stats["anticapitalism"],
+            chasiness=stats["chasiness"],
+            omniscience=stats["omniscience"],
+            tenaciousness=stats["tenaciousness"],
+            watchfulness=stats["watchfulness"],
+            pressurization=stats["pressurization"],
+            cinnamon=stats.get("cinnamon") or 0,
+        )
+
     @staticmethod
     def null():
-        return PlayerData(
+        return PlayerData.from_chron(
             {
                 "id": None,
                 "name": "Null Player",
@@ -880,7 +940,8 @@ class GameData:
             f"{CHRONICLER_URI}/v2/entities?type=team&at={timestamp}&count=1000",
         )
         self.teams = {
-            e["entityId"]: TeamData(e["data"], e["validFrom"], self.teams.get(e["entityId"])) for e in resp["items"]
+            e["entityId"]: TeamData.from_chron(e["data"], e["validFrom"], self.teams.get(e["entityId"])) for e in
+            resp["items"]
         }
 
     def fetch_players(self, timestamp, delta_secs: float = 0):
@@ -891,7 +952,8 @@ class GameData:
             f"{CHRONICLER_URI}/v2/entities?type=player&at={timestamp}&count=2000",
         )
         self.players = {
-            e["entityId"]: PlayerData(e["data"], e["validFrom"], self.players.get(e["entityId"])) for e in resp["items"]
+            e["entityId"]: PlayerData.from_chron(e["data"], e["validFrom"], self.players.get(e["entityId"])) for e in
+            resp["items"]
         }
 
     def fetch_stadiums(self, timestamp, delta_secs: float = 0):
@@ -902,7 +964,7 @@ class GameData:
             f"{CHRONICLER_URI}/v2/entities?type=stadium&at={timestamp}&count=1000",
         )
         self.stadiums = {
-            e["entityId"]: StadiumData.from_dict(e["data"], e["validFrom"], self.stadiums.get(e["entityId"]))
+            e["entityId"]: StadiumData.from_chron(e["data"], e["validFrom"], self.stadiums.get(e["entityId"]))
             for e in resp["items"]
         }
 
@@ -913,7 +975,7 @@ class GameData:
             f"{CHRONICLER_URI}/v2/versions?type=player&id={player_id}&after={timestamp}&count=1&order=asc",
         )
         for item in resp["items"]:
-            self.players[item["entityId"]] = PlayerData(
+            self.players[item["entityId"]] = PlayerData.from_chron(
                 item["data"], item["validFrom"], self.players.get(item["entityId"])
             )
 
