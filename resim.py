@@ -2031,7 +2031,6 @@ class Resim:
                     self.roll("feedback item damage")
 
                 return True
-                return True
 
             if self.ty == EventType.FEEDBACK_BLOCKED:
                 self.roll("target")
@@ -2959,22 +2958,22 @@ class Resim:
             # ideally we'd get rid of these and our formula would just guess right but alas
             double_strike_overrides = {
                 # fragment 1:
-                 "2021-05-18T14:00:51.704Z": True,
-                 "2021-05-18T00:00:55.970Z": True,
-                 "2021-05-18T00:12:17.263Z": True,
-                 "2021-05-18T01:07:53.312Z": True,
+                 #"2021-05-18T14:00:51.704Z": True,
+                 #"2021-05-18T00:00:55.970Z": True,
+                 #"2021-05-18T00:12:17.263Z": True,
+                 #"2021-05-18T01:07:53.312Z": True,
                 # "2021-05-18T02:14:14.532Z": True,  # I REALLY don't like this one!!!! Something else is wrong!!!
-                 "2021-05-18T02:17:39.455Z": True,
+                 #"2021-05-18T02:17:39.455Z": True,
                 # fragment 2:
-                 "2021-05-19T05:20:20.513Z": True,
-                 "2021-05-19T13:11:36.731Z": True,
+                 #"2021-05-19T05:20:20.513Z": True,
+                 #"2021-05-19T13:11:36.731Z": True,
                 # fragment 3:
-                 "2021-05-20T14:18:35.226Z": True,
+                 #"2021-05-20T14:18:35.226Z": True,
                 # fragment 4:
-                 "2021-05-20T17:02:04.119Z": True,
-                 "2021-05-20T17:21:41.644Z": True,
-                 "2021-05-20T17:22:31.407Z": True,
-                 "2021-05-20T17:24:46.963Z": True,
+                 #"2021-05-20T17:02:04.119Z": True,
+                 #"2021-05-20T17:21:41.644Z": True,
+                 #"2021-05-20T17:22:31.407Z": True,
+                 #"2021-05-20T17:24:46.963Z": True,
                 # fragment 5: none anymore!
             }
 
