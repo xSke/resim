@@ -11,6 +11,7 @@ def _test():
         vibes=True, mods=True, items=True, broken_items=False
     )
     df["musc_scaled"] = load.player_attribute(df, 'batter', 'musclitude', items=False)
+    df["musc_scaled_n"] = load.player_attribute(df, 'batter', 'musclitude', items="negative")
 
     # center=True is the default
     df["forwardness"] = load.stadium_attribute(df, 'forwardness', center=True)
