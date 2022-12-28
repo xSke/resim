@@ -185,7 +185,7 @@ class Resim:
             "2021-05-10T19:28:42.723Z": 1,
             "2021-05-17T23:10:48.902Z": 1,  # dp item damage rolls...?
             "2021-05-18T02:14:12.542Z": 1,  # AA blood roll on the previous event needs to be fixed
-            "2021-05-18T02:22:44.148Z": 1,  # idk
+            "2021-05-18T02:22:44.084Z": 1,  # Another AA Blood w/ Overperforming
             # "2021-05-21T01:02:36.430Z": 1,  # party time align?
             "2021-05-21T01:02:40.772Z": 1,
             # these three all seem double strike related, but i can't figure out why
