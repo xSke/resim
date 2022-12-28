@@ -23,13 +23,17 @@ STAT_RELEVANT_DATA_KEYS = ["weather", "season", "day", "runner_count", "top_of_i
                            "batter_at_bats"]
 
 
-def _get_player_attribute(attr_key: str, use_items: bool, use_broken_items: bool):
+def _get_player_attribute(attr_key: str, use_items: Union[bool, str], use_broken_items: bool):
     def player_attribute_extractor(player: PlayerData):
         attr = player.data.get(attr_key) or 0  # for cinnamon
         if use_items:
             for item in player.items:
                 if use_broken_items or item.health != 0:
-                    attr += item.stats.get(attr_key) or 0
+                    item_attr = item.stats.get(attr_key) or 0
+                    if use_items == "negative":
+                        attr -= item_attr
+                    else:
+                        attr += item_attr
 
         return attr
 
@@ -151,7 +155,12 @@ def data(roll_type: str, season: Union[None, int, list[int]], roles: Iterable[st
 
 
 def player_attribute(df: pd.DataFrame, object_key: str, attr_key: str, *,
-                     vibes: bool = True, mods: bool = True, items: bool = True, broken_items: bool = False):
+                     vibes: bool = True, mods: bool = True, items: Union[bool, str] = True,
+                     broken_items: bool = False):
+    if not (items is True or items is False or items == "negative"):
+        raise ValueError(f"Invalid value {items!r} for argument \"items\" passed to load.player_attribute. "
+                         "Valid values: True, False, \"negative\"")
+
     attr = df[object_key + "_object"].apply(_get_player_attribute(attr_key, items, broken_items))
     if vibes:
         vibe = df[object_key + "_vibes"]
