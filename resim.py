@@ -182,17 +182,10 @@ class Resim:
             "2021-04-14T17:06:28.047Z": -2,  # i don't know
             "2021-04-14T19:07:51.129Z": -2,  # may be attractor-relayed?
             "2021-04-20T12:00:00.931Z": -1,  # item damage at end of game??
-            "2021-04-20T15:31:03.368Z": 1,  # ???
-            "2021-04-21T04:24:42.674Z": 1,
             "2021-05-10T19:28:42.723Z": 1,
             "2021-05-17T23:10:48.902Z": 1,  # dp item damage rolls...?
             "2021-05-18T02:14:12.542Z": 1,  # AA blood roll on the previous event needs to be fixed
             "2021-05-18T02:22:44.148Z": 1,  # idk
-            "2021-05-20T12:18:08.800Z": 1,  # drumsolo walk
-            "2021-05-20T12:19:08.611Z": 1,  # drumsolo walk
-            "2021-05-20T12:20:13.495Z": 1,  # drumsolo walk
-            # "2021-05-20T12:29:39.279Z": 1,  # drumsolo walk?
-            "2021-05-21T18:27:35.164Z": 1,  # another walk with bases loaded
             # "2021-05-21T01:02:36.430Z": 1,  # party time align?
             "2021-05-21T01:02:40.772Z": 1,
             # these three all seem double strike related, but i can't figure out why
@@ -1102,10 +1095,16 @@ class Resim:
                     self.log_roll(Csv.MODPROC, "Balk", instinct_roll, False)
 
             for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
-                did_score = runner_id not in self.next_update["baseRunners"]
-                if did_score:
-                    runner = self.data.get_player(runner_id)
-                    self.damage(runner, "runner")
+                runner = self.data.get_player(runner_id)
+                if base == Base.THIRD:
+                    if runner.raw_name in self.desc and "scores" in self.desc:
+                        self.damage(runner, "runner")
+                if base == Base.SECOND and "Base Instincts" in self.desc and "scores" in self.desc:
+                    if runner.raw_name in self.desc:
+                        self.damage(runner, "runner")
+                if base == Base.FIRST and "Base Instincts" in self.desc and "scores" in self.desc:
+                    if runner.raw_name in self.desc:
+                        self.damage(runner, "runner")
 
             self.damage(self.batter, "batter")
         self.damage(self.pitcher, "pitcher")
