@@ -641,7 +641,7 @@ class Resim:
                 "1a84542b-abd4-42aa-86b3-1a89a80184f6": 14,  # prize match
                 "0a79fdbb-73ca-4b8e-8696-10776d75cd0f": 1,
                 "42fb4a2e-c471-4f2c-96b4-e0319e3f9aa0": 1,
-                "d1dc6196-d972-4fe0-94e7-751592f772f2": 16,  # prize match
+                "d1dc6196-d972-4fe0-94e7-751592f772f2": 17,  # prize match
                 "51c42e63-3c8b-4195-8c2c-0375897231b4": 10,  # prize match
                 "a2d9e7c4-9a4e-4573-ac13-90f1fa64c13d": 0,
                 "4221f4d3-480e-4588-8b15-c7093a5e4194": 16,  # prize match
