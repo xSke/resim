@@ -2028,18 +2028,11 @@ class Resim:
 
                 # i think it would be extremely funny if these are item damage rolls
                 # imagine getting feedbacked to charleston *and* you lose your shoes.
-                if self.event["created"] in [
-                    "2021-04-14T00:19:59.567Z",
-                    "2021-04-20T05:01:56.535Z",
-                    "2021-04-20T05:36:58.150Z",
-                    "2021-04-20T19:14:43.039Z",
-                    "2021-04-21T04:22:00.021Z",
-                    "2021-04-21T23:07:47.685Z",
-                    "2021-05-19T08:22:14.987Z",
-                    "2021-05-21T11:08:22.441Z",
-                ]:
-                    self.roll("feedback???")
-                    self.roll("feedback???")
+                if self.season >= 15:
+                    self.roll("feedback item damage")
+                    self.roll("feedback item damage")
+
+                return True
                 return True
 
             if self.ty == EventType.FEEDBACK_BLOCKED:
