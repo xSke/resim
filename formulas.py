@@ -21,7 +21,10 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
         if mod == Mod.LATE_TO_PARTY:
             # fix for late to party silently activating...
             if meta.day == 72:
-                multiplier += 0.2
+                # print(meta.day, team.mods, player.mods)
+                if "OVERPERFORMING" not in team.mods:
+                    # print("adding multiplier")
+                    multiplier += 0.2
         if mod == Mod.OVERPERFORMING:
             multiplier += 0.2
         elif mod == Mod.UNDERPERFORMING:
@@ -32,7 +35,7 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
                 multiplier += min(0.05, 0.05 * (meta.day / 99))
         elif mod == Mod.HIGH_PRESSURE:
             # checks for flooding weather and baserunners
-            if meta.weather == "Weather.FLOODING" and meta.runner_count > 0:
+            if meta.weather == Weather.FLOODING and meta.runner_count > 0:
                 # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
                 # "should we really boost the pitcher when the *other* team's batters are on base" yes.
                 multiplier += 0.25
@@ -49,9 +52,9 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
 
             if attr not in []:
                 multiplier += (14 - roster_size) * 0.01
-        elif mod == Mod.AFFINITY_FOR_CROWS and meta.weather == "Weather.BIRDS":
+        elif mod == Mod.AFFINITY_FOR_CROWS and meta.weather == Weather.BIRDS:
             multiplier += 0.5
-        elif mod == Mod.CHUNKY and meta.weather == "Weather.PEANUTS":
+        elif mod == Mod.CHUNKY and meta.weather == Weather.PEANUTS:
             # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
             #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
             # gfric boost hasn't been "tested" necessarily
@@ -59,7 +62,7 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
                 multiplier += 1.0
             elif attr == "ground_friction":
                 multiplier += 0.5
-        elif mod == Mod.SMOOTH and meta.weather == "Weather.PEANUTS":
+        elif mod == Mod.SMOOTH and meta.weather == Weather.PEANUTS:
             # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted everything in
             #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
             # the musc boost here has been "tested in the data", the others have not
@@ -88,7 +91,7 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             # guessing at how this works
             multiplier += meta.batter_at_bats * 0.01
 
-    if player.bat == "NIGHT_VISION_GOGGLES" and meta.weather == "Weather.ECLIPSE":
+    if player.bat == "NIGHT_VISION_GOGGLES" and meta.weather == Weather.ECLIPSE:
         # Blessing description: Item. Random player on your team hits 50% better during Solar Eclipses.
         if attr == "thwackability":
             multiplier += 0.5
@@ -113,17 +116,18 @@ def get_strike_threshold(
 
     batter_hype = stadium.hype if not meta.top_of_inning else 0
     pitcher_hype = stadium.hype if meta.top_of_inning else 0
+    hypediff = pitcher_hype - batter_hype
 
     # fmt: off
-    constant, ruth_factor, cold_factor, fwd_factor, musc_factor, mox_factor, abs_factor, roll_cap = {
-        11: (0.2,  0.35,  0,    0.2,   0.1,    0,   0,  0.9),
-        12: (0.2,  0.3,   0,    0.2,   0.1,    0,   0,  0.85),
-        13: (0.2,  0.3,   0,    0.2,   0.1,    0,   0,  0.85),
-        14: (0.2,  0.285, 0,    0.2,   0.1,    0,   0,  0.86),
-        15: (0.2,  0.285, 0,    0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
-        16: (0.2,  0.285, 0,    0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
-        17: (0.2,  0.285, 0,    0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
-        18: (0.25, 0.285*10/11, 0.285/11, 0.2, 0.085, -0.085, -0.035,  0.86),  # todo: a solid starter guess
+    constant, ruth_factor, fwd_factor, musc_factor, mox_factor, abs_factor, roll_cap = {
+        11: (0.2,  0.35,    0.2,   0.1,    0,   0,  0.9),
+        12: (0.2,  0.3,     0.2,   0.1,    0,   0,  0.85),
+        13: (0.2,  0.3,     0.2,   0.1,    0,   0,  0.85),
+        14: (0.2,  0.285,   0.2,   0.1,    0,   0,  0.86),
+        15: (0.2,  0.285,   0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
+        16: (0.2,  0.285,   0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
+        17: (0.2,  0.285,   0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
+        18: (0.25, 0.285,   0.2, 0.085, -0.085, -0.035,  0.86),  # todo: a solid starter guess
     }[meta.season]
     # fmt: on
 
@@ -133,26 +137,18 @@ def get_strike_threshold(
     if meta.season >= 18:
         threshold = (
                 (constant if fwd < 0.5 else constant + 0.05)
-                + ruth_factor * (ruth * (1 + 0.2 * vibes))
-                + cold_factor * (cold * (1 + 0.2 * vibes))
+                + ruth_factor * ((10 * ruth + 1 * cold) / 11 + 0.2 * hypediff) * (1 + 0.2 * vibes)
                 + (fwd_factor * fwd if fwd < 0.5 else (fwd_factor - 0.1) * fwd)
                 + musc_factor * musc
                 + mox_factor * mox
                 + abs_factor * abs(musc - mox)
-                + 0.06 * pitcher_hype * (1 + 0.2 * vibes)
-                - 0.06 * batter_hype * (1 + 0.2 * vibes)
         )
     else:
         threshold = (
             constant
             + ruth_factor * (ruth * (1 + 0.2 * vibes))
-            # + cold_factor * (cold * (1 + 0.2 * vibes))
             + fwd_factor * fwd
             + musc_factor * musc
-            # + mox_factor * mox
-            # + abs_factor * abs(musc - mox)
-            + 0.06 * pitcher_hype * (1 + 0.2 * vibes)
-            - 0.06 * batter_hype * (1 + 0.2 * vibes)
         )
     threshold = min(threshold, roll_cap)
     return threshold

@@ -10,7 +10,7 @@ import sys
 sys.path.append('../')
 
 import formulas
-from data import PlayerData, TeamData, StadiumData, DataObject, EXCLUDE_FROM_CACHE
+from data import PlayerData, TeamData, StadiumData, DataObject, Weather, EXCLUDE_FROM_CACHE
 from sin_values import SIN_PHASES
 
 DataObjectMap = Dict[str, DataObject]
@@ -77,7 +77,7 @@ def _get_multiplier(position, attr):
 def _get_stat_relevant_data(row):
     (weather, season, day, runner_count, top_of_inning, is_maximum_blaseball, batter_at_bats) = row
     return formulas.StatRelevantData(
-        weather=weather,
+        weather=Weather[weather.replace("Weather.", "")],
         season=season,
         day=day,
         runner_count=runner_count,
@@ -162,14 +162,21 @@ def player_attribute(df: pd.DataFrame, object_key: str, attr_key: str, *,
                          "Valid values: True, False, \"negative\"")
 
     attr = df[object_key + "_object"].apply(_get_player_attribute(attr_key, items, broken_items))
+    attr_raw = df[object_key + "_object"].apply(_get_player_attribute(attr_key, False, False))
+    attr_item = attr - attr_raw
+    # print(attr_item)
     if vibes:
         vibe = df[object_key + "_vibes"]
-        attr = attr * (1 + 0.2 * vibe)
+        attr_raw = attr_raw * (1 + 0.2 * vibe) 
+        attr_item = attr_item * (1 + 0.2 * vibe)
 
     if mods:
         cols = [object_key + "_object", _team_for_object(object_key) + "_object", 'stat_relevant_data']
         multiplier = df[cols].apply(_get_multiplier(object_key, attr_key), axis=1)
-        attr = attr * multiplier
+        # attr = attr_raw * multiplier + attr_item * multiplier
+        broken_item = df[object_key + "_object"].apply(lambda obj: any(item.health == 0 for item in obj.items))
+        attr = attr_raw * multiplier + attr_item * (~broken_item * multiplier + broken_item)
+        # attr = attr_raw * multiplier + attr_item * (multiplier if df[object_key + "_object"].iloc[0].items[0].health != 0 else 1)
 
     return attr
 
