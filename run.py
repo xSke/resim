@@ -14,6 +14,7 @@ from data import get_feed_between
 from resim import Csv, Resim
 from rng import Rng
 
+# fmt: off
 # season (0-indexed), (s0, s1), rng offset, event offset, start timestamp, end timestamp
 FRAGMENTS_WITH_SEASON = [
     # SEASON 12:
@@ -122,38 +123,17 @@ FRAGMENTS_WITH_SEASON = [
     # deploy at 2021-04-20T15:50:00Z
     (16, (2615094872925212987, 10785311068506962293), 12, 0, "2021-04-20T16:00:00Z", "2021-04-20T22:55:00.000Z"),
     # deploy at 2021-04-20T22:55:00Z
-    (
-        16,
-        (1545183801643444274, 11628662956451449120),
-        12,
-        0,
-        "2021-04-20T23:00:00Z",
-        "2021-04-21T23:14:44.758Z",
-    ),  # gets errors shortly after this
+    (16, (1545183801643444274, 11628662956451449120), 12, 0, "2021-04-20T23:00:00Z", "2021-04-21T23:14:44.758Z"),  # gets errors shortly after this
     # deploy at 2021-04-22T03:50:00Z
     (16, (12546856154551792590, 1162678545057283425), 13, 0, "2021-04-22T04:00:00Z", "2021-04-22T19:45:00.000Z"),
     # deploy at 2021-04-22T19:45:00Z
     # SEASON 18
     # deploy at 2021-05-11T01:45:00Z
-    (
-        17,
-        (4682029815740372257, 3533887921931845028),
-        12,
-        0,
-        "2021-05-11T02:00:00Z",
-        "2021-05-11T16:50:00.000Z",
-    ),
+    (17, (4682029815740372257, 3533887921931845028), 12, 0, "2021-05-11T02:00:00Z", "2021-05-11T16:50:00.000Z"),
     # deploy at 2021-05-11T17:00:00Z
     # SEASON 19
     # deploy at 2021-05-17T18:45:00Z
-    (
-        18,
-        (1615434327554138667, 18361091879603008920),
-        14,
-        0,
-        "2021-05-17T21:00:00Z",
-        "2021-05-18T16:59:02.002172Z",
-    ),
+    (18, (1615434327554138667, 18361091879603008920), 14, 0, "2021-05-17T21:00:00Z", "2021-05-18T16:59:02.002172Z"),
     # deploy at 2021-05-18T18:25:00Z
     # deploy at 2021-05-18T18:40:00Z
     (18, (7888161043874514753, 16266359688230399901), 21, -6, "2021-05-18T19:13:26.489Z", "2021-05-19T17:28:04.375Z"),
@@ -163,6 +143,7 @@ FRAGMENTS_WITH_SEASON = [
     (18, (16804996902252179124, 4120713687146338265), 40, -4, "2021-05-20T17:00:45.311Z", "2021-05-21T05:50:47.645Z"),
     (18, (8628222494580762787, 2714836620760386688), 52, -4, "2021-05-21T07:20:30.257Z", "2021-05-21T19:39:41.997Z"),
 ]
+# fmt: on
 
 # For backwards compatibility. Edit FRAGMENTS_WITH_SEASON instead
 FRAGMENTS = [(a, b, c, d, e) for _, a, b, c, d, e in FRAGMENTS_WITH_SEASON]
@@ -221,9 +202,11 @@ def main():
 
     print("Running resim...")
     with tqdm(total=total_events, unit=" events", unit_scale=True) as progress:
-        all_pool_args = [((args.silent, args.outfile, args.csv), fragment)
-                         for fragment in FRAGMENTS_WITH_SEASON
-                         if not args.season or fragment[0] in args.season]
+        all_pool_args = [
+            ((args.silent, args.outfile, args.csv), fragment)
+            for fragment in FRAGMENTS_WITH_SEASON
+            if not args.season or fragment[0] in args.season
+        ]
         if args.no_multiprocessing:
             for pool_args in all_pool_args:
                 run_fragment(pool_args, progress_callback=lambda: progress.update())
@@ -296,10 +279,13 @@ def get_total_events(seasons: Optional[List[int]]):
             progress.update()
             progress.set_description(f"Season {season}")
     with open("cache/event_count.json", "w") as f:
-        json.dump({
-            "fragments_hash": fragments_hash,
-            "seasons": season_events,
-        }, f)
+        json.dump(
+            {
+                "fragments_hash": fragments_hash,
+                "seasons": season_events,
+            },
+            f,
+        )
     return _total_events_for_seasons(season_events, seasons)
 
 

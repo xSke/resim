@@ -450,10 +450,7 @@ class TeamOrPlayerMods(DataClassJsonMixin):
         mods_by_type = {}
         for (mod_type, key) in MOD_KEYS.items():
             mods_by_type[mod_type] = set(data.get(key, []))
-        return dict(
-            _mods_by_type=mods_by_type,
-            mods=cls._concatenate_mods(mods_by_type)
-        )
+        return dict(_mods_by_type=mods_by_type, mods=cls._concatenate_mods(mods_by_type))
 
     def add_mod(self, mod: Union[Mod, str], mod_type: ModType):
         mod = str(mod)
@@ -526,14 +523,16 @@ class TeamData(TeamOrPlayerMods):
 
     def is_cache_equivalent(self, other: "TeamData") -> bool:
         return (
-                self.id == other.id and
-                # Excluding last update time
-                self.lineup == other.lineup and
-                self.rotation == other.rotation and
-                self.shadows == other.shadows and
-                # Excluding eDensity
-                self.level == other.level and
-                self.nickname == other.nickname
+            self.id == other.id
+            and
+            # Excluding last update time
+            self.lineup == other.lineup
+            and self.rotation == other.rotation
+            and self.shadows == other.shadows
+            and
+            # Excluding eDensity
+            self.level == other.level
+            and self.nickname == other.nickname
             # Excluding rotation slot
         )
 
@@ -551,7 +550,10 @@ class TeamData(TeamOrPlayerMods):
             "1970-01-01T00:00:00.000Z",
             None,
         )
+
+
 TeamData.null = TeamData.make_null()
+
 
 @dataclass
 class StadiumData(DataClassJsonMixin):
@@ -609,22 +611,24 @@ class StadiumData(DataClassJsonMixin):
 
     def is_cache_equivalent(self, other: "StadiumData") -> bool:
         return (
-                self.id == other.id and
-                # Excluding last update time
-                self.mods == other.mods and
-                self.name == other.name and
-                self.nickname == other.nickname and
-                self.mysticism == other.mysticism and
-                self.viscosity == other.viscosity and
-                self.elongation == other.elongation and
-                # Excluding filthiness
-                self.obtuseness == other.obtuseness and
-                self.forwardness == other.forwardness and
-                self.grandiosity == other.grandiosity and
-                self.ominousness == other.ominousness and
-                self.fortification == other.fortification and
-                self.inconvenience == other.inconvenience
-                # Excluding hype
+            self.id == other.id
+            and
+            # Excluding last update time
+            self.mods == other.mods
+            and self.name == other.name
+            and self.nickname == other.nickname
+            and self.mysticism == other.mysticism
+            and self.viscosity == other.viscosity
+            and self.elongation == other.elongation
+            and
+            # Excluding filthiness
+            self.obtuseness == other.obtuseness
+            and self.forwardness == other.forwardness
+            and self.grandiosity == other.grandiosity
+            and self.ominousness == other.ominousness
+            and self.fortification == other.fortification
+            and self.inconvenience == other.inconvenience
+            # Excluding hype
         )
 
     @staticmethod
@@ -647,7 +651,10 @@ class StadiumData(DataClassJsonMixin):
             inconvenience=0.5,
             hype=0,
         )
+
+
 StadiumData.null = StadiumData.make_null()
+
 
 @dataclass
 class ItemData:
@@ -768,7 +775,7 @@ class PlayerData(TeamOrPlayerMods):
             season_mod_sources=data_state.get("seasModSources", {}),
             peanut_allergy=data.get("peanutAllergy"),
             **cls.mods_init_args(data),
-            **cls.stats_init_args(data, items)
+            **cls.stats_init_args(data, items),
         )
 
         if prev_player_data is not None:
@@ -802,45 +809,49 @@ class PlayerData(TeamOrPlayerMods):
 
     def is_cache_equivalent(self, other: "PlayerData") -> bool:
         return (
-                self.id == other.id and
-                # Excluding last update time
-                self.raw_name == other.raw_name and
-                self.unscattered_name == other.unscattered_name and
-                # Excluding data
-                self.buoyancy == other.buoyancy and
-                self.divinity == other.divinity and
-                self.martyrdom == other.martyrdom and
-                self.moxie == other.moxie and
-                self.musclitude == other.musclitude and
-                self.patheticism == other.patheticism and
-                self.thwackability == other.thwackability and
-                self.tragicness == other.tragicness and
-                self.ruthlessness == other.ruthlessness and
-                self.overpowerment == other.overpowerment and
-                self.unthwackability == other.unthwackability and
-                self.shakespearianism == other.shakespearianism and
-                self.suppression == other.suppression and
-                self.coldness == other.coldness and
-                self.baseThirst == other.baseThirst and
-                self.continuation == other.continuation and
-                self.ground_friction == other.ground_friction and
-                self.indulgence == other.indulgence and
-                self.laserlikeness == other.laserlikeness and
-                self.anticapitalism == other.anticapitalism and
-                self.chasiness == other.chasiness and
-                self.omniscience == other.omniscience and
-                self.tenaciousness == other.tenaciousness and
-                self.watchfulness == other.watchfulness and
-                self.pressurization == other.pressurization and
-                self.cinnamon == other.cinnamon and
-                self.blood == other.blood and
-                # Excluding consecutive hits
-                self.bat == other.bat and
-                self.soul == other.soul and
-                # Excluding eDensity
-                self.items == other.items and
-                self.season_mod_sources == other.season_mod_sources and
-                self.peanut_allergy == other.peanut_allergy
+            self.id == other.id
+            and
+            # Excluding last update time
+            self.raw_name == other.raw_name
+            and self.unscattered_name == other.unscattered_name
+            and
+            # Excluding data
+            self.buoyancy == other.buoyancy
+            and self.divinity == other.divinity
+            and self.martyrdom == other.martyrdom
+            and self.moxie == other.moxie
+            and self.musclitude == other.musclitude
+            and self.patheticism == other.patheticism
+            and self.thwackability == other.thwackability
+            and self.tragicness == other.tragicness
+            and self.ruthlessness == other.ruthlessness
+            and self.overpowerment == other.overpowerment
+            and self.unthwackability == other.unthwackability
+            and self.shakespearianism == other.shakespearianism
+            and self.suppression == other.suppression
+            and self.coldness == other.coldness
+            and self.baseThirst == other.baseThirst
+            and self.continuation == other.continuation
+            and self.ground_friction == other.ground_friction
+            and self.indulgence == other.indulgence
+            and self.laserlikeness == other.laserlikeness
+            and self.anticapitalism == other.anticapitalism
+            and self.chasiness == other.chasiness
+            and self.omniscience == other.omniscience
+            and self.tenaciousness == other.tenaciousness
+            and self.watchfulness == other.watchfulness
+            and self.pressurization == other.pressurization
+            and self.cinnamon == other.cinnamon
+            and self.blood == other.blood
+            and
+            # Excluding consecutive hits
+            self.bat == other.bat
+            and self.soul == other.soul
+            and
+            # Excluding eDensity
+            self.items == other.items
+            and self.season_mod_sources == other.season_mod_sources
+            and self.peanut_allergy == other.peanut_allergy
         )
 
     @staticmethod
@@ -969,6 +980,8 @@ class PlayerData(TeamOrPlayerMods):
             "1970-01-01T00:00:00.000Z",
             None,
         )
+
+
 PlayerData.null = PlayerData.make_null()
 
 DataObject = Union[PlayerData, TeamData, StadiumData]

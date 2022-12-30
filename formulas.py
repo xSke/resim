@@ -136,20 +136,15 @@ def get_strike_threshold(
 
     if meta.season >= 18:
         threshold = (
-                (constant if fwd < 0.5 else constant + 0.05)
-                + ruth_factor * ((10 * ruth + 1 * cold) / 11 + 0.2 * hypediff) * (1 + 0.2 * vibes)
-                + (fwd_factor * fwd if fwd < 0.5 else (fwd_factor - 0.1) * fwd)
-                + musc_factor * musc
-                + mox_factor * mox
-                + abs_factor * abs(musc - mox)
+            (constant if fwd < 0.5 else constant + 0.05)
+            + ruth_factor * ((10 * ruth + 1 * cold) / 11 + 0.2 * hypediff) * (1 + 0.2 * vibes)
+            + (fwd_factor * fwd if fwd < 0.5 else (fwd_factor - 0.1) * fwd)
+            + musc_factor * musc
+            + mox_factor * mox
+            + abs_factor * abs(musc - mox)
         )
     else:
-        threshold = (
-            constant
-            + ruth_factor * (ruth * (1 + 0.2 * vibes))
-            + fwd_factor * fwd
-            + musc_factor * musc
-        )
+        threshold = constant + ruth_factor * (ruth * (1 + 0.2 * vibes)) + fwd_factor * fwd + musc_factor * musc
     threshold = min(threshold, roll_cap)
     return threshold
 

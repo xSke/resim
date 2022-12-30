@@ -32,6 +32,7 @@ from formulas import (
     get_swing_strike_threshold,
 )
 
+
 @unique
 class Csv(Enum):
     """
@@ -535,7 +536,8 @@ class Resim:
                 self.roll("extra for some reason")
 
             if (
-                "was restored!" in self.desc or "were restored!" in self.desc
+                "was restored!" in self.desc
+                or "were restored!" in self.desc
                 or "were restored!" in self.desc
                 or "was repaired." in self.desc
                 or "were repaired." in self.desc
@@ -1417,7 +1419,7 @@ class Resim:
                             damage_runners = []
 
                         for rbase in damage_runners:
-                            idx = self.update['basesOccupied'].index(rbase)
+                            idx = self.update["basesOccupied"].index(rbase)
                             runner_id = self.update["baseRunners"][idx]
                             runner = self.data.get_player(runner_id)
                             self.damage(runner, "runner")
@@ -3059,7 +3061,7 @@ class Resim:
             self.next_update["basesOccupied"] if self.next_update else None,
             self.get_stat_meta(),
             save_objects,
-            self.event['created'],
+            self.event["created"],
         )
 
     def setup_data(self, event):

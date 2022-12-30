@@ -7,7 +7,7 @@ import pandas as pd
 import sys
 
 # I don't want this to be required, but I don't know how to make the import work otherwise
-sys.path.append('../')
+sys.path.append("../")
 
 import formulas
 from data import PlayerData, TeamData, StadiumData, DataObject, Weather, EXCLUDE_FROM_CACHE
@@ -15,12 +15,27 @@ from sin_values import SIN_PHASES
 
 DataObjectMap = Dict[str, DataObject]
 
-PLAYER_OBJECTS = ['batter', 'pitcher', 'fielder', 'relevant_runner', 'runner_on_first', 'runner_on_second',
-                  'runner_on_third', 'runner_on_third_hh']
-TEAM_OBJECTS = ['batting_team', 'pitching_team']
-OTHER_OBJECTS = ['stadium']
-STAT_RELEVANT_DATA_KEYS = ["weather", "season", "day", "runner_count", "top_of_inning", "is_maximum_blaseball",
-                           "batter_at_bats"]
+PLAYER_OBJECTS = [
+    "batter",
+    "pitcher",
+    "fielder",
+    "relevant_runner",
+    "runner_on_first",
+    "runner_on_second",
+    "runner_on_third",
+    "runner_on_third_hh",
+]
+TEAM_OBJECTS = ["batting_team", "pitching_team"]
+OTHER_OBJECTS = ["stadium"]
+STAT_RELEVANT_DATA_KEYS = [
+    "weather",
+    "season",
+    "day",
+    "runner_count",
+    "top_of_inning",
+    "is_maximum_blaseball",
+    "batter_at_bats",
+]
 
 
 def _get_player_attribute(attr_key: str, use_items: Union[bool, str], use_broken_items: bool):
@@ -97,7 +112,7 @@ def _team_for_object(object_key: str) -> str:
 
 
 def _load_objects(df: pd.DataFrame, object_key: str) -> DataObjectMap:
-    filenames = df[object_key + '_file'].unique()
+    filenames = df[object_key + "_file"].unique()
     object_map: DataObjectMap = {}
     for i, filename in enumerate(filenames):
         with open("../" + filename, "r") as f:
@@ -114,8 +129,9 @@ def _load_objects(df: pd.DataFrame, object_key: str) -> DataObjectMap:
     return object_map
 
 
-def data(roll_type: str, season: Union[None, int, list[int]], roles: Iterable[str] = ("pitcher", "batter")) \
-        -> pd.DataFrame:
+def data(
+    roll_type: str, season: Union[None, int, list[int]], roles: Iterable[str] = ("pitcher", "batter")
+) -> pd.DataFrame:
     """
     Loads a dataframe with all the roll data for a particular type of roll
     :param roll_type: Type of roll. This is the thing that appears in the csv filenames, like "strikes" or "party"
@@ -154,12 +170,21 @@ def data(roll_type: str, season: Union[None, int, list[int]], roles: Iterable[st
     return df
 
 
-def player_attribute(df: pd.DataFrame, object_key: str, attr_key: str, *,
-                     vibes: bool = True, mods: bool = True, items: Union[bool, str] = True,
-                     broken_items: bool = False):
+def player_attribute(
+    df: pd.DataFrame,
+    object_key: str,
+    attr_key: str,
+    *,
+    vibes: bool = True,
+    mods: bool = True,
+    items: Union[bool, str] = True,
+    broken_items: bool = False,
+):
     if not (items is True or items is False or items == "negative"):
-        raise ValueError(f"Invalid value {items!r} for argument \"items\" passed to load.player_attribute. "
-                         "Valid values: True, False, \"negative\"")
+        raise ValueError(
+            f'Invalid value {items!r} for argument "items" passed to load.player_attribute. '
+            'Valid values: True, False, "negative"'
+        )
 
     attr = df[object_key + "_object"].apply(_get_player_attribute(attr_key, items, broken_items))
     attr_raw = df[object_key + "_object"].apply(_get_player_attribute(attr_key, False, False))
@@ -167,11 +192,11 @@ def player_attribute(df: pd.DataFrame, object_key: str, attr_key: str, *,
     # print(attr_item)
     if vibes:
         vibe = df[object_key + "_vibes"]
-        attr_raw = attr_raw * (1 + 0.2 * vibe) 
+        attr_raw = attr_raw * (1 + 0.2 * vibe)
         attr_item = attr_item * (1 + 0.2 * vibe)
 
     if mods:
-        cols = [object_key + "_object", _team_for_object(object_key) + "_object", 'stat_relevant_data']
+        cols = [object_key + "_object", _team_for_object(object_key) + "_object", "stat_relevant_data"]
         multiplier = df[cols].apply(_get_multiplier(object_key, attr_key), axis=1)
         # attr = attr_raw * multiplier + attr_item * multiplier
         broken_item = df[object_key + "_object"].apply(lambda obj: any(item.health == 0 for item in obj.items))

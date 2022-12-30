@@ -22,19 +22,19 @@ class SaveCsv:
         self.last_saved_object = last_saved_update
 
     def write(
-            self,
-            event_type: str,
-            roll: float,
-            passed: bool,
-            update,
-            is_strike: bool,
-            strike_roll: float,
-            strike_threshold: float,
-            fielder_roll,
-            baserunners_next,
-            meta: StatRelevantData,
-            save_objects: Dict[str, DataObject],
-            event_time,
+        self,
+        event_type: str,
+        roll: float,
+        passed: bool,
+        update,
+        is_strike: bool,
+        strike_roll: float,
+        strike_threshold: float,
+        fielder_roll,
+        baserunners_next,
+        meta: StatRelevantData,
+        save_objects: Dict[str, DataObject],
+        event_time,
     ):
         # fmt: off
         row = {
@@ -72,10 +72,7 @@ class SaveCsv:
 
         for save_key, obj in save_objects.items():
             file_path = f"{self.object_dir}/{obj.id}-{obj.last_update_time}.json".replace(":", "_")
-            if (
-                    obj.id not in self.last_saved_object
-                    or self.last_saved_object[obj.id] != obj.last_update_time
-            ):
+            if obj.id not in self.last_saved_object or self.last_saved_object[obj.id] != obj.last_update_time:
                 to_save = {
                     "type": obj.object_type,
                     "last_update_time": obj.last_update_time,
