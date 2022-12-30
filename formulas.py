@@ -53,7 +53,8 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             if attr not in []:
                 multiplier += (14 - roster_size) * 0.01
         elif mod == Mod.AFFINITY_FOR_CROWS and meta.weather == Weather.BIRDS:
-            multiplier += 0.5
+            if attr not in []:
+                multiplier += 0.5
         elif mod == Mod.CHUNKY and meta.weather == Weather.PEANUTS:
             # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
             #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
