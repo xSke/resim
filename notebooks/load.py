@@ -9,9 +9,9 @@ import sys
 # I don't want this to be required, but I don't know how to make the import work otherwise
 sys.path.append("../")
 
-import formulas
-from data import PlayerData, TeamData, StadiumData, DataObject, Weather, EXCLUDE_FROM_CACHE
-from sin_values import SIN_PHASES
+import formulas  # noqa: E402
+from data import PlayerData, TeamData, StadiumData, DataObject, Weather  # noqa: E402
+from sin_values import SIN_PHASES  # noqa: E402
 
 DataObjectMap = Dict[str, DataObject]
 
@@ -201,7 +201,9 @@ def player_attribute(
         # attr = attr_raw * multiplier + attr_item * multiplier
         broken_item = df[object_key + "_object"].apply(lambda obj: any(item.health == 0 for item in obj.items))
         attr = attr_raw * multiplier + attr_item * (~broken_item * multiplier + broken_item)
-        # attr = attr_raw * multiplier + attr_item * (multiplier if df[object_key + "_object"].iloc[0].items[0].health != 0 else 1)
+        # attr = attr_raw * multiplier + attr_item * (
+        #     multiplier if df[object_key + "_object"].iloc[0].items[0].health != 0 else 1
+        # )
 
     return attr
 

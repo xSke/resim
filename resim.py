@@ -1073,7 +1073,8 @@ class Resim:
                     base_two_roll = self.roll("which base")
 
                     if "Base Instincts take them directly to second base!" in self.desc:
-                        # Note: The fielder roll is used here as the formula multiplies two rolls together and this is the easiest way to log two rolls at once
+                        # Note: The fielder roll is used here as the formula multiplies two rolls together
+                        # and this is the easiest way to log two rolls at once
                         self.log_roll(
                             Csv.INSTINCTS,
                             "Second",
@@ -1679,7 +1680,7 @@ class Resim:
                 self.print(f"!!! too high foul roll ({foul_roll} > {threshold})")
 
                 if foul_roll > 0.5:
-                    self.print(f"!!! very too high foul roll")
+                    self.print("!!! very too high foul roll")
             elif not known_outcome and foul_roll < threshold:
                 self.print(f"!!! too low foul roll ({foul_roll} < {threshold})")
         outcomestr = "Foul" if known_outcome else "Fair"
@@ -2615,7 +2616,7 @@ class Resim:
                     "2021-04-20T09:00:31.366Z": 9,   # Parasitic Cap
                     "2021-04-20T09:12:45.083Z": 15,  # Inflatable Plastic Bat
                     "2021-04-20T13:00:31.463Z": 11,  # Brambly Glove
-                    "2021-04-20T13:23:25.792Z": 13,  # Metaphorical Shoes - why is this 13 when the other metaphorical shoes are 14???
+                    "2021-04-20T13:23:25.792Z": 13,  # Metaphorical Shoes - why is this 13 when the other metaphorical shoes are 14??? # noqa: E501
                     "2021-04-22T05:22:34.529Z": 9,   # Paper Shoes
                     "2021-05-18T15:03:17.013Z": 5,   # Socks
                     "2021-05-21T08:06:07.589Z": 8,   # Flickering Bat
@@ -2662,9 +2663,10 @@ class Resim:
             # what is the exact criteria here?
             # we have ghost Elijah Bates entering a secret base in 42a824ba-bd7b-4b63-aeb5-a60173df136e
             # (null leagueTeamId) and that *does* have an exit roll on the "wrong side"
-            # so maybe it just checks "if present on opposite team" rather than "is not present on current team"? or
-            # it's special handling for null team
-            # update as of s19 d33: it definitely also accounts for *shadows* - alx keming can exit when the ffs are batting but not pitching
+            # so maybe it just checks "if present on opposite team" rather than
+            # "is not present on current team"? or it's special handling for null team
+            # update as of s19 d33: it definitely also accounts for *shadows*
+            # - alx keming can exit when the ffs are batting but not pitching
             pitching_lineup = self.pitching_team.lineup + self.pitching_team.shadows
             secret_runner = self.data.get_player(secret_runner_id)
             if secret_runner_id in pitching_lineup:

@@ -1,12 +1,9 @@
-import copy
 import json
 import os
 from csv import DictWriter
 from typing import Dict
 
-import pandas as pd
-
-from data import DataObject, cacheable, PlayerData
+from data import DataObject
 from formulas import StatRelevantData
 
 

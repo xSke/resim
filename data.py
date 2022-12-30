@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 import os
 import json
 import requests
-from dataclasses_json import DataClassJsonMixin, config, Exclude
-from typing import Any, List, Dict, Iterable, Mapping, Optional, Set, Union, Tuple, ClassVar, Type
+from dataclasses_json import DataClassJsonMixin, config
+from typing import Any, List, Dict, Iterable, Mapping, Optional, Set, Union, ClassVar
 from datetime import datetime, timedelta
 from enum import Enum, IntEnum, auto, unique
 from sin_values import SIN_PHASES
