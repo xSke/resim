@@ -314,7 +314,11 @@ def get_foul_threshold(batter: PlayerData, batting_team: TeamData, stadium: Stad
     div = batter.divinity * get_multiplier(batter, batting_team, "batter", "divinity", meta) * (1 + 0.2 * vibes)
     batter_sum = (musc + thwack + div) / 3
 
-    threshold = 0.25 + 0.1 * fwd - 0.1 * obt + 0.1 * batter_sum
+    batter_hype = stadium.hype if not meta.top_of_inning else 0
+    pitcher_hype = stadium.hype if meta.top_of_inning else 0
+    hypediff = (batter_hype - pitcher_hype) * (1 + 0.2 * vibes)
+
+    threshold = 0.25 + 0.1 * fwd - 0.1 * obt + 0.1 * batter_sum + 0.02 * hypediff
     return threshold
 
 

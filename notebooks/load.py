@@ -148,7 +148,7 @@ def data(
         season_str = str(season)
     else:
         season_str = "{" + ",".join(str(s) for s in season) + "}"
-    all_files = glob.glob(f"../roll_data/s{season}*-{roll_type}.csv")
+    all_files = glob.glob(f"../roll_data/s{season_str}*-{roll_type}.csv")
 
     df = pd.concat((pd.read_csv(f, dtype={"stadium_id": "string"}) for f in all_files), ignore_index=True)
 
