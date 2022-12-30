@@ -3052,8 +3052,6 @@ class Resim:
             roll,
             passed,
             self.update,
-            0,
-            0,
             self.is_strike,
             self.strike_roll,
             self.strike_threshold,
