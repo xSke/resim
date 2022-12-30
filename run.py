@@ -164,7 +164,7 @@ FRAGMENTS_WITH_SEASON = [
     (18, (8628222494580762787, 2714836620760386688), 52, -4, "2021-05-21T07:20:30.257Z", "2021-05-21T19:39:41.997Z"),
 ]
 
-# For backwards compatibility. Edit FRAMGENTS_WITH_SEASON instead
+# For backwards compatibility. Edit FRAGMENTS_WITH_SEASON instead
 FRAGMENTS = [(a, b, c, d, e) for _, a, b, c, d, e in FRAGMENTS_WITH_SEASON]
 
 PROGRESS_QUEUE: Optional[Queue] = None
