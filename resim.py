@@ -1825,67 +1825,80 @@ class Resim:
                     False,
                 )
 
+            #Drained Stat for both Siphon & Blooddrain is: Pitching 0-0.25, Batting 0.25-0.5, Defense 0.5-0.75, Baserunning 0.75-1    
             if self.ty == EventType.BLOODDRAIN_SIPHON:
-                self.roll("siphon proc1")
-                self.roll("siphon proc2")
-                self.roll("siphon proc3")
-                self.roll("siphon proc4")
+                self.roll("which siphon")
+                target_roll = self.roll("Active or Passive Target")
+                pitchers = (self.pitching_team.lineup + self.pitching_team.rotation)
+                batters = (self.batting_team.lineup)
 
-                # these ones are 1 more for some reason. don't know
+                #Siphon on Siphon Violence - They all conveniently fall into the same roll length
                 if self.event["created"] in [
-                    "2021-03-17T03:20:31.620Z",
-                    "2021-04-07T13:02:47.102Z",
-                    "2021-03-03T03:17:25.555Z",
-                    "2021-03-03T05:17:29.552Z",
-                    "2021-03-03T06:13:25.353Z",
-                    "2021-03-03T18:26:00.538Z",
-                    "2021-03-09T06:07:27.564Z",
-                    "2021-03-04T06:05:07.060Z",
-                    "2021-03-11T06:16:24.968Z",
-                    "2021-04-07T18:07:53.969Z",
-                    "2021-04-13T17:17:24.293Z",
-                    "2021-05-20T08:01:11.485Z",
-                    "2021-05-21T11:02:56.754Z",
+                "2021-03-11T16:07:06.900Z", 
+                "2021-04-16T02:23:37.186Z", 
+                "2021-05-19T14:06:37.515Z"
                 ]:
-                    self.roll("siphon proc 5?")
+                    self.roll("siphon1")
+                    self.roll("siphon2")   
+
+                else:
+                    for player_id in pitchers:
+                        pitcher = self.data.get_player(player_id)
+                        if pitcher.has_mod(Mod.SIPHON) and pitcher.raw_name in self.desc:
+                            pitchersiphon=True
+
+                            if pitchersiphon:
+                                if target_roll > 0.5 and len(self.update["baseRunners"]) > 0:
+                                    self.roll("siphon target")
+                                    self.roll("which stat drained")
+                                    self.roll("effect")
+                                else:
+                                    self.roll("which stat drained")
+                                    self.roll("effect")
+
+                    for player_id in batters:
+                        batter = self.data.get_player(player_id)
+                        if batter.has_mod(Mod.SIPHON) and batter.raw_name in self.desc:
+                            battersiphon=True
+                        
+                            if battersiphon:
+                                for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
+                                    runner = self.data.get_player(runner_id)
+                                if len(self.update["baseRunners"]) > 0 and runner.raw_name in self.desc:
+                                        self.roll("which stat drained")
+                                        self.roll("effect")
+                                else:
+                                    if target_roll > 0.5 or player_id == self.batter.id:
+                                        self.roll("siphon target")
+                                        self.roll("which stat drained")
+                                        self.roll("effect")
+                                    else:
+                                        self.roll("which stat drained")
+                                        self.roll("effect")
                 return True
 
-            if self.ty == EventType.BLOODDRAIN:
-                self.roll("blooddrain proc1")
-                self.roll("blooddrain proc2")
-                self.roll("blooddrain proc3")
-
-                # todo: why are these shorter?
-                if self.event["created"] not in [
-                    "2021-03-09T10:27:56.571Z",
-                    "2021-03-11T03:12:13.124Z",
-                    "2021-03-12T01:07:27.467Z",
-                    "2021-04-20T11:24:53.259Z",
-                    "2021-04-21T22:10:38.228Z",
-                    "2021-04-21T03:26:09.890Z",
-                    "2021-04-19T19:14:36.778Z",
-                    "2021-05-20T14:17:53.849Z",
-                ]:
-                    self.roll("blooddrain proc4")
-
-                # todo: ???
-                if self.event["created"] in [
-                    "2021-03-12T01:10:43.414Z",
-                    "2021-04-20T01:06:26.585Z",
-                    "2021-04-20T21:16:23.765Z",
-                    "2021-04-21T18:00:46.683Z",
-                    "2021-05-18T10:20:04.864Z",
-                    "2021-05-18T12:02:37.227Z",
-                ]:
-                    self.roll("blooddrain proc")
-                return True
-
-            if self.ty == EventType.BLOODDRAIN_BLOCKED:
-                self.roll("blooddrain proc1")
-                self.roll("blooddrain proc2")
-                self.roll("blooddrain proc3")
-                if self.event["created"] not in ["2021-04-19T19:04:51.879Z", "2021-04-19T19:19:58.839Z"]:
-                    self.roll("blooddrain proc4")
+            if self.ty == EventType.BLOODDRAIN or self.ty == EventType.BLOODDRAIN_BLOCKED:
+                #This one thinks that an on base runner is the batter
+                if self.event["created"] in ["2021-04-20T06:31:02.337Z"]:
+                   self.roll("blooddrain proc1")
+                   self.roll("blooddrain proc2")
+                   self.roll("blooddrain proc3")
+                   self.roll("Drained Stat") 
+                elif len(self.update["baseRunners"]) > 0 and self.batter.raw_name not in self.desc and self.pitcher.raw_name not in self.desc:
+                   self.roll("blooddrain proc1")
+                   self.roll("blooddrain proc2")
+                   self.roll("blooddrain proc3")
+                   self.roll("blooddrain proc4")
+                   self.roll("Drained Stat")
+                elif self.batter.raw_name and self.pitcher.raw_name in self.desc:
+                   self.roll("blooddrain proc1")
+                   self.roll("blooddrain proc2")
+                   self.roll("Drained Stat")
+                else:
+                   self.roll("blooddrain proc1")
+                   self.roll("blooddrain proc2")
+                   self.roll("blooddrain proc3")
+                   self.roll("Drained Stat")
                 return True
 
         elif self.weather == Weather.PEANUTS:
