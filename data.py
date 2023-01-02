@@ -143,6 +143,7 @@ class Mod(Enum):
     SEEKER = auto()
     SHELLED = auto()
     SINKING_SHIP = auto()
+    SIPHON = auto()
     SLOW_BUILD = auto()
     SMITHY = auto()
     SMOOTH = auto()

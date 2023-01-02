@@ -159,7 +159,7 @@ def data(
         season_str = str(season)
     else:
         season_str = "{" + ",".join(str(s) for s in season) + "}"
-    all_files = glob.glob(f"../roll_data/s{season}*-{roll_type}.csv")
+    all_files = glob.glob(f"../roll_data/s{season_str}*-{roll_type}.csv")
 
     df = pd.concat((pd.read_csv(f, dtype={"stadium_id": "string"}) for f in all_files), ignore_index=True)
 
@@ -187,13 +187,18 @@ def player_attribute(
     attr_key: str,
     *,
     vibes: bool = True,
-    mods: bool = True,
+    mods: Union[bool, str] = True,
     items: Union[bool, str] = True,
     broken_items: bool = False,
 ):
     if not (items is True or items is False or items == "negative"):
         raise ValueError(
             f'Invalid value {items!r} for argument "items" passed to load.player_attribute. '
+            'Valid values: True, False, "negative"'
+        )
+    if not (mods is True or mods is False or mods == "negative"):
+        raise ValueError(
+            f'Invalid value {mods!r} for argument "mods" passed to load.player_attribute. '
             'Valid values: True, False, "negative"'
         )
 
@@ -207,14 +212,18 @@ def player_attribute(
         attr_item = attr_item * (1 + 0.2 * vibe)
 
     if mods:
-        cols = [object_key + "_object", _team_for_object(object_key) + "_object", "stat_relevant_data"]
-        multiplier = df[cols].apply(_get_multiplier(object_key, attr_key), axis=1)
-        # attr = attr_raw * multiplier + attr_item * multiplier
-        broken_item = df[object_key + "_object"].apply(lambda obj: any(item.health == 0 for item in obj.items))
-        attr = attr_raw * multiplier + attr_item * (~broken_item * multiplier + broken_item)
-        # attr = attr_raw * multiplier + attr_item * (
-        #     multiplier if df[object_key + "_object"].iloc[0].items[0].health != 0 else 1
-        # )
+        if mods == "negative":
+            cols = [object_key + "_object", _team_for_object(object_key) + "_object", "stat_relevant_data"]
+            multiplier = df[cols].apply(_get_multiplier(object_key, attr_key), axis=1)
+            # attr = attr_raw * multiplier + attr_item * multiplier
+            broken_item = df[object_key + "_object"].apply(lambda obj: any(item.health == 0 for item in obj.items))
+            attr = attr_raw / multiplier + attr_item * (~broken_item * multiplier + broken_item)
+        else:
+            cols = [object_key + "_object", _team_for_object(object_key) + "_object", "stat_relevant_data"]
+            multiplier = df[cols].apply(_get_multiplier(object_key, attr_key), axis=1)
+            # attr = attr_raw * multiplier + attr_item * multiplier
+            broken_item = df[object_key + "_object"].apply(lambda obj: any(item.health == 0 for item in obj.items))
+            attr = attr_raw * multiplier + attr_item * (~broken_item * multiplier + broken_item)
 
     return attr
 

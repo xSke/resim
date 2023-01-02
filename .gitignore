@@ -9,3 +9,4 @@ jump.txt
 .DS_Store
 /roll_data/
 /object_data/
+*.zsh
