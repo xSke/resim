@@ -268,8 +268,28 @@ def player_attribute_group(
 
         df[attr_name] = attr
 
-    return None
+    return
 
 
 def stadium_attribute(df: pd.DataFrame, attr_key: str, *, center: bool = True):
     return df["stadium_object"].apply(_get_stadium_attribute(attr_key)) - 0.5 * center
+
+
+def stadium_attribute_all(df: pd.DataFrame, *, center: bool = True):
+    attr_keys = [
+        "grandiosity",
+        "fortification",
+        "obtuseness",
+        "ominousness",
+        "inconvenience",
+        "viscosity",
+        "forwardness",
+        "mysticism",
+        "elongation",
+        "filthiness",
+        "hype",
+    ]
+    for attr_key in attr_keys:
+        attr_name = "ballpark_" + attr_key
+        df[attr_name] = stadium_attribute(df, attr_key, center=center)
+    return
