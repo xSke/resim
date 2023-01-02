@@ -1364,7 +1364,7 @@ class Resim:
                 if is_next_free:
                     adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})")
                     self.log_roll(
-                        Csv.FLYOUT, "advance", adv_roll, roll_outcome, fielder=fielder, relevant_runner=runner
+                        Csv.FLYOUT, f"advance_{base}", adv_roll, roll_outcome, fielder=fielder, relevant_runner=runner
                     )
 
                     if roll_outcome:
