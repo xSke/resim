@@ -400,10 +400,14 @@ class Resim:
                 for _ in range(25):
                     self.roll("stat")
 
-            # todo: clean this up, see if we can find a better check for "is this a holiday inning party" elsewhere
             if "is Partying" in self.desc:
+                # we want to roll this only if this is a *holiday inning* party, and we currently have no nice way of seeing that
+                # we can check the date, but after_party is also a thing. and there's at least one occasion where a player has both, and we can't disambiguate
                 team = self.data.get_team(self.event["teamTags"][0])
-                if not team.has_mod(Mod.PARTY_TIME) and self.day < 27:
+                if (not team.has_mod(Mod.PARTY_TIME) and not team.has_mod(Mod.AFTER_PARTY) and self.day < 27) or self.event["created"] in [
+                    "2021-05-17T21:21:21.303Z",
+                    "2021-05-17T21:22:11.076Z",
+                ]:
                     # this is a holiday inning party (why 26?)
                     for _ in range(26):
                         self.roll("stat")
@@ -532,7 +536,13 @@ class Resim:
             if self.season >= 15:
                 self.roll("reset items? idk?")
 
-            if self.event["created"] == "2021-05-20T23:02:11.327Z":
+            if self.event["created"] in [
+                "2021-05-20T23:02:11.327Z",
+
+                # these two are probably not the same reason
+                "2021-04-13T01:06:52.165Z",
+                "2021-04-13T01:28:04.005Z",
+            ]:
                 self.roll("extra for some reason")
 
             if (
@@ -617,7 +627,6 @@ class Resim:
                 "3ff91111-7862-442e-aa59-c338871c63fe": 2,
                 "1514e79b-e14b-45e0-aada-dad2ba4d753d": 1,
                 "a327e425-aaf4-4199-8292-bba0ec4a226a": 2,
-                "5deffffd-97bd-44b3-bb5d-6a03e91065b0": 1,
                 "d03ad239-25ee-41bf-a1d3-6e087f302171": 1,
                 "b2bb8e5c-358f-448b-bbf3-7c8c33148107": 1,
                 "bf35c2a3-61f3-49e2-b693-9e7ead9a2f8e": 1,
@@ -1875,6 +1884,10 @@ class Resim:
                                     else:
                                         self.roll("which stat drained")
                                         self.roll("effect")
+
+                if self.event["created"] == "2021-04-12T22:01:16.338Z":
+                    # this... might be item damage on siphon strikeout...?
+                    self.roll("sorry kidror idk why")
                 return True
 
             if self.ty == EventType.BLOODDRAIN or self.ty == EventType.BLOODDRAIN_BLOCKED:
@@ -2337,7 +2350,11 @@ class Resim:
                     runner = self.data.get_player(runner_id)
 
                     exempt_mods = [Mod.EGO1, Mod.SWIM_BLADDER]
-                    if self.season >= 15:
+
+                    # unsure when this change was made
+                    # we have Pitching Machine (with ego2) swept elsewhere on season 16 day 10
+                    # and Aldon Cashmoney (also ego2) kept on base on season 16 day 65
+                    if (self.season, self.day) >= (15, 64):
                         exempt_mods += [Mod.EGO2, Mod.EGO3, Mod.EGO4]
                     if not runner.has_any(*exempt_mods):
                         self.roll(f"sweep ({runner.name})")
@@ -3009,6 +3026,13 @@ class Resim:
         # so the "which item to break" is just moved into the misc handler for now
         self.roll(f"item damage ({player.name})")
 
+        # so, there are a few(?) cases in early s16 where an item was damaged and broke, and no event was logged or displayed
+        # in this case there's still an extra roll for damage location.
+        if (self.event["created"], player.id) in [
+            ("2021-04-12T16:22:51.087Z", "c09e64b6-8248-407e-b3af-1931b880dbee") # Lenny Spruce
+        ]:
+            self.roll(f"which item? (manual override for {player.name}, see comments)")
+
     def log_roll(
         self,
         csv: Csv,
@@ -3543,9 +3567,6 @@ class Resim:
         self.roll("ritual")
         self.roll("blood")
         self.roll("coffee")
-
-        if self.event["created"] == "2021-04-12T16:22:20.933Z":
-            self.roll("!!! todo")
 
     def get_runner_multiplier(self, runner, relevant_attr=None):
 
