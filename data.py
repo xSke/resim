@@ -90,6 +90,7 @@ class Mod(Enum):
     AAA = auto()
     ACIDIC = auto()
     AFFINITY_FOR_CROWS = auto()
+    AFTER_PARTY = auto()
     ATTRACTOR = auto()
     BASE_INSTINCTS = auto()
     BIG_BUCKET = auto()

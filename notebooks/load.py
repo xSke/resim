@@ -1,7 +1,8 @@
-import glob
+from glob import glob
 import itertools
 import json
 from typing import Dict, Union, Iterable
+from braceexpand import braceexpand
 
 import pandas as pd
 import sys
@@ -37,6 +38,13 @@ STAT_RELEVANT_DATA_KEYS = [
     "batter_at_bats",
 ]
 
+
+def braced_glob(path):
+    l = []
+    for x in braceexpand(path):
+        l.extend(glob(x))
+            
+    return l
 
 def _get_player_attribute(attr_key: str, use_items: Union[bool, str], use_broken_items: bool):
     def player_attribute_extractor(player: PlayerData):
@@ -159,7 +167,7 @@ def data(
         season_str = str(season)
     else:
         season_str = "{" + ",".join(str(s) for s in season) + "}"
-    all_files = glob.glob(f"../roll_data/s{season_str}*-{roll_type}.csv")
+    all_files = braced_glob(f"../roll_data/s{season_str}*-{roll_type}.csv")
 
     df = pd.concat((pd.read_csv(f, dtype={"stadium_id": "string"}) for f in all_files), ignore_index=True)
 
