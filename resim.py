@@ -1,5 +1,6 @@
 import math
 import os
+import re
 import sys
 import itertools
 
@@ -31,6 +32,7 @@ from formulas import (
     get_swing_ball_threshold,
     get_swing_strike_threshold,
 )
+from item_gen import ItemRollType, roll_item
 
 
 @unique
@@ -160,7 +162,7 @@ class Resim:
                 shoe_thieves.last_update_time = self.event["created"]
 
         self.print()
-        if not self.update and self.play > 1:
+        if not self.update and self.play and self.play > 1:
             self.print("!!! missing update data")
         self.print(
             "===== {} {}/{} {}".format(
@@ -404,7 +406,9 @@ class Resim:
                 # we want to roll this only if this is a *holiday inning* party, and we currently have no nice way of seeing that
                 # we can check the date, but after_party is also a thing. and there's at least one occasion where a player has both, and we can't disambiguate
                 team = self.data.get_team(self.event["teamTags"][0])
-                if (not team.has_mod(Mod.PARTY_TIME) and not team.has_mod(Mod.AFTER_PARTY) and self.day < 27) or self.event["created"] in [
+                if (
+                    not team.has_mod(Mod.PARTY_TIME) and not team.has_mod(Mod.AFTER_PARTY) and self.day < 27
+                ) or self.event["created"] in [
                     "2021-05-17T21:21:21.303Z",
                     "2021-05-17T21:22:11.076Z",
                 ]:
@@ -460,6 +464,7 @@ class Resim:
             EventType.PLAYER_ADDED_TO_TEAM,
             EventType.BIG_DEAL,
             EventType.WON_INTERNET_SERIES,
+            EventType.UNDEFINED_TYPE,
         ]:
             # skip postseason
             return True
@@ -538,7 +543,6 @@ class Resim:
 
             if self.event["created"] in [
                 "2021-05-20T23:02:11.327Z",
-
                 # these two are probably not the same reason
                 "2021-04-13T01:06:52.165Z",
                 "2021-04-13T01:28:04.005Z",
@@ -686,6 +690,7 @@ class Resim:
                 "7cc6dbc2-a07f-48f9-8761-fddfbc0fcf66": 16,  # prize match
                 "95cf5ed9-4cec-44f2-8316-926c044b91e7": 10,  # prize match
                 "bcccb4bc-d725-489e-b4e8-b745040a7226": 11,  # prize match
+                "4f8ce860-fb5e-4cff-8111-d687fa438876": 7,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -769,6 +774,9 @@ class Resim:
             if self.ty == EventType.PLAYER_GAINED_ITEM and "gained the Prized" in self.desc:
                 # prize match reward
                 self.roll("prize target")
+
+            if self.ty == EventType.PLAYER_GAINED_ITEM and "The Community Chest Opens" in self.desc:
+                self.create_item(self.event, ItemRollType.CHEST)
             return True
         if self.ty == EventType.PLAYER_SWAP:
             return True
@@ -777,19 +785,22 @@ class Resim:
         if self.ty == EventType.WEATHER_CHANGE:
             return True
         if self.ty == EventType.COMMUNITY_CHEST_GAME_EVENT:
-            # todo
+            # It looks like before season 18 there are 12 rolls after all of the items are created
+            # regardless of the number of COMMUNITY_CHEST_GAME_EVENTs,
+            # except the one at 2021-04-20T21:43:13.835Z, which has 0.
+            # After that, it's apparently 1 per event.
             chests = {
-                "2021-04-20T21:43:13.835Z": 375,
-                "2021-04-22T06:15:48.986Z": 362,
-                "2021-05-11T16:05:03.662Z": 398,
-                "2021-05-18T13:07:33.068Z": 350,
-                "2021-05-21T01:06:02.371Z": 361,
+                "2021-04-22T06:15:48.986Z": 12,
+                "2021-04-23T14:06:46.795Z": 12,
             }
+
             time = self.event["created"]
             to_step = chests.get(time)
             if to_step:
                 self.print(f"!!! stepping {to_step} @ {time} for Community Chest")
                 self.rng.step(to_step)
+            elif self.season >= 17:
+                self.roll("?????")
 
             # todo: properly handle the item changes
             if self.event["created"] == "2021-05-11T16:05:03.662Z":
@@ -1834,27 +1845,27 @@ class Resim:
                     False,
                 )
 
-            #Drained Stat for both Siphon & Blooddrain is: Pitching 0-0.25, Batting 0.25-0.5, Defense 0.5-0.75, Baserunning 0.75-1    
+            # Drained Stat for both Siphon & Blooddrain is: Pitching 0-0.25, Batting 0.25-0.5, Defense 0.5-0.75, Baserunning 0.75-1
             if self.ty == EventType.BLOODDRAIN_SIPHON:
                 self.roll("which siphon")
                 target_roll = self.roll("Active or Passive Target")
-                pitchers = (self.pitching_team.lineup + self.pitching_team.rotation)
-                batters = (self.batting_team.lineup)
+                pitchers = self.pitching_team.lineup + self.pitching_team.rotation
+                batters = self.batting_team.lineup
 
-                #Siphon on Siphon Violence - They all conveniently fall into the same roll length
+                # Siphon on Siphon Violence - They all conveniently fall into the same roll length
                 if self.event["created"] in [
-                "2021-03-11T16:07:06.900Z", 
-                "2021-04-16T02:23:37.186Z", 
-                "2021-05-19T14:06:37.515Z"
+                    "2021-03-11T16:07:06.900Z",
+                    "2021-04-16T02:23:37.186Z",
+                    "2021-05-19T14:06:37.515Z",
                 ]:
                     self.roll("siphon1")
-                    self.roll("siphon2")   
+                    self.roll("siphon2")
 
                 else:
                     for player_id in pitchers:
                         pitcher = self.data.get_player(player_id)
                         if pitcher.has_mod(Mod.SIPHON) and pitcher.raw_name in self.desc:
-                            pitchersiphon=True
+                            pitchersiphon = True
 
                             if pitchersiphon:
                                 if target_roll > 0.5 and len(self.update["baseRunners"]) > 0:
@@ -1868,14 +1879,14 @@ class Resim:
                     for player_id in batters:
                         batter = self.data.get_player(player_id)
                         if batter.has_mod(Mod.SIPHON) and batter.raw_name in self.desc:
-                            battersiphon=True
-                        
+                            battersiphon = True
+
                             if battersiphon:
                                 for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
                                     runner = self.data.get_player(runner_id)
                                 if len(self.update["baseRunners"]) > 0 and runner.raw_name in self.desc:
-                                        self.roll("which stat drained")
-                                        self.roll("effect")
+                                    self.roll("which stat drained")
+                                    self.roll("effect")
                                 else:
                                     if target_roll > 0.5 or player_id == self.batter.id:
                                         self.roll("siphon target")
@@ -1891,27 +1902,31 @@ class Resim:
                 return True
 
             if self.ty == EventType.BLOODDRAIN or self.ty == EventType.BLOODDRAIN_BLOCKED:
-                #This one thinks that an on base runner is the batter
+                # This one thinks that an on base runner is the batter
                 if self.event["created"] in ["2021-04-20T06:31:02.337Z"]:
-                   self.roll("blooddrain proc1")
-                   self.roll("blooddrain proc2")
-                   self.roll("blooddrain proc3")
-                   self.roll("Drained Stat") 
-                elif len(self.update["baseRunners"]) > 0 and self.batter.raw_name not in self.desc and self.pitcher.raw_name not in self.desc:
-                   self.roll("blooddrain proc1")
-                   self.roll("blooddrain proc2")
-                   self.roll("blooddrain proc3")
-                   self.roll("blooddrain proc4")
-                   self.roll("Drained Stat")
+                    self.roll("blooddrain proc1")
+                    self.roll("blooddrain proc2")
+                    self.roll("blooddrain proc3")
+                    self.roll("Drained Stat")
+                elif (
+                    len(self.update["baseRunners"]) > 0
+                    and self.batter.raw_name not in self.desc
+                    and self.pitcher.raw_name not in self.desc
+                ):
+                    self.roll("blooddrain proc1")
+                    self.roll("blooddrain proc2")
+                    self.roll("blooddrain proc3")
+                    self.roll("blooddrain proc4")
+                    self.roll("Drained Stat")
                 elif self.batter.raw_name and self.pitcher.raw_name in self.desc:
-                   self.roll("blooddrain proc1")
-                   self.roll("blooddrain proc2")
-                   self.roll("Drained Stat")
+                    self.roll("blooddrain proc1")
+                    self.roll("blooddrain proc2")
+                    self.roll("Drained Stat")
                 else:
-                   self.roll("blooddrain proc1")
-                   self.roll("blooddrain proc2")
-                   self.roll("blooddrain proc3")
-                   self.roll("Drained Stat")
+                    self.roll("blooddrain proc1")
+                    self.roll("blooddrain proc2")
+                    self.roll("blooddrain proc3")
+                    self.roll("Drained Stat")
                 return True
 
         elif self.weather == Weather.PEANUTS:
@@ -2615,45 +2630,7 @@ class Resim:
                 self.roll("receiving team")
                 self.roll("receiving player")
 
-                # fmt: off
-                glitter_lengths = {
-                    "2021-04-13T04:11:43.211Z": 10,  # Leg Ring
-                    "2021-04-13T04:12:57.801Z": 11,  # Plant-Based Cap
-                    "2021-04-13T06:11:37.919Z": 5,   # Glove
-                    "2021-04-13T06:19:24.169Z": 5,   # Necklace - why is this 5 when the other necklace is 4???
-                    "2021-04-13T06:21:23.962Z": 10,  # Leg Ring
-                    "2021-04-13T20:04:51.632Z": 5,   # Glove
-                    "2021-04-13T23:09:03.266Z": 11,  # Inflatable Sunglasses
-                    "2021-04-13T23:15:49.175Z": 5,   # Cap
-                    "2021-04-14T03:02:56.577Z": 5,   # Cap
-                    "2021-04-14T03:08:02.423Z": 4,   # Sunglasses
-                    "2021-04-14T11:03:16.318Z": 4,   # Sunglasses
-                    "2021-04-14T11:11:16.266Z": 11,  # Bat of Vanity
-                    "2021-04-14T15:11:14.466Z": 5,   # Bat
-                    "2021-04-14T15:22:37.236Z": 12,  # Frosty Shoes
-                    "2021-04-14T18:21:47.306Z": 8,   # Parasitic Jersey
-                    "2021-04-14T21:13:25.144Z": 4,   # Necklace
-                    "2021-04-15T07:04:22.275Z": 5,   # Shoes
-                    "2021-04-15T07:08:27.800Z": 10,  # Leg Glove
-                    "2021-04-15T07:09:02.365Z": 12,  # Cryogenic Shoes
-                    "2021-04-15T07:11:27.306Z": 5,   # Ring
-                    "2021-04-15T09:21:46.071Z": 9,   # Golden Bat
-                    "2021-04-15T15:11:08.363Z": 5,   # Shoes
-                    "2021-04-15T22:21:35.826Z": 9,   # Shoes of Blaserunning
-                    "2021-04-16T04:02:46.484Z": 9,   # Parasitic Ring
-                    "2021-04-16T04:11:23.475Z": 13,  # Chaotic Jersey
-                    "2021-04-16T13:06:47.014Z": 14,  # Metaphorical Shoes
-                    "2021-04-20T09:00:31.366Z": 9,   # Parasitic Cap
-                    "2021-04-20T09:12:45.083Z": 15,  # Inflatable Plastic Bat
-                    "2021-04-20T13:00:31.463Z": 11,  # Brambly Glove
-                    "2021-04-20T13:23:25.792Z": 13,  # Metaphorical Shoes - why is this 13 when the other metaphorical shoes are 14??? # noqa: E501
-                    "2021-04-22T05:22:34.529Z": 9,   # Paper Shoes
-                    "2021-05-18T15:03:17.013Z": 5,   # Socks
-                    "2021-05-21T08:06:07.589Z": 8,   # Flickering Bat
-                }
-                # fmt: on
-                for _ in range(glitter_lengths.get(self.event["created"], 5)):
-                    self.roll("item")
+                self.create_item(self.event, ItemRollType.GLITTER)
                 return True
 
             else:
@@ -2953,6 +2930,30 @@ class Resim:
                 # don't roll twice when holding hands
                 break
 
+    def create_item(self, event, roll_type: ItemRollType):
+        item_name = roll_item(self.season, self.day, roll_type, self.roll)
+        if event["created"] in [
+            "2021-04-20T21:43:04.935Z",
+        ]:
+            self.roll("????")
+
+        match = re.search("gained (.+?)( and ditched| and dropped|\.)", self.desc)
+        expected_item_name = match.group(1)
+        if expected_item_name != item_name:
+            self.error(f"incorrect item! expected {expected_item_name}, got {item_name}.")
+        if roll_type == ItemRollType.CHEST:
+            self.roll("chest target???")
+
+        playerTags = self.event.get("playerTags")
+        player = self.data.get_player(playerTags[0]) if playerTags else None
+        if player:
+            max_items = player.data.get("evolution", 0) + 1
+            if len(player.items) == max_items:
+                self.roll("item to replace???")
+        elif match.group(2) != ".":
+            # if "and ditched" in self.desc or "and dropped" in self.desc:
+            self.roll("item to replace???")
+
     def get_eclipse_threshold(self):
         fort = self.stadium.fortification
         if self.season == 11:
@@ -3029,7 +3030,7 @@ class Resim:
         # so, there are a few(?) cases in early s16 where an item was damaged and broke, and no event was logged or displayed
         # in this case there's still an extra roll for damage location.
         if (self.event["created"], player.id) in [
-            ("2021-04-12T16:22:51.087Z", "c09e64b6-8248-407e-b3af-1931b880dbee") # Lenny Spruce
+            ("2021-04-12T16:22:51.087Z", "c09e64b6-8248-407e-b3af-1931b880dbee")  # Lenny Spruce
         ]:
             self.roll(f"which item? (manual override for {player.name}, see comments)")
 

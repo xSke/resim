@@ -190,6 +190,7 @@ class EventType(IntEnum):
     NOT_YET_HANDLED_IN_ENUM = -99999
     # Pulled from https://www.blaseball.wiki/w/SIBR:Feed#Event_types
     # and https://github.com/beiju/blarser/blob/main/blarser/src/api/eventually_schema.rs#L143
+    UNDEFINED_TYPE = -1
     LETS_GO = 0
     PLAY_BALL = 1
     HALF_INNING = 2
