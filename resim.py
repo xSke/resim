@@ -1264,18 +1264,18 @@ class Resim:
             named_fielder = ground_fielder
 
         if self.outs < self.max_outs - 1:
+            if self.ty == EventType.FLY_OUT:
+                self.damage(self.pitcher, "pitcher")
+                self.damage(named_fielder, "fielder")
+                self.damage(self.batter, "fielder")
             self.handle_out_advances(named_fielder)
-        elif not is_fc_dp:
+        if not self.outs < self.max_outs - 1:
             self.try_roll_batter_debt(named_fielder)
-
-        # some of these are "in between" the advancement rolls when applicable
-        # not entirely sure where, so leaving them out here for now
-        # the order of these three (relatively) *is* correct though, definitely pitcher-batter-fielder.
-        self.damage(self.pitcher, "pitcher")
-        if not is_fc_dp:
-            self.damage(self.batter, "fielder")
-        if named_fielder and not is_fc_dp:
-            self.damage(named_fielder, "fielder")
+            self.damage(self.pitcher, "pitcher")
+            if named_fielder and not is_fc_dp:
+                self.damage(named_fielder, "fielder")
+            if not is_fc_dp:
+                self.damage(self.batter, "fielder")
 
     def try_roll_batter_debt(self, fielder):
         if self.batter.has_mod(Mod.DEBT_THREE) and fielder and not fielder.has_mod(Mod.COFFEE_PERIL):
@@ -1409,6 +1409,9 @@ class Resim:
                         if "scores!" in self.desc:
                             # todo: is this also a runner?
                             self.damage(self.batter, "batter")
+
+                        self.damage(self.pitcher, "pitcher")
+
                         return
 
                     fc_roll = self.roll("martyr?")  # high = fc
@@ -1433,8 +1436,14 @@ class Resim:
                             runner_id = self.update["baseRunners"][idx]
                             runner = self.data.get_player(runner_id)
                             self.damage(runner, "runner")
+                            
+                        self.damage(self.pitcher, "pitcher")
+
                         return
 
+            self.damage(self.pitcher, "pitcher")
+            self.damage(self.batter, "fielder")
+            self.damage(fielder, "fielder")
             self.try_roll_batter_debt(fielder)
 
             forced_bases = 0
@@ -1457,7 +1466,7 @@ class Resim:
                 if roll_outcome is not None:
                     self.log_roll(
                         Csv.GROUNDOUT_FORMULAS,
-                        "advance",
+                        f"advance_{base}",
                         adv_roll,
                         roll_outcome,
                         fielder=fielder,
@@ -1633,15 +1642,6 @@ class Resim:
         self.damage(self.batter, "batter")
         self.handle_hit_advances(hit_bases, defender_roll)
 
-        # tentative: damage every runner at least once?
-        for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
-            runner = self.data.get_player(runner_id)
-            self.damage(runner, "batter")
-
-            is_force_score = base >= (3 - hit_bases)  # fifth base lol
-            if is_force_score:
-                self.damage(runner, "batter")
-
         if self.batting_team.has_mod(Mod.AAA) and hit_bases == 3:
             # todo: figure out if this checks mod origin or not
             if not self.batter.has_mod(Mod.OVERPERFORMING, ModType.GAME):
@@ -1651,6 +1651,15 @@ class Resim:
             # todo: figure out if this checks mod origin or not
             if not self.batter.has_mod(Mod.OVERPERFORMING, ModType.GAME):
                 self.roll("power chAArge")
+
+        # tentative: damage every runner at least once?
+        for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
+            runner = self.data.get_player(runner_id)
+            self.damage(runner, "batter")
+
+            is_force_score = base >= (3 - hit_bases)  # fifth base lol
+            if is_force_score:
+                self.damage(runner, "batter")
 
     def get_stat_meta(self):
         is_maximum_blaseball = (
@@ -1838,14 +1847,14 @@ class Resim:
             if self.ty == EventType.BLOODDRAIN_SIPHON:
                 self.roll("which siphon")
                 target_roll = self.roll("Active or Passive Target")
-                pitchers = (self.pitching_team.lineup + self.pitching_team.rotation)
-                batters = (self.batting_team.lineup)
+                pitchers = self.pitching_team.lineup + self.pitching_team.rotation
+                batters = self.batting_team.lineup
 
                 #Siphon on Siphon Violence - They all conveniently fall into the same roll length
                 if self.event["created"] in [
                 "2021-03-11T16:07:06.900Z", 
                 "2021-04-16T02:23:37.186Z", 
-                "2021-05-19T14:06:37.515Z"
+                "2021-05-19T14:06:37.515Z",
                 ]:
                     self.roll("siphon1")
                     self.roll("siphon2")   
@@ -1854,7 +1863,7 @@ class Resim:
                     for player_id in pitchers:
                         pitcher = self.data.get_player(player_id)
                         if pitcher.has_mod(Mod.SIPHON) and pitcher.raw_name in self.desc:
-                            pitchersiphon=True
+                            pitchersiphon = True
 
                             if pitchersiphon:
                                 if target_roll > 0.5 and len(self.update["baseRunners"]) > 0:
@@ -1868,7 +1877,7 @@ class Resim:
                     for player_id in batters:
                         batter = self.data.get_player(player_id)
                         if batter.has_mod(Mod.SIPHON) and batter.raw_name in self.desc:
-                            battersiphon=True
+                            battersiphon = True
                         
                             if battersiphon:
                                 for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
