@@ -1466,7 +1466,7 @@ class Resim:
                 if roll_outcome is not None:
                     self.log_roll(
                         Csv.GROUNDOUT_FORMULAS,
-                        f"advance_{base}",
+                        "advance",
                         adv_roll,
                         roll_outcome,
                         fielder=fielder,
