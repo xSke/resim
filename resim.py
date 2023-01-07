@@ -1640,7 +1640,6 @@ class Resim:
 
         self.damage(self.pitcher, "pitcher")
         self.damage(self.batter, "batter")
-        self.handle_hit_advances(hit_bases, defender_roll)
 
         if self.batting_team.has_mod(Mod.AAA) and hit_bases == 3:
             # todo: figure out if this checks mod origin or not
@@ -1652,6 +1651,8 @@ class Resim:
             if not self.batter.has_mod(Mod.OVERPERFORMING, ModType.GAME):
                 self.roll("power chAArge")
 
+        self.handle_hit_advances(hit_bases, defender_roll)     
+                
         # tentative: damage every runner at least once?
         for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
             runner = self.data.get_player(runner_id)
