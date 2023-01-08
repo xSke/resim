@@ -328,6 +328,37 @@ class Resim:
             self.pending_attractor = None
 
     def handle_misc(self):
+        if (
+            self.season >= 17
+            and self.update["gameStartPhase"] < 0
+            and self.next_update["gameStartPhase"] >= 0
+            and self.ty != EventType.ADDED_MOD_FROM_OTHER_MOD
+        ):
+            min_roll, max_roll = (0, 0.017) if self.ty == EventType.PRIZE_MATCH else (0.017, 1)
+            self.roll("prize match", min_roll, max_roll)
+
+        PSYCHO_ACOUSTICS_PHASE_BY_SEASON = {
+            13: 10,
+            14: 11,
+            15: 11,
+            16: 11,
+            17: 13,
+            18: 13,
+        }
+        psycho_acoustics_phase = PSYCHO_ACOUSTICS_PHASE_BY_SEASON.get(self.season, 13)
+        if (
+            self.update["gameStartPhase"] < psycho_acoustics_phase
+            and self.next_update["gameStartPhase"] >= psycho_acoustics_phase
+            and self.ty != EventType.ADDED_MOD_FROM_OTHER_MOD
+            and self.weather
+            in [
+                Weather.FEEDBACK,
+                Weather.REVERB,
+            ]
+            and self.stadium.has_mod(Mod.PSYCHOACOUSTICS)
+        ):
+            self.print("away team mods:", self.away_team.print_mods(ModType.PERMANENT))
+            self.roll("echo team mod")
         if self.ty in [
             EventType.HOME_FIELD_ADVANTAGE,
             EventType.BECOME_TRIPLE_THREAT,
@@ -351,6 +382,9 @@ class Resim:
                 self.roll("which mod?")
             if self.ty == EventType.A_BLOOD_TYPE:
                 self.roll("a blood type")
+
+            if self.ty == EventType.PRIZE_MATCH:
+                self.create_item(self.event, ItemRollType.PRIZE)
 
             # skipping pregame messages
             return True
@@ -615,9 +649,6 @@ class Resim:
                 # *why*
                 self.roll("game start")
 
-            if self.season >= 17:
-                self.roll("prize match")
-
             # todo: figure out the real logic here, i'm sure there's some
             extra_start_rolls = {
                 "e07d8602-ec51-4ef6-be20-4a07da6b457e": 1,
@@ -642,27 +673,17 @@ class Resim:
                 "2fabc7aa-8c17-4b8b-aa10-bb1a7af90d82": 1,
                 "eb441ce0-6768-4463-a997-817381b176fe": 1,
                 "0633f858-d1cb-4ba2-a04b-6b035767bed5": 1,
-                "09aa60b8-aa2a-42ab-92c2-e00a0954c25d": 8,  # prize match??
-                "e2a7f575-b165-485f-b1c9-39a3c8edacbf": 16,  # prize match
+                "e2a7f575-b165-485f-b1c9-39a3c8edacbf": 1,
                 "883b56f8-d470-4a9f-b709-7647ffcac4cc": 1,
                 "f39fc061-5485-4140-9ec0-92d716c1fa67": 1,
-                "ca53fd25-ed06-4d6d-b0ae-80d0a1b58ed1": 9,
-                "24506e8e-e774-4566-a1d5-ecfb2616efc2": 19,
-                "a581bfd7-725f-49a3-83ff-dc98806ef262": 16,
-                "88147839-a9c7-44f8-a5aa-e3c733a5013a": 10,  # prize match
-                "2b9d87df-a76a-48d1-aea2-d0be9876c857": 11,  # prize match
+                "ca53fd25-ed06-4d6d-b0ae-80d0a1b58ed1": 2,
+                "a581bfd7-725f-49a3-83ff-dc98806ef262": 1,
                 "0cde3960-b7dd-4df2-b469-5274be158563": 1,
                 "8a90bd4b-9f51-4c2e-9c24-882dabdfe932": 1,
-                "1a84542b-abd4-42aa-86b3-1a89a80184f6": 14,  # prize match
                 "0a79fdbb-73ca-4b8e-8696-10776d75cd0f": 1,
                 "42fb4a2e-c471-4f2c-96b4-e0319e3f9aa0": 1,
-                "d1dc6196-d972-4fe0-94e7-751592f772f2": 17,  # prize match
-                "51c42e63-3c8b-4195-8c2c-0375897231b4": 10,  # prize match
                 "a2d9e7c4-9a4e-4573-ac13-90f1fa64c13d": 0,
-                "4221f4d3-480e-4588-8b15-c7093a5e4194": 16,  # prize match
-                "55b18ff6-3d29-4550-a4dc-5a64d02de2bd": 25,  # prize match x2
                 "662e2383-1b5e-4a46-9598-da4a574f58ae": 1,
-                "b5952513-e008-4dd3-9176-9ec4b7d9b1c4": 18,  # prize match
                 "c27b5393-4910-4a8c-a6a5-93cce32fe30a": 1,
                 "bd9c9d74-39c8-4195-8777-06b49c2f912a": 1,
                 "0aa716c9-9745-4606-bbdc-34d4b1845f0c": 1,
@@ -679,17 +700,12 @@ class Resim:
                 "78838e9a-16b2-4733-8194-c629eb57d803": 1,
                 "4ed7ce17-f47d-41ce-aad3-1089ab54bd2c": 2,
                 "9a5b1658-0924-43ef-a417-e7de8076a57c": 1,
-                "e1c383ab-efc0-49ad-91e2-3d29cca47a90": 8,  # prize match
-                "aa55aab8-cb03-4483-b5b9-393060310e76": 35,  # prize match x2
+                "e1c383ab-efc0-49ad-91e2-3d29cca47a90": 1,
                 "b62e2bd0-333e-4462-a84d-5aecabd0c1bc": 1,
                 "45f65a7f-ed58-4482-8139-92d2e2ef7bfa": 1,
-                "7c52ac86-1994-4b99-9b9c-ff8850bd4608": 32,  # prize match x2
                 "9291e5ce-a49f-44dc-9bb4-747bc783c351": 1,
                 "33415dda-9822-4bfd-b943-b8f7c4fb3af4": 1,
                 "0b82745a-e797-4256-9ce7-9868253a9e4b": 1,
-                "7cc6dbc2-a07f-48f9-8761-fddfbc0fcf66": 16,  # prize match
-                "95cf5ed9-4cec-44f2-8316-926c044b91e7": 10,  # prize match
-                "bcccb4bc-d725-489e-b4e8-b745040a7226": 11,  # prize match
                 "4f8ce860-fb5e-4cff-8111-d687fa438876": 7,
             }
 
@@ -714,13 +730,6 @@ class Resim:
                     # and not in postseason either
                     if self.game_id != "31ae7c75-b30a-49b1-bddd-b40e3ebd518e" and self.day < 99:
                         self.roll("extra roll for shelled pitcher")
-
-            if self.weather in [
-                Weather.FEEDBACK,
-                Weather.REVERB,
-            ] and self.stadium.has_mod(Mod.PSYCHOACOUSTICS):
-                self.print("away team mods:", self.away_team.print_mods(ModType.PERMANENT))
-                self.roll("echo team mod")
             return True
         if self.ty in [EventType.FLAG_PLANTED]:
             for _ in range(11):
@@ -2931,16 +2940,33 @@ class Resim:
                 break
 
     def create_item(self, event, roll_type: ItemRollType):
-        item_name = roll_item(self.season, self.day, roll_type, self.roll)
+        match = re.search("(?:gained|The Winner gets) (.+?)( and ditched| and dropped|\.?$)", self.desc)
+
+        expected_item_name = match.group(1) if match else ""
+        if roll_type == ItemRollType.PRIZE:
+            item_id = self.next_update["state"]["prizeMatch"]["itemId"]
+        elif roll_type == ItemRollType.CHEST:
+            meta = event.get("metadata") or {}
+            item_id = meta["itemId"]
+        else:
+            # For a glitter drop, we would need to get the item id from the child event
+            item_id = ""
+        if item_id:
+            expected = self.data.fetch_item_at(item_id, event["created"])
+        else:
+            expected = expected_item_name
+
+        item_name = roll_item(self.season, self.day, roll_type, self.roll, expected)
         if event["created"] in [
             "2021-04-20T21:43:04.935Z",
         ]:
             self.roll("????")
 
-        match = re.search("gained (.+?)( and ditched| and dropped|\.)", self.desc)
-        expected_item_name = match.group(1)
         if expected_item_name != item_name:
             self.error(f"incorrect item! expected {expected_item_name}, got {item_name}.")
+
+        if roll_type == ItemRollType.PRIZE:
+            return
         if roll_type == ItemRollType.CHEST:
             self.roll("chest target???")
 
@@ -2950,8 +2976,7 @@ class Resim:
             max_items = player.data.get("evolution", 0) + 1
             if len(player.items) == max_items:
                 self.roll("item to replace???")
-        elif match.group(2) != ".":
-            # if "and ditched" in self.desc or "and dropped" in self.desc:
+        elif match.group(2) in (" and ditched", " and dropped"):
             self.roll("item to replace???")
 
     def get_eclipse_threshold(self):

@@ -13,6 +13,7 @@ EXCLUDE_FROM_CACHE = {
     "team": {"runs", "wins", "eDensity"},
     "player": {"consecutiveHits", "eDensity"},
     "stadium": {"hype"},
+    "item": {"health"},
 }
 
 stat_indices = [
@@ -1066,6 +1067,14 @@ class GameData:
             self.players[item["entityId"]] = PlayerData.from_chron(
                 item["data"], item["validFrom"], self.players.get(item["entityId"])
             )
+
+    def fetch_item_at(self, item_id, timestamp):
+        key = f"item_{item_id}_at_{timestamp}"
+        resp = get_cached(
+            key,
+            f"{CHRONICLER_URI}/v2/versions?type=item&id={item_id}&at={timestamp}&count=1&order=asc",
+        )
+        return resp["items"][0]["data"] or {}
 
     def fetch_game(self, game_id):
         key = f"game_updates_{game_id}"

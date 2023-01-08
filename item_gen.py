@@ -2,9 +2,13 @@ import dataclasses
 from enum import Enum, auto
 import math
 
-from typing import Callable, Optional
+from collections.abc import Mapping
+from typing import Any, Optional, Protocol, Union
 
-RollFn = Callable[[str], float]
+
+class RollFn(Protocol):
+    def __call__(self, label: str, lower: float = 0, upper: float = 1) -> float:
+        ...
 
 
 @dataclasses.dataclass
@@ -510,6 +514,11 @@ NUM_ELEMENTS_FN = {
         ItemRollType.CHEST: lambda x: 0 if x < 0.05 else 1 if x < 0.55 else 2 if x < 0.95 else 3,
         ItemRollType.GLITTER: lambda x: 0 if x < 0.5 else 1,
     },
+    (17, 0): {
+        ItemRollType.CHEST: lambda x: 0 if x < 0.05 else 1 if x < 0.55 else 2 if x < 0.95 else 3,
+        ItemRollType.GLITTER: lambda x: 0 if x < 0.5 else 1,
+        ItemRollType.PRIZE: lambda x: 1 if x < 0.55 else 2 if x < 0.95 else 3,
+    },
 }
 
 
@@ -647,7 +656,7 @@ PREFIX_POOL = {
         "Parasitic",
         "Clutch",
         "Chunky",
-        "?????",
+        "Smooth",
         "Repeating",
         "Fireproof",
         "Noise-Cancelling",
@@ -688,7 +697,7 @@ PREFIX_POOL = {
         "Parasitic",
         "Clutch",
         "Chunky",
-        "?????",
+        "Smooth",
         "Repeating",
         "Fireproof",
         "Noise-Cancelling",
@@ -729,7 +738,7 @@ PREFIX_POOL = {
         "Parasitic",
         "Clutch",
         "Chunky",
-        "?????",
+        "Smooth",
         "Repeating",
         "Fireproof",
         "Noise-Cancelling",
@@ -770,7 +779,7 @@ PREFIX_POOL = {
         "Parasitic",
         "Clutch",
         "Chunky",
-        "?????",
+        "Smooth",
         "Repeating",
         "Fireproof",
         "Noise-Cancelling",
@@ -840,28 +849,59 @@ SUFFIX_POOL = {
 }
 
 
+DELTA = 0.00000000000001
+
 # TODO: pass in the actual item, so we can compare with expected rolls
-def roll_item(season: int, day: int, roll_type: ItemRollType, roll: RollFn):
+def roll_item(
+    season: int,
+    day: int,
+    roll_type: ItemRollType,
+    roll: RollFn,
+    expected: Optional[Union[str, Mapping[str, Any]]] = None,
+):
     elements_roll = roll("num_elements")
 
     num_elements_key = max(filter(lambda key: key <= (season, day), NUM_ELEMENTS_FN))
     num_elements = NUM_ELEMENTS_FN[num_elements_key][roll_type](elements_roll)
 
-    value = roll("base type")
     base_type_pool = BASE_TYPE_POOL[season]
+    if expected:
+        if isinstance(expected, str):
+            expected_base = expected.rsplit(" of ", 1)[0].split()[-1]
+        else:
+            expected_base = expected["root"]["name"]
+        index = base_type_pool.index(expected_base)
+        lower = index / len(base_type_pool)
+        upper = (index + 1) / len(base_type_pool)
+    else:
+        lower = 0
+        upper = 1
+
+    value = roll("base type", lower, upper)
+
     base_type = base_type_pool[math.floor(value * len(base_type_pool))]
 
     base_stat = BASE_TYPES[base_type]
-    slope, intercept = BASE_STAT_PARAMS[season]
-    value = roll(f"base stat({base_stat})")
+    if expected and isinstance(expected, Mapping):
+        base_stat_value = expected["root"]["adjustments"][0]["value"]
+        slope, intercept = BASE_STAT_PARAMS[season]
+        expected_roll = (base_stat_value - intercept) / slope
+
+        lower = expected_roll - DELTA
+        upper = expected_roll + DELTA
+    else:
+        lower = 0
+        upper = 1
+
+    value = roll(f"base stat({base_stat})", lower, upper)
 
     post_prefix = ""
     suffix = ""
     prefixes = []
 
-    prefix_pool = list(PREFIX_POOL[max(filter(lambda key: key < (season, day), PREFIX_POOL))])
-    post_prefix_pool = POST_PREFIX_POOL[max(filter(lambda key: key < (season, day), POST_PREFIX_POOL))]
-    suffix_pool = SUFFIX_POOL[max(filter(lambda key: key < (season, day), SUFFIX_POOL))]
+    prefix_pool = list(PREFIX_POOL[max(filter(lambda key: key <= (season, day), PREFIX_POOL))])
+    post_prefix_pool = POST_PREFIX_POOL[max(filter(lambda key: key <= (season, day), POST_PREFIX_POOL))]
+    suffix_pool = SUFFIX_POOL[max(filter(lambda key: key <= (season, day), SUFFIX_POOL))]
     for _ in range(num_elements):
         value = roll(f"pre-prefix???")
         if value < 0.25:
@@ -896,8 +936,10 @@ def roll_item(season: int, day: int, roll_type: ItemRollType, roll: RollFn):
             value = roll(f"{element} {stat_roll.stat}")
             expected = stat_roll.apply(value)
 
-    roll("???")
+    if roll_type != ItemRollType.PRIZE:
+        roll("???")
 
     post_prefixes = [post_prefix] if post_prefix else []
     suffixes = ["of", suffix] if suffix else []
+
     return " ".join(prefixes + post_prefixes + [base_type] + suffixes)
