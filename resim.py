@@ -1284,18 +1284,18 @@ class Resim:
             named_fielder = ground_fielder
 
         if self.outs < self.max_outs - 1:
+            if self.ty == EventType.FLY_OUT:
+                self.damage(self.pitcher, "pitcher")
+                self.damage(named_fielder, "fielder")
+                self.damage(self.batter, "fielder")
             self.handle_out_advances(named_fielder)
-        elif not is_fc_dp:
+        if not self.outs < self.max_outs - 1:
             self.try_roll_batter_debt(named_fielder)
-
-        # some of these are "in between" the advancement rolls when applicable
-        # not entirely sure where, so leaving them out here for now
-        # the order of these three (relatively) *is* correct though, definitely pitcher-batter-fielder.
-        self.damage(self.pitcher, "pitcher")
-        if not is_fc_dp:
-            self.damage(self.batter, "fielder")
-        if named_fielder and not is_fc_dp:
-            self.damage(named_fielder, "fielder")
+            self.damage(self.pitcher, "pitcher")
+            if named_fielder and not is_fc_dp:
+                self.damage(named_fielder, "fielder")
+            if not is_fc_dp:
+                self.damage(self.batter, "fielder")
 
     def try_roll_batter_debt(self, fielder):
         if self.batter.has_mod(Mod.DEBT_THREE) and fielder and not fielder.has_mod(Mod.COFFEE_PERIL):
@@ -1393,7 +1393,7 @@ class Resim:
                 if is_next_free:
                     adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})")
                     self.log_roll(
-                        Csv.FLYOUT, "advance", adv_roll, roll_outcome, fielder=fielder, relevant_runner=runner
+                        Csv.FLYOUT, f"advance_{base}", adv_roll, roll_outcome, fielder=fielder, relevant_runner=runner
                     )
 
                     if roll_outcome:
@@ -1429,6 +1429,9 @@ class Resim:
                         if "scores!" in self.desc:
                             # todo: is this also a runner?
                             self.damage(self.batter, "batter")
+
+                        self.damage(self.pitcher, "pitcher")
+
                         return
 
                     fc_roll = self.roll("martyr?")  # high = fc
@@ -1453,8 +1456,14 @@ class Resim:
                             runner_id = self.update["baseRunners"][idx]
                             runner = self.data.get_player(runner_id)
                             self.damage(runner, "runner")
+                            
+                        self.damage(self.pitcher, "pitcher")
+
                         return
 
+            self.damage(self.pitcher, "pitcher")
+            self.damage(self.batter, "fielder")
+            self.damage(fielder, "fielder")
             self.try_roll_batter_debt(fielder)
 
             forced_bases = 0
@@ -1651,16 +1660,6 @@ class Resim:
 
         self.damage(self.pitcher, "pitcher")
         self.damage(self.batter, "batter")
-        self.handle_hit_advances(hit_bases, defender_roll)
-
-        # tentative: damage every runner at least once?
-        for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
-            runner = self.data.get_player(runner_id)
-            self.damage(runner, "batter")
-
-            is_force_score = base >= (3 - hit_bases)  # fifth base lol
-            if is_force_score:
-                self.damage(runner, "batter")
 
         if self.batting_team.has_mod(Mod.AAA) and hit_bases == 3:
             # todo: figure out if this checks mod origin or not
@@ -1671,6 +1670,17 @@ class Resim:
             # todo: figure out if this checks mod origin or not
             if not self.batter.has_mod(Mod.OVERPERFORMING, ModType.GAME):
                 self.roll("power chAArge")
+
+        self.handle_hit_advances(hit_bases, defender_roll)     
+                
+        # tentative: damage every runner at least once?
+        for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
+            runner = self.data.get_player(runner_id)
+            self.damage(runner, "batter")
+
+            is_force_score = base >= (3 - hit_bases)  # fifth base lol
+            if is_force_score:
+                self.damage(runner, "batter")
 
     def get_stat_meta(self):
         is_maximum_blaseball = (

@@ -115,7 +115,18 @@ def _team_for_object(object_key: str) -> str:
         return "batting_team"
     elif object_key == "pitcher":
         return "pitching_team"
-    # TODO More of them
+    elif object_key == "fielder":
+        return "pitching_team"
+    elif object_key == "relevant_runner":
+        return "batting_team"
+    elif object_key == "runner_on_first":
+        return "batting_team"
+    elif object_key == "runner_on_second":
+        return "batting_team"
+    elif object_key == "runner_on_third":
+        return "batting_team"
+    elif object_key == "runner_on_third_hh":
+        return "batting_team"
     raise ValueError(f"Object '{object_key}' does not have an associated team")
 
 
@@ -225,5 +236,77 @@ def player_attribute(
     return attr
 
 
+def player_attribute_group(
+    df: pd.DataFrame,
+    object_key: str,
+    attr_group: Union[str, list[str]],
+    *,
+    vibes: bool = True,
+    mods: bool = True,
+    items: Union[bool, str] = True,
+    broken_items: bool = False,
+):
+    if not (items is True or items is False or items == "negative"):
+        raise ValueError(
+            f'Invalid value {items!r} for argument "items" passed to load.player_attribute. '
+            'Valid values: True, False, "negative"'
+        )
+
+    attr_keys = []
+    if attr_group == "all":
+        attr_group = ["batting", "pitching", "baserunning", "fielding", "other"]
+    if "batting" in attr_group:
+        attr_keys.extend(["divinity", "martyrdom", "moxie", "musclitude", "patheticism", "thwackability", "tragicness"])
+    if "pitching" in attr_group:
+        attr_keys.extend(
+            ["ruthlessness", "overpowerment", "unthwackability", "shakespearianism", "suppression", "coldness"]
+        )
+    if "baserunning" in attr_group:
+        attr_keys.extend(["basethirst", "laserlikeness", "continuation", "groundfriction", "indulgence"])
+    if "fielding" in attr_group:
+        attr_keys.extend(["anticapitalism", "chasiness", "omniscience", "tenaciousness", "watchfulness"])
+    if "other" in attr_group:
+        attr_keys.extend(["buoyancy", "cinnamon", "pressurization"])
+
+    for attr_key in attr_keys:
+        attr = player_attribute(
+            df, object_key, attr_key, vibes=vibes, mods=mods, items=items, broken_items=broken_items
+        )
+
+        attr_name = object_key + "_" + attr_key
+        if vibes:
+            attr_name += "_vibes"
+        if not mods:
+            attr_name += "_nomods"
+        if not items:
+            attr_name += "_noitems"
+        if broken_items:
+            attr_name += "_wbroken"
+
+        df[attr_name] = attr
+
+    return
+
+
 def stadium_attribute(df: pd.DataFrame, attr_key: str, *, center: bool = True):
     return df["stadium_object"].apply(_get_stadium_attribute(attr_key)) - 0.5 * center
+
+
+def stadium_attribute_all(df: pd.DataFrame, *, center: bool = True):
+    attr_keys = [
+        "grandiosity",
+        "fortification",
+        "obtuseness",
+        "ominousness",
+        "inconvenience",
+        "viscosity",
+        "forwardness",
+        "mysticism",
+        "elongation",
+        "filthiness",
+        "hype",
+    ]
+    for attr_key in attr_keys:
+        attr_name = "ballpark_" + attr_key
+        df[attr_name] = stadium_attribute(df, attr_key, center=center)
+    return
