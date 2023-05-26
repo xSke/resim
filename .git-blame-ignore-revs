@@ -13,3 +13,5 @@ be49f4f668b1179b460f6fe07dae874389df6d0f  # [lint] Assort flake8 fixes
 73bf559f7c2c72f42b8fc4d19302477081a9539f  # [lint] exclude notebooks from black for now
 7c161155433037ef77dbb283c8dccd8f43bb9c81  # [lint] black on ipynbs
 ca37bc8ca97660030f8b5f729eb7e309aac21ba9  # [lint] Reformat to 120 line length
+4343c02f2b4992c923cbf714e96ec2f4808e3b12  # [lint] black
+e25f175c99bb6e94e8333cc3c81e96c44c482637  # [lint] flake8
