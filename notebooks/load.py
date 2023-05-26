@@ -40,11 +40,11 @@ STAT_RELEVANT_DATA_KEYS = [
 
 
 def braced_glob(path):
-    l = []
+    paths = []
     for x in braceexpand(path):
-        l.extend(glob(x))
+        paths.extend(glob(x))
 
-    return l
+    return paths
 
 
 def _get_player_attribute(attr_key: str, use_items: Union[bool, str], use_broken_items: bool):

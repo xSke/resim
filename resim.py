@@ -401,8 +401,10 @@ class Resim:
                     self.roll("stat")
 
             if "is Partying" in self.desc:
-                # we want to roll this only if this is a *holiday inning* party, and we currently have no nice way of seeing that
-                # we can check the date, but after_party is also a thing. and there's at least one occasion where a player has both, and we can't disambiguate
+                # we want to roll this only if this is a *holiday inning* party,
+                # and we currently have no nice way of seeing that
+                # we can check the date, but after_party is also a thing.
+                # and there's at least one occasion where a player has both, and we can't disambiguate
                 team = self.data.get_team(self.event["teamTags"][0])
                 if (
                     not team.has_mod(Mod.PARTY_TIME) and not team.has_mod(Mod.AFTER_PARTY) and self.day < 27
@@ -1057,7 +1059,7 @@ class Resim:
             if "uses a Mind Trick" in self.desc:
                 # batter successfully converted strikeout to walk
                 if "strikes out swinging." in self.desc:
-                    psychiccontact_roll = self.roll("psychiccontact")
+                    psychiccontact_roll = self.roll("psychiccontact")  # noqa: F841
 
                 bsychic_roll = self.roll("bsychic")
                 self.log_roll(Csv.BSYCHIC, "Success", bsychic_roll, True)
@@ -1843,7 +1845,8 @@ class Resim:
                     False,
                 )
 
-            # Drained Stat for both Siphon & Blooddrain is: Pitching 0-0.25, Batting 0.25-0.5, Defense 0.5-0.75, Baserunning 0.75-1
+            # Drained Stat for both Siphon & Blooddrain is:
+            # Pitching 0-0.25, Batting 0.25-0.5, Defense 0.5-0.75, Baserunning 0.75-1
             if self.ty == EventType.BLOODDRAIN_SIPHON:
                 self.roll("which siphon")
                 target_roll = self.roll("Active or Passive Target")
@@ -2043,8 +2046,8 @@ class Resim:
                 pass
 
         elif self.weather == Weather.FEEDBACK:
-            select_roll = self.roll("feedbackselection")  # 60/40 Batter/Pitcher
-            feedback_roll = self.roll("feedback")  # feedback event y/n
+            select_roll = self.roll("feedbackselection")  # noqa: F841 60/40 Batter/Pitcher
+            feedback_roll = self.roll("feedback")  # noqa: F841 feedback event y/n
             if self.ty == EventType.FEEDBACK_SWAP:
                 self.log_roll(
                     Csv.WEATHERPROC,
@@ -2254,8 +2257,8 @@ class Resim:
                 )
 
             if self.ty == EventType.COFFEE_BEAN:
-                quality_roll = self.roll("coffee proc1")
-                flavor_roll = self.roll("coffee proc")
+                quality_roll = self.roll("coffee proc1")  # noqa: F841
+                flavor_roll = self.roll("coffee proc")  # noqa: F841
 
                 return True
 
@@ -2274,9 +2277,9 @@ class Resim:
                 self.log_roll(Csv.SWEET2, "NoRefill", coffee2_roll, False)
 
             if self.ty == EventType.GAIN_FREE_REFILL:
-                quality_roll = self.roll("coffee 2 proc1")
-                flavor_one_roll = self.roll("coffee 2 proc2")
-                flavor_two_roll = self.roll("coffee 2 proc3")
+                quality_roll = self.roll("coffee 2 proc1")  # noqa: F841
+                flavor_one_roll = self.roll("coffee 2 proc2")  # noqa: F841
+                flavor_two_roll = self.roll("coffee 2 proc3")  # noqa: F841
                 return True
 
             if self.batter.has_mod(Mod.COFFEE_PERIL):
@@ -2609,8 +2612,8 @@ class Resim:
             if self.ty == EventType.SMITHY_ACTIVATION:
                 self.log_roll(Csv.MODPROC, "Fix", smithy_roll, True)
 
-                player_roll = self.roll("smithy1")
-                item_roll = self.roll("smithy2")
+                player_roll = self.roll("smithy1")  # noqa: F841
+                item_roll = self.roll("smithy2")  # noqa: F841
                 return True
             else:
                 self.log_roll(Csv.MODPROC, "NoFix", smithy_roll, False)
@@ -3039,7 +3042,8 @@ class Resim:
         # so the "which item to break" is just moved into the misc handler for now
         self.roll(f"item damage ({player.name})")
 
-        # so, there are a few(?) cases in early s16 where an item was damaged and broke, and no event was logged or displayed
+        # so, there are a few(?) cases in early s16 where an item was damaged and broke,
+        # and no event was logged or displayed.
         # in this case there's still an extra roll for damage location.
         if (self.event["created"], player.id) in [
             ("2021-04-12T16:22:51.087Z", "c09e64b6-8248-407e-b3af-1931b880dbee")  # Lenny Spruce
@@ -3060,31 +3064,26 @@ class Resim:
     ):
         if csv not in self.csvs:
             return
-        relevant_runner_multiplier = self.get_runner_multiplier(relevant_runner)
         runners_on_bases = zip(self.update["basesOccupied"], self.update["baseRunners"])
         runner_1st = [r for base, r in runners_on_bases if base == Base.FIRST]
         runner_2nd = [r for base, r in runners_on_bases if base == Base.SECOND]
         runners_3rd = [r for base, r in runners_on_bases if base == Base.THIRD]
         if runner_1st:
             runner_on_first = self.data.get_player(runner_1st[0])
-            runner_on_first_multiplier = self.get_runner_multiplier(runner_on_first)
         else:
-            runner_on_first, runner_on_first_multiplier = None, 1
+            runner_on_first = None
         if runner_2nd:
             runner_on_second = self.data.get_player(runner_2nd[0])
-            runner_on_second_multiplier = self.get_runner_multiplier(runner_on_second)
         else:
-            runner_on_second, runner_on_second_multiplier = None, 1
+            runner_on_second = None
         if runners_3rd:
             runner_on_third = self.data.get_player(runners_3rd[0])
-            runner_on_third_multiplier = self.get_runner_multiplier(runner_on_third)
         else:
-            runner_on_third, runner_on_third_multiplier = None, 1
+            runner_on_third = None
         if len(runners_3rd) == 2:  # Holding hands
             runner_on_third_hh = self.data.get_player(runners_3rd[1])
-            runner_on_third_hh_multiplier = self.get_runner_multiplier(runner_on_third_hh)
         else:
-            runner_on_third_hh, runner_on_third_hh_multiplier = None, 1
+            runner_on_third_hh = None
         null_player = PlayerData.null
         null_team = TeamData.null
         save_objects = {
