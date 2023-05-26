@@ -1,3 +1,4 @@
+import functools
 import itertools
 import struct
 
@@ -9,6 +10,18 @@ MASK = 0xFFFFFFFFFFFFFFFF
 MAX_KERNEL_BASIS_SIZE = 20
 
 BitMatrix = list[int]
+
+
+@functools.cache
+def state_matricies(i: int) -> (BitMatrix, BitMatrix):
+    """
+    Develop the bit matricies which define state spaces
+    """
+    if i == 0:
+        # Start with initial state
+        return initial_state_matricies()
+    # Otherwise, run Xorshift128+ on the prior set of [cached] states
+    return xs128p_matrix(*state_matricies(i - 1))
 
 
 def initial_state_matricies() -> tuple[BitMatrix, BitMatrix]:
@@ -168,26 +181,26 @@ def solve(knowns: list[Union[float, tuple[float, float], None]]) -> list[tuple[i
     """
     bits: list[int] = []
     bits_matrix: BitMatrix = []
-    state0_sym, state1_sym = initial_state_matricies()
 
-    for known in knowns:
+    for i, known in enumerate(knowns):
+        state0_matrix, _ = state_matricies(i)
         if type(known) == float:
-            mantissa_bits = int_to_bits(get_mantissa(known), 52)
-            bits += mantissa_bits
-            bits_matrix += state0_sym[:52]
+            mantissa = get_mantissa(known)
+            known_bits = 52
+            bits += int_to_bits(mantissa, known_bits)
+            bits_matrix += state0_matrix[:known_bits]
         elif type(known) in [tuple, list]:
             lo, hi = known
             lo_mantissa = get_mantissa(lo)
             hi_mantissa = get_mantissa(hi)
             known_bits = 52 - (lo_mantissa ^ hi_mantissa).bit_length()
             bits += int_to_bits(lo_mantissa >> (52 - known_bits), known_bits)
-            bits_matrix += state0_sym[:known_bits]
+            bits_matrix += state0_matrix[:known_bits]
         elif known is None:
-            pass
+            continue
         else:
             print("unknown type for known", known)
             1 / 0
-        state0_sym, state1_sym = xs128p_matrix(state0_sym, state1_sym)
 
     num_known_bits = len(bits)
     # print('solving...')
