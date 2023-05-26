@@ -13,20 +13,20 @@ BitMatrix = list[int]
 
 
 @functools.cache
-def state_matricies(i: int) -> (BitMatrix, BitMatrix):
+def state_matrices(i: int) -> (BitMatrix, BitMatrix):
     """
-    Develop the bit matricies which define state spaces
+    Develop the bit matrices which define state spaces
     """
     if i == 0:
         # Start with initial state
-        return initial_state_matricies()
+        return initial_state_matrices()
     # Otherwise, run Xorshift128+ on the prior set of [cached] states
-    return xs128p_matrix(*state_matricies(i - 1))
+    return xs128p_matrix(*state_matrices(i - 1))
 
 
-def initial_state_matricies() -> tuple[BitMatrix, BitMatrix]:
+def initial_state_matrices() -> tuple[BitMatrix, BitMatrix]:
     """
-    As bits, initial state matricies look like weird offset identity matricies.
+    As bits, initial state matrices look like weird offset identity matrices.
     The results are 128 bits wide and 64 rows tall, but at a smaller scale
     they look like this:
 
@@ -47,7 +47,7 @@ def initial_state_matricies() -> tuple[BitMatrix, BitMatrix]:
 
 def xs128p_matrix(state0_matrix: BitMatrix, state1_matrix: BitMatrix) -> tuple[BitMatrix, BitMatrix]:
     """
-    Equivalent to Xorshift128+ implementation across matricies of states.
+    Equivalent to Xorshift128+ implementation across matrices of states.
     """
     state0_matrix = state0_matrix[:]
     state1_matrix = state1_matrix[:]
@@ -77,7 +77,7 @@ def rshift_matrix(matrix: BitMatrix, n: int) -> BitMatrix:
 
 def xor_matrix(matrix1: BitMatrix, matrix2: BitMatrix) -> BitMatrix:
     """
-    XOR two bit matricies together, row-wise
+    XOR two bit matrices together, row-wise
     """
     result = []
     for i in range(min(len(matrix1), len(matrix2))):
@@ -183,7 +183,7 @@ def solve(knowns: list[Union[float, tuple[float, float], None]]) -> list[tuple[i
     bits_matrix: BitMatrix = []
 
     for i, known in enumerate(knowns):
-        state0_matrix, _ = state_matricies(i)
+        state0_matrix, _ = state_matrices(i)
         if type(known) == float:
             mantissa = get_mantissa(known)
             known_bits = 52
