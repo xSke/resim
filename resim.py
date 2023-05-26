@@ -404,7 +404,9 @@ class Resim:
                 # we want to roll this only if this is a *holiday inning* party, and we currently have no nice way of seeing that
                 # we can check the date, but after_party is also a thing. and there's at least one occasion where a player has both, and we can't disambiguate
                 team = self.data.get_team(self.event["teamTags"][0])
-                if (not team.has_mod(Mod.PARTY_TIME) and not team.has_mod(Mod.AFTER_PARTY) and self.day < 27) or self.event["created"] in [
+                if (
+                    not team.has_mod(Mod.PARTY_TIME) and not team.has_mod(Mod.AFTER_PARTY) and self.day < 27
+                ) or self.event["created"] in [
                     "2021-05-17T21:21:21.303Z",
                     "2021-05-17T21:22:11.076Z",
                 ]:
@@ -538,7 +540,6 @@ class Resim:
 
             if self.event["created"] in [
                 "2021-05-20T23:02:11.327Z",
-
                 # these two are probably not the same reason
                 "2021-04-13T01:06:52.165Z",
                 "2021-04-13T01:28:04.005Z",
@@ -1072,7 +1073,6 @@ class Resim:
                 self.log_roll(Csv.PSYCHIC, "Fail", psychic_roll, False)
 
         if self.ty == EventType.WALK:
-
             if self.batting_team.has_mod(Mod.BASE_INSTINCTS):
                 instinct_roll = self.roll("base instincts")
 
@@ -1436,7 +1436,7 @@ class Resim:
                             runner_id = self.update["baseRunners"][idx]
                             runner = self.data.get_player(runner_id)
                             self.damage(runner, "runner")
-                            
+
                         self.damage(self.pitcher, "pitcher")
 
                         return
@@ -1651,8 +1651,8 @@ class Resim:
             if not self.batter.has_mod(Mod.OVERPERFORMING, ModType.GAME):
                 self.roll("power chAArge")
 
-        self.handle_hit_advances(hit_bases, defender_roll)     
-                
+        self.handle_hit_advances(hit_bases, defender_roll)
+
         # tentative: damage every runner at least once?
         for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
             runner = self.data.get_player(runner_id)
@@ -1757,7 +1757,6 @@ class Resim:
             pass
 
         elif self.weather == Weather.ECLIPSE:
-
             threshold = self.get_eclipse_threshold()
             eclipse_roll = self.roll("eclipse")
 
@@ -1844,21 +1843,21 @@ class Resim:
                     False,
                 )
 
-            #Drained Stat for both Siphon & Blooddrain is: Pitching 0-0.25, Batting 0.25-0.5, Defense 0.5-0.75, Baserunning 0.75-1    
+            # Drained Stat for both Siphon & Blooddrain is: Pitching 0-0.25, Batting 0.25-0.5, Defense 0.5-0.75, Baserunning 0.75-1
             if self.ty == EventType.BLOODDRAIN_SIPHON:
                 self.roll("which siphon")
                 target_roll = self.roll("Active or Passive Target")
                 pitchers = self.pitching_team.lineup + self.pitching_team.rotation
                 batters = self.batting_team.lineup
 
-                #Siphon on Siphon Violence - They all conveniently fall into the same roll length
+                # Siphon on Siphon Violence - They all conveniently fall into the same roll length
                 if self.event["created"] in [
-                "2021-03-11T16:07:06.900Z", 
-                "2021-04-16T02:23:37.186Z", 
-                "2021-05-19T14:06:37.515Z",
+                    "2021-03-11T16:07:06.900Z",
+                    "2021-04-16T02:23:37.186Z",
+                    "2021-05-19T14:06:37.515Z",
                 ]:
                     self.roll("siphon1")
-                    self.roll("siphon2")   
+                    self.roll("siphon2")
 
                 else:
                     for player_id in pitchers:
@@ -1879,13 +1878,13 @@ class Resim:
                         batter = self.data.get_player(player_id)
                         if batter.has_mod(Mod.SIPHON) and batter.raw_name in self.desc:
                             battersiphon = True
-                        
+
                             if battersiphon:
                                 for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
                                     runner = self.data.get_player(runner_id)
                                 if len(self.update["baseRunners"]) > 0 and runner.raw_name in self.desc:
-                                        self.roll("which stat drained")
-                                        self.roll("effect")
+                                    self.roll("which stat drained")
+                                    self.roll("effect")
                                 else:
                                     if target_roll > 0.5 or player_id == self.batter.id:
                                         self.roll("siphon target")
@@ -1901,27 +1900,31 @@ class Resim:
                 return True
 
             if self.ty == EventType.BLOODDRAIN or self.ty == EventType.BLOODDRAIN_BLOCKED:
-                #This one thinks that an on base runner is the batter
+                # This one thinks that an on base runner is the batter
                 if self.event["created"] in ["2021-04-20T06:31:02.337Z"]:
-                   self.roll("blooddrain proc1")
-                   self.roll("blooddrain proc2")
-                   self.roll("blooddrain proc3")
-                   self.roll("Drained Stat") 
-                elif len(self.update["baseRunners"]) > 0 and self.batter.raw_name not in self.desc and self.pitcher.raw_name not in self.desc:
-                   self.roll("blooddrain proc1")
-                   self.roll("blooddrain proc2")
-                   self.roll("blooddrain proc3")
-                   self.roll("blooddrain proc4")
-                   self.roll("Drained Stat")
+                    self.roll("blooddrain proc1")
+                    self.roll("blooddrain proc2")
+                    self.roll("blooddrain proc3")
+                    self.roll("Drained Stat")
+                elif (
+                    len(self.update["baseRunners"]) > 0
+                    and self.batter.raw_name not in self.desc
+                    and self.pitcher.raw_name not in self.desc
+                ):
+                    self.roll("blooddrain proc1")
+                    self.roll("blooddrain proc2")
+                    self.roll("blooddrain proc3")
+                    self.roll("blooddrain proc4")
+                    self.roll("Drained Stat")
                 elif self.batter.raw_name and self.pitcher.raw_name in self.desc:
-                   self.roll("blooddrain proc1")
-                   self.roll("blooddrain proc2")
-                   self.roll("Drained Stat")
+                    self.roll("blooddrain proc1")
+                    self.roll("blooddrain proc2")
+                    self.roll("Drained Stat")
                 else:
-                   self.roll("blooddrain proc1")
-                   self.roll("blooddrain proc2")
-                   self.roll("blooddrain proc3")
-                   self.roll("Drained Stat")
+                    self.roll("blooddrain proc1")
+                    self.roll("blooddrain proc2")
+                    self.roll("blooddrain proc3")
+                    self.roll("Drained Stat")
                 return True
 
         elif self.weather == Weather.PEANUTS:
@@ -3039,7 +3042,7 @@ class Resim:
         # so, there are a few(?) cases in early s16 where an item was damaged and broke, and no event was logged or displayed
         # in this case there's still an extra roll for damage location.
         if (self.event["created"], player.id) in [
-            ("2021-04-12T16:22:51.087Z", "c09e64b6-8248-407e-b3af-1931b880dbee") # Lenny Spruce
+            ("2021-04-12T16:22:51.087Z", "c09e64b6-8248-407e-b3af-1931b880dbee")  # Lenny Spruce
         ]:
             self.roll(f"which item? (manual override for {player.name}, see comments)")
 
@@ -3579,7 +3582,6 @@ class Resim:
         self.roll("coffee")
 
     def get_runner_multiplier(self, runner, relevant_attr=None):
-
         runner_multiplier = 1
 
         # It looks like no multipliers apply based on hit advancement.

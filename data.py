@@ -450,7 +450,7 @@ class TeamOrPlayerMods(DataClassJsonMixin):
             ModType.ITEM: "itemAttr",
         }
         mods_by_type = {}
-        for (mod_type, key) in MOD_KEYS.items():
+        for mod_type, key in MOD_KEYS.items():
             mods_by_type[mod_type] = set(data.get(key, []))
         return dict(_mods_by_type=mods_by_type, mods=cls._concatenate_mods(mods_by_type))
 

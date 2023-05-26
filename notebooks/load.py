@@ -43,8 +43,9 @@ def braced_glob(path):
     l = []
     for x in braceexpand(path):
         l.extend(glob(x))
-            
+
     return l
+
 
 def _get_player_attribute(attr_key: str, use_items: Union[bool, str], use_broken_items: bool):
     def player_attribute_extractor(player: PlayerData):
