@@ -1,29 +1,29 @@
 import itertools
 import struct
 
+from typing import Union
+
 # original code by ubuntor: https://discord.com/channels/738107179294523402/875833188537208842/965050266258903070
 
 MASK = 0xFFFFFFFFFFFFFFFF
-BRUTEFORCE_THRESHOLD = 2**20
+MAX_KERNEL_BASIS_SIZE = 20
+
+BitMatrix = list[int]
 
 
-def powerset(s):
-    return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(len(s) + 1))
+def initial_state_matricies() -> tuple[BitMatrix, BitMatrix]:
+    """
+    As bits, initial state matricies look like weird offset identity matricies.
+    The results are 128 bits wide and 64 rows tall, but at a smaller scale
+    they look like this:
 
+                         state0              state1
 
-def lshift_var(a, n):
-    return a[n:] + [0] * n
-
-
-def rshift_var(a, n):
-    return [0] * n + a[:-n]
-
-
-def xor_var(a, b):
-    return [x ^ y for x, y in zip(a, b)]
-
-
-def init_sym():
+                        10000000            00001000
+                        01000000            00000100
+                        00100000            00000010
+                        00010000            00000001
+    """
     state0 = [0] * 64
     state1 = [0] * 64
     for i in range(64):
@@ -32,49 +32,92 @@ def init_sym():
     return state0, state1
 
 
-def rref(mat, n):
-    m = len(mat)
-    mat = mat[:]
+def xs128p_matrix(state0_matrix: BitMatrix, state1_matrix: BitMatrix) -> tuple[BitMatrix, BitMatrix]:
+    """
+    Equivalent to Xorshift128+ implementation across matricies of states.
+    """
+    state0_matrix = state0_matrix[:]
+    state1_matrix = state1_matrix[:]
+    s1, s0 = state0_matrix, state1_matrix
+    s1 = xor_matrix(s1, lshift_matrix(s1, 23))
+    s1 = xor_matrix(s1, rshift_matrix(s1, 17))
+    s1 = xor_matrix(s1, s0)
+    s1 = xor_matrix(s1, rshift_matrix(s0, 26))
+    state0_matrix = state1_matrix
+    state1_matrix = s1
+    return state0_matrix, state1_matrix
+
+
+def lshift_matrix(matrix: BitMatrix, n: int) -> BitMatrix:
+    """
+    "left-shift" the bit matrix by sliding it up N rows
+    """
+    return matrix[n:] + [0] * n
+
+
+def rshift_matrix(matrix: BitMatrix, n: int) -> BitMatrix:
+    """
+    "right-shift" the bit matrix by sliding it down N rows
+    """
+    return [0] * n + matrix[:-n]
+
+
+def xor_matrix(matrix1: BitMatrix, matrix2: BitMatrix) -> BitMatrix:
+    """
+    XOR two bit matricies together, row-wise
+    """
+    result = []
+    for i in range(min(len(matrix1), len(matrix2))):
+        result.append(matrix1[i] ^ matrix2[i])
+    return result
+
+
+def rref(matrix: BitMatrix, n: int) -> BitMatrix:
+    """
+    Reduced Row Echelon Form (RREF) of a matrix
+    """
+    matrix = matrix[:]
+    num_rows = len(matrix)
     next_row = 0
     for col in range(n):
-        for row in range(next_row, m):
-            if (mat[row] >> (n - 1 - col)) & 1 == 1:
-                mat[row], mat[next_row] = mat[next_row], mat[row]
-                for i in range(m):
-                    if i != next_row and (mat[i] >> (n - 1 - col)) & 1 == 1:
-                        mat[i] ^= mat[next_row]
+        for row in range(next_row, num_rows):
+            if (matrix[row] >> (n - 1 - col)) & 1 == 1:
+                matrix[row], matrix[next_row] = matrix[next_row], matrix[row]
+                for i in range(num_rows):
+                    if i != next_row and (matrix[i] >> (n - 1 - col)) & 1 == 1:
+                        matrix[i] ^= matrix[next_row]
                 next_row += 1
-                if next_row == m:
-                    return mat
+                if next_row == num_rows:
+                    return matrix
                 break
-    return mat
+    return matrix
 
 
-def transpose(mat):
-    n = len(mat)
-    r = [0] * 128
+def transpose(matrix: BitMatrix) -> BitMatrix:
+    """
+    Transposes a bit matrix. Assumes the input matrix is 128 bits wide.
+    """
+    num_rows = len(matrix)
+    flipped = []
     for i in range(128):
-        s = 0
-        for j in range(n):
-            s += ((mat[j] >> (127 - i)) & 1) << (n - 1 - j)
-        r[i] = s
-    return r
+        cell = 0
+        for j in range(num_rows):
+            cell += ((matrix[j] >> (127 - i)) & 1) << (num_rows - 1 - j)
+        flipped.append(cell)
+    return flipped
 
 
-def xs128p_sym(state0, state1):
-    state0 = state0[:]
-    state1 = state1[:]
-    s1, s0 = state0, state1
-    s1 = xor_var(s1, lshift_var(s1, 23))
-    s1 = xor_var(s1, rshift_var(s1, 17))
-    s1 = xor_var(s1, s0)
-    s1 = xor_var(s1, rshift_var(s0, 26))
-    state0 = state1
-    state1 = s1
-    return state0, state1
+def powerset(s: list[int]) -> list[tuple[int, ...]]:
+    """
+    Given [1, 2], returns [(), (1,), (2,), (1, 2)]
+    """
+    return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(len(s) + 1))
 
 
-def xs128p(state0, state1):
+def xs128p(state0: int, state1: int) -> tuple[int, int]:
+    """
+    Xorshift128+ implementation
+    """
     s1 = state0 & MASK
     s0 = state1 & MASK
     s1 ^= (s1 << 23) & MASK
@@ -86,85 +129,89 @@ def xs128p(state0, state1):
     return state0, state1
 
 
-def state_to_double(s0):
+def state_to_double(s0: int) -> float:
     double_bits = (s0 >> 12) | 0x3FF0000000000000
     return struct.unpack("d", struct.pack("<Q", double_bits))[0] - 1
 
 
-def get_mantissa(val):
+def get_mantissa(val: float) -> int:
     if val == 1.0:
         return MASK >> 12
     return struct.unpack("<Q", struct.pack("d", val + 1))[0] & 0x000FFFFFFFFFFFFF
 
 
-def int_to_bits(n, length):
+def int_to_bits(n: int, length: int) -> list[int]:
     return [(n >> (length - i - 1)) & 1 for i in range(length)]
 
 
-def bits_to_int(bits):
+def bits_to_int(bits: list[int]) -> int:
     return int("".join(str(i) for i in bits), 2)
 
 
-def print_mat(M, n):
+def print_matrix(M: BitMatrix, n: int = 128) -> None:
     for row in M:
         print(f"{row:0{n}b}")
     print()
 
 
-def solve(knowns):
-    """knowns: list of
-         float             [known value]
-      or (float, float)    [known range]
-      or None              [no constraint]
-
-    returns list of all possible solutions (s0,s1)
-    ([] if no solution found)
+def solve(knowns: list[Union[float, tuple[float, float], None]]) -> list[tuple[int, int]]:
     """
-    bits_sym = []
-    bits = []
-    state0_sym, state1_sym = init_sym()
+    Determine valid RNG states which could output float values matching knowns
+
+    knowns: list of constraints for consecutive RNG float outputs
+    Each known can be:
+        float               [known value between 0.0 and 1.0]
+        (float, float)      [known range of (low, high) values]
+        or None             [no constraint for this output]
+
+    Returns list of all possible solutions (s0, s1), or [] if no solution found
+    """
+    bits: list[int] = []
+    bits_matrix: BitMatrix = []
+    state0_sym, state1_sym = initial_state_matricies()
 
     for known in knowns:
         if type(known) == float:
             mantissa_bits = int_to_bits(get_mantissa(known), 52)
             bits += mantissa_bits
-            bits_sym += state0_sym[:52]
+            bits_matrix += state0_sym[:52]
         elif type(known) in [tuple, list]:
             lo, hi = known
             lo_mantissa = get_mantissa(lo)
             hi_mantissa = get_mantissa(hi)
             known_bits = 52 - (lo_mantissa ^ hi_mantissa).bit_length()
             bits += int_to_bits(lo_mantissa >> (52 - known_bits), known_bits)
-            bits_sym += state0_sym[:known_bits]
+            bits_matrix += state0_sym[:known_bits]
         elif known is None:
             pass
         else:
             print("unknown type for known", known)
             1 / 0
-        state0_sym, state1_sym = xs128p_sym(state0_sym, state1_sym)
+        state0_sym, state1_sym = xs128p_matrix(state0_sym, state1_sym)
 
-    num_known = len(bits)
+    num_known_bits = len(bits)
     # print('solving...')
 
     # find kernel basis (homogeneous solutions)
     kernel_basis = []
 
-    M = transpose(bits_sym)
+    M = transpose(bits_matrix)
 
     M = [(M[i] << 128) + (1 << (127 - i)) for i in range(128)]
-    M = rref(M, num_known + 128)
+    M = rref(M, num_known_bits + 128)
     for row in M:
         if row >> 128 == 0:
             kernel_basis.append(row & ((1 << 128) - 1))
 
-    if len(kernel_basis) > 0:
-        print(f"WARNING: {2**len(kernel_basis)} (2^{len(kernel_basis)}) potential solutions")
-        if 2 ** len(kernel_basis) > BRUTEFORCE_THRESHOLD:
+    kernel_basis_size = len(kernel_basis)
+    if kernel_basis_size > 0:
+        print(f"WARNING: {2**kernel_basis_size} (2^{kernel_basis_size}) potential solutions")
+        if kernel_basis_size > MAX_KERNEL_BASIS_SIZE:
             print("too many to bruteforce, giving up :(")
             return []
 
     # find particular solution
-    M = [(bits_sym[i] << 1) + bits[i] for i in range(len(bits_sym))]
+    M = [(bits_matrix[i] << 1) + bits[i] for i in range(len(bits_matrix))]
     M = rref(M, 129)
 
     particular_solution = 0
