@@ -2,7 +2,7 @@ import functools
 import itertools
 import struct
 
-from typing import Union
+from typing import TypedDict, Union
 
 # original code by ubuntor: https://discord.com/channels/738107179294523402/875833188537208842/965050266258903070
 
@@ -142,6 +142,26 @@ def xs128p(state0: int, state1: int) -> tuple[int, int]:
     return state0, state1
 
 
+def xs128p_backward(state0: int, state1: int) -> tuple[int, int]:
+    """
+    Inverse of Xorshift128+ implementation, steps state backwards by 1
+    """
+    prev_state1 = state0
+    prev_state0 = state1 ^ (state0 >> 26)
+    prev_state0 = prev_state0 ^ state0
+    prev_state0 = reverse17(prev_state0)
+    prev_state0 = reverse23(prev_state0)
+    return prev_state0, prev_state1
+
+
+def reverse17(val: int) -> int:
+    return val ^ (val >> 17) ^ (val >> 34) ^ (val >> 51)
+
+
+def reverse23(val: int) -> int:
+    return (val ^ (val << 23) ^ (val << 46)) & MASK
+
+
 def state_to_double(s0: int) -> float:
     double_bits = (s0 >> 12) | 0x3FF0000000000000
     return struct.unpack("d", struct.pack("<Q", double_bits))[0] - 1
@@ -167,7 +187,9 @@ def print_matrix(M: BitMatrix, n: int = 128) -> None:
     print()
 
 
-def solve(knowns: list[Union[float, tuple[float, float], None]]) -> list[tuple[int, int]]:
+def solve_in_rng_order(
+    knowns: list[Union[float, tuple[float, float], None]],
+) -> list[tuple[int, int]]:
     """
     Determine valid RNG states which could output float values matching knowns
 
@@ -203,7 +225,7 @@ def solve(knowns: list[Union[float, tuple[float, float], None]]) -> list[tuple[i
             1 / 0
 
     num_known_bits = len(bits)
-    # print('solving...')
+    # print(f"solving with {num_known_bits}...")
 
     # find kernel basis (homogeneous solutions)
     kernel_basis = []
@@ -260,4 +282,77 @@ def solve(knowns: list[Union[float, tuple[float, float], None]]) -> list[tuple[i
             # good solution!
             # print('found solution', candidate_solution)
             solutions.append(candidate_solution)
+    return solutions
+
+
+BLOCK_SIZE = 64
+
+
+class RNGStateSolution(TypedDict):
+    state: tuple[int, int]
+    offset: int
+    roll: float
+    crossesBlockBoundary: bool
+
+
+def solve_in_math_random_order(
+    rolls: list[Union[float, tuple[float, float], None]],
+) -> list[RNGStateSolution]:
+    """
+    Math.random() generates blocks of 64 values, and then reverses them:
+
+       block 1, roll 63
+       block 1, roll 62
+       block 1, roll 61
+       ...
+       block 1, roll  2
+       block 1, roll  1
+       block 1, roll  0
+       block 2, roll 63   <- this value is generated 127 rolls *after*
+       block 2, roll 62      the prior one which Math.random() outputted
+       block 2, roll 61
+
+    rolls: list of constraints for consecutive Math.random() float outputs
+    Each roll can be:
+        float               [known value between 0.0 and 1.0]
+        (float, float)      [known range of (low, high) values]
+        or None             [no constraint for this output]
+
+    Returns list of all possible RNG solutions or [] if no solution found
+    """
+    solutions = []
+    for offset in range(min(len(rolls), BLOCK_SIZE)):
+        knowns = []
+        if offset:
+            block = rolls[0:offset][::-1]
+            # If we have some initial offset, then the first block
+            # needs to have the rest of the block filled out with nulls
+            block.extend(None for _ in range(BLOCK_SIZE - len(block)))
+            knowns.extend(block)
+
+        for i in range(offset, len(rolls), BLOCK_SIZE):
+            block = rolls[i : i + BLOCK_SIZE]
+            # For every subsequent block, we need to fill the
+            # start of the block with nulls instead of the end
+            block.extend(None for _ in range(BLOCK_SIZE - len(block)))
+            block = block[::-1]
+            knowns.extend(block)
+
+        states = solve_in_rng_order(knowns)
+        if not states:
+            continue
+
+        for state in states:
+            for i in range((offset or 64) - 1):
+                state = xs128p(*state)
+
+            solutions.append(
+                {
+                    "state": state,
+                    "offset": (offset or 64) - 1,
+                    "roll": state_to_double(state[0]),
+                    "crossesBlockBoundary": len(knowns) > BLOCK_SIZE,
+                }
+            )
+
     return solutions

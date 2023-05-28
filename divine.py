@@ -2,25 +2,7 @@ from resim import Resim
 from io import StringIO
 
 # from multiprocessing import Pool
-from rng import Rng, xs128p
-from rng_solver import solve
-
-
-def flip_blocks(input, offset):
-    block_series = [None] * offset + input
-
-    rem = 64 - (len(block_series) % 64)
-    block_series.extend([None] * rem)
-
-    for x in range(len(block_series) // 64 + 1):
-        block_series[x * 64 : (x + 1) * 64] = block_series[x * 64 : (x + 1) * 64][::-1]
-
-    return block_series
-
-
-def block_permutations(input):
-    for i in range(64):
-        yield i, flip_blocks(input, i)
+from rng_solver import solve_in_math_random_order
 
 
 class StubRng:
@@ -34,6 +16,11 @@ class StubRng:
 
     def get_state_str(self):
         return "[STUB]"
+
+
+def get_rng_url(solution):
+    state = solution["state"]
+    return f"https://rng.sibr.dev/?state=({state[0]},{state[1]})+{solution['offset']}"
 
 
 def inner(window):
@@ -51,20 +38,9 @@ def inner(window):
 
     print(f"trying window {start_time} - {end_time}")
 
-    for i, knowns_block in block_permutations(knowns):
-        res = solve(knowns_block)
-        if res:
-            # step through the block-corrected rolls for the first roll of an event and print that
-            window_flipped = flip_blocks(window, i)
-            state = res[0]
-            for i, k in enumerate(window_flipped):
-                if k and k.index == 0:
-                    r = Rng(state, i % 64)
-                    r.step(-1)  # account for our indexing being the coords *before* consuming the roll
-                    print(f"found event at {k.timestamp}: {r.get_state_str()}, first roll {r.next()}")
-                    break
-
-                state = xs128p(state)
+    solutions = solve_in_math_random_order(knowns)
+    for solution in solutions:
+        print(f"found event at {window[0].timestamp}: " f"{get_rng_url(solution)} ; " f"first roll {solution['roll']}")
 
 
 def main():
