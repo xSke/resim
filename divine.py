@@ -2,6 +2,7 @@ from resim import Resim
 from io import StringIO
 
 # from multiprocessing import Pool
+from rng import Rng
 from rng_solver import solve_in_math_random_order
 
 
@@ -40,7 +41,16 @@ def inner(window):
 
     solutions = solve_in_math_random_order(knowns)
     for solution in solutions:
-        print(f"found event at {window[0].timestamp}: " f"{get_rng_url(solution)} ; " f"first roll {solution['roll']}")
+        rng = Rng(solution["state"], solution["offset"])
+        for roll in window:
+            if roll and roll.index == 0:
+                rng.step(-1)  # account for our indexing being the coords *before* consuming the roll
+                print(
+                    f"found event at {roll.timestamp} ({roll.roll_name}): "
+                    f"{rng.get_state_str()}, first roll {rng.next()}"
+                )
+                break
+            rng.step(1)
 
 
 def main():
