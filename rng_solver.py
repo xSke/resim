@@ -93,11 +93,12 @@ def rref(matrix: BitMatrix, n: int) -> BitMatrix:
     num_rows = len(matrix)
     next_row = 0
     for col in range(n):
+        col_bitmask = 1 << (n - 1 - col)
         for row in range(next_row, num_rows):
-            if (matrix[row] >> (n - 1 - col)) & 1 == 1:
+            if matrix[row] & col_bitmask:
                 matrix[row], matrix[next_row] = matrix[next_row], matrix[row]
                 for i in range(num_rows):
-                    if i != next_row and (matrix[i] >> (n - 1 - col)) & 1 == 1:
+                    if i != next_row and (matrix[i] & col_bitmask):
                         matrix[i] ^= matrix[next_row]
                 next_row += 1
                 if next_row == num_rows:
@@ -178,7 +179,7 @@ def int_to_bits(n: int, length: int) -> list[int]:
 
 
 def bits_to_int(bits: list[int]) -> int:
-    return int("".join(str(i) for i in bits), 2)
+    return int("".join(map(str, bits)), 2)
 
 
 def print_matrix(M: BitMatrix, n: int = 128) -> None:
