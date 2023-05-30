@@ -95,15 +95,20 @@ def rref(matrix: BitMatrix, n: int) -> BitMatrix:
     for col in range(n):
         col_bitmask = 1 << (n - 1 - col)
         for row in range(next_row, num_rows):
-            if matrix[row] & col_bitmask:
-                matrix[row], matrix[next_row] = matrix[next_row], matrix[row]
-                for i in range(num_rows):
-                    if i != next_row and (matrix[i] & col_bitmask):
-                        matrix[i] ^= matrix[next_row]
-                next_row += 1
-                if next_row == num_rows:
-                    return matrix
-                break
+            if not matrix[row] & col_bitmask:
+                continue
+            # Flip rows
+            matrix[row], matrix[next_row] = matrix[next_row], matrix[row]
+            for i in range(num_rows):
+                if i == next_row:
+                    continue
+                # XOR all rows except next row
+                if matrix[i] & col_bitmask:
+                    matrix[i] ^= matrix[next_row]
+            next_row += 1
+            if next_row == num_rows:
+                return matrix
+            break
     return matrix
 
 
