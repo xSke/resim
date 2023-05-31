@@ -66,12 +66,10 @@ class Rng(object):
         return to_double(self.state[0])
 
     def next(self) -> float:
-        self.step(1)
-        return self.value()
+        return self.step(1)
 
     def prev(self) -> float:
-        self.step(-1)
-        return self.value()
+        return self.step(-1)
 
     def step_raw(self, amount=1):
         if amount > 0:
@@ -93,3 +91,4 @@ class Rng(object):
             self.offset -= 64
 
         self.step_raw(-steps)
+        return self.value()
