@@ -2,11 +2,13 @@ import functools
 import itertools
 import struct
 
-from typing import TypedDict, Union
+from typing import Optional, TypedDict, Union
 
 # original code by ubuntor: https://discord.com/channels/738107179294523402/875833188537208842/965050266258903070
 
-MASK = 0xFFFFFFFFFFFFFFFF
+BIT_WIDTH = 128
+MASK_64 = 0xFFFFFFFFFFFFFFFF
+MASK128 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 MAX_KERNEL_BASIS_SIZE = 20
 
 BitMatrix = list[int]
@@ -37,11 +39,11 @@ def initial_state_matrices() -> tuple[BitMatrix, BitMatrix]:
                         00100000            00000010
                         00010000            00000001
     """
-    state0 = [0] * 64
-    state1 = [0] * 64
+    state0 = []
+    state1 = []
     for i in range(64):
-        state0[i] = 1 << (127 - i)
-        state1[i] = 1 << (127 - (64 + i))
+        state0.append(1 << (BIT_WIDTH - 1 - i))
+        state1.append(1 << (BIT_WIDTH - 1 - (64 + i)))
     return state0, state1
 
 
@@ -114,16 +116,66 @@ def rref(matrix: BitMatrix, n: int) -> BitMatrix:
 
 def transpose(matrix: BitMatrix) -> BitMatrix:
     """
-    Transposes a bit matrix. Assumes the input matrix is 128 bits wide.
+    Transposes a bit matrix.
+    Assumes the input matrix is 128 bits wide, so the output is 128 rows tall.
     """
     num_rows = len(matrix)
     flipped = []
-    for i in range(128):
+    for i in range(BIT_WIDTH):
         cell = 0
         for j in range(num_rows):
-            cell += ((matrix[j] >> (127 - i)) & 1) << (num_rows - 1 - j)
+            bit = (matrix[j] >> (BIT_WIDTH - 1 - i)) & 1
+            cell |= bit << (num_rows - 1 - j)
         flipped.append(cell)
     return flipped
+
+
+def get_kernel_basis(bits_matrix: BitMatrix) -> BitMatrix:
+    """
+    Find kernel basis (homogeneous solutions)
+    https://en.wikipedia.org/wiki/Kernel_(linear_algebra)#Computation_by_Gaussian_elimination
+    """
+
+    # bits_matrix is 128 cols wide and (# known bits) rows tall
+    # transpose it to 128 rows tall, and (# known bits) cols wide
+    M = transpose(bits_matrix)
+
+    # Augment our matrix from M to [M|I], where I is the 128x128 identity matrix
+    for i in range(len(M)):
+        # Shifts the matrix left 128 spaces
+        M[i] <<= BIT_WIDTH
+        # Draws the identity matrix in the righthand side of each row
+        M[i] |= 1 << (BIT_WIDTH - 1 - i)
+
+    # RREF to effectively solve the system of equations
+    M = rref(M, len(bits_matrix) + BIT_WIDTH)
+
+    kernel_basis = []
+    for row in M:
+        if row >> BIT_WIDTH:
+            continue
+        kernel_basis.append(row & MASK128)
+
+    size = len(kernel_basis)
+    if size > 0:
+        print(f"WARNING: {2**size} (2^{size}) potential solutions")
+
+    return kernel_basis
+
+
+def get_particular_solution(bits_matrix: BitMatrix, bits: list[bool]) -> Optional[int]:
+    M = [(row << 1) | bits[i] for i, row in enumerate(bits_matrix)]
+    M = rref(M, BIT_WIDTH + 1)
+
+    particular_solution = 0
+    for i, row in enumerate(M):
+        if row == 0:
+            break
+        if row == 1:
+            return None
+        particular_solution += (row & 1) << (BIT_WIDTH - 1 - i)
+
+    return particular_solution
 
 
 def powerset(s: list[int]) -> list[tuple[int, ...]]:
@@ -137,14 +189,14 @@ def xs128p(state0: int, state1: int) -> tuple[int, int]:
     """
     Xorshift128+ implementation
     """
-    s1 = state0 & MASK
-    s0 = state1 & MASK
-    s1 ^= (s1 << 23) & MASK
-    s1 ^= (s1 >> 17) & MASK
-    s1 ^= s0 & MASK
-    s1 ^= (s0 >> 26) & MASK
-    state0 = state1 & MASK
-    state1 = s1 & MASK
+    s1 = state0 & MASK_64
+    s0 = state1 & MASK_64
+    s1 ^= (s1 << 23) & MASK_64
+    s1 ^= (s1 >> 17) & MASK_64
+    s1 ^= s0 & MASK_64
+    s1 ^= (s0 >> 26) & MASK_64
+    state0 = state1 & MASK_64
+    state1 = s1 & MASK_64
     return state0, state1
 
 
@@ -165,7 +217,7 @@ def reverse17(val: int) -> int:
 
 
 def reverse23(val: int) -> int:
-    return (val ^ (val << 23) ^ (val << 46)) & MASK
+    return (val ^ (val << 23) ^ (val << 46)) & MASK_64
 
 
 def state_to_double(s0: int) -> float:
@@ -175,19 +227,19 @@ def state_to_double(s0: int) -> float:
 
 def get_mantissa(val: float) -> int:
     if val == 1.0:
-        return MASK >> 12
+        return MASK_64 >> 12
     return struct.unpack("<Q", struct.pack("d", val + 1))[0] & 0x000FFFFFFFFFFFFF
 
 
-def int_to_bits(n: int, length: int) -> list[int]:
-    return [(n >> (length - i - 1)) & 1 for i in range(length)]
+def int_to_bits(n: int, length: int) -> list[bool]:
+    return [bool((n >> (length - i - 1)) & 1) for i in range(length)]
 
 
-def bits_to_int(bits: list[int]) -> int:
-    return int("".join(map(str, bits)), 2)
+def bits_to_int(bits: list[bool]) -> int:
+    return int("".join(map(str, map(int, bits))), 2)
 
 
-def print_matrix(M: BitMatrix, n: int = 128) -> None:
+def print_matrix(M: BitMatrix, n: int = BIT_WIDTH) -> None:
     for row in M:
         print(f"{row:0{n}b}")
     print()
@@ -207,7 +259,7 @@ def solve_in_rng_order(
 
     Returns list of all possible solutions (s0, s1), or [] if no solution found
     """
-    bits: list[int] = []
+    bits: list[bool] = []
     bits_matrix: BitMatrix = []
 
     for i, known in enumerate(knowns):
@@ -215,54 +267,35 @@ def solve_in_rng_order(
         if type(known) == float:
             mantissa = get_mantissa(known)
             known_bits = 52
-            bits += int_to_bits(mantissa, known_bits)
-            bits_matrix += state0_matrix[:known_bits]
+            bits.extend(int_to_bits(mantissa, known_bits))
+            bits_matrix.extend(state0_matrix[:known_bits])
         elif type(known) in [tuple, list]:
             lo, hi = known
             lo_mantissa = get_mantissa(lo)
             hi_mantissa = get_mantissa(hi)
             known_bits = 52 - (lo_mantissa ^ hi_mantissa).bit_length()
-            bits += int_to_bits(lo_mantissa >> (52 - known_bits), known_bits)
-            bits_matrix += state0_matrix[:known_bits]
+            bits.extend(int_to_bits(lo_mantissa >> (52 - known_bits), known_bits))
+            bits_matrix.extend(state0_matrix[:known_bits])
         elif known is None:
             continue
         else:
-            print("unknown type for known", known)
-            1 / 0
+            raise TypeError(f"Unknown type '{type(known)}' for known {known}")
 
-    num_known_bits = len(bits)
-    # print(f"solving with {num_known_bits}...")
+    # num_known_bits = len(bits)
+    # print(f"Solving with {len(bits)}...")
 
-    # find kernel basis (homogeneous solutions)
-    kernel_basis = []
+    kernel_basis = get_kernel_basis(bits_matrix)
 
-    M = transpose(bits_matrix)
+    if len(kernel_basis) > MAX_KERNEL_BASIS_SIZE:
+        print("Too many to bruteforce, giving up :(")
+        return []
 
-    M = [(M[i] << 128) + (1 << (127 - i)) for i in range(128)]
-    M = rref(M, num_known_bits + 128)
-    for row in M:
-        if row >> 128 == 0:
-            kernel_basis.append(row & ((1 << 128) - 1))
-
-    kernel_basis_size = len(kernel_basis)
-    if kernel_basis_size > 0:
-        print(f"WARNING: {2**kernel_basis_size} (2^{kernel_basis_size}) potential solutions")
-        if kernel_basis_size > MAX_KERNEL_BASIS_SIZE:
-            print("too many to bruteforce, giving up :(")
-            return []
-
+    # TODO continue migrating comments here
     # find particular solution
-    M = [(bits_matrix[i] << 1) + bits[i] for i in range(len(bits_matrix))]
-    M = rref(M, 129)
-
-    particular_solution = 0
-    for row in M:
-        if row == 0:
-            break
-        if row == 1:
-            # print('ERROR: contradiction found, no solution!')
-            return []
-        particular_solution += (row & 1) << (row.bit_length() - 2)
+    particular_solution = get_particular_solution(bits_matrix, bits)
+    if particular_solution is None:
+        # print('ERROR: contradiction found, no solution!')
+        return
 
     solutions = []
 
