@@ -13,7 +13,7 @@ SOLUTION_WIDTH = 2 * STATE_WIDTH
 # 128x128 identity matrix, precomputed
 IDENTITY128 = [1 << (SOLUTION_WIDTH - 1 - i) for i in range(SOLUTION_WIDTH)]
 STATE_MASK = int("1" * STATE_WIDTH, 2)
-SOLUTION_MASK = int("1" * SOLUTION_WIDTH, 2)
+SOLUTION_MASK = STATE_MASK << STATE_WIDTH | STATE_MASK
 MAX_KERNEL_BASIS_SIZE = 20
 
 BitMatrix = list[int]
@@ -26,31 +26,18 @@ def state_matrices(i: int) -> (BitMatrix, BitMatrix):
     Develop the bit matrices which define state spaces
     """
     if i == 0:
-        # Start with initial state
-        return initial_state_matrices()
+        # As bits, initial state matrices are the top and bottom halves
+        # of a 128x128 identity matrix. At a smaller scale they look like this:
+        #
+        #                  state0              state1
+        #
+        #                 10000000            00001000
+        #                 01000000            00000100
+        #                 00100000            00000010
+        #                 00010000            00000001
+        return IDENTITY128[:STATE_WIDTH], IDENTITY128[STATE_WIDTH:]
     # Otherwise, run Xorshift128+ on the prior set of [cached] states
     return xs128p_matrix(*state_matrices(i - 1))
-
-
-def initial_state_matrices() -> tuple[BitMatrix, BitMatrix]:
-    """
-    As bits, initial state matrices look like weird offset identity matrices.
-    The results are 128 bits wide and 64 rows tall, but at a smaller scale
-    they look like this:
-
-                         state0              state1
-
-                        10000000            00001000
-                        01000000            00000100
-                        00100000            00000010
-                        00010000            00000001
-    """
-    state0 = []
-    state1 = []
-    for i in range(STATE_WIDTH):
-        state0.append(IDENTITY128[i])
-        state1.append(IDENTITY128[i + STATE_WIDTH])
-    return state0, state1
 
 
 def xs128p_matrix(state0_matrix: BitMatrix, state1_matrix: BitMatrix) -> tuple[BitMatrix, BitMatrix]:
@@ -93,15 +80,15 @@ def xor_matrix(matrix1: BitMatrix, matrix2: BitMatrix) -> BitMatrix:
     return result
 
 
-def rref(matrix: BitMatrix, n: int) -> BitMatrix:
+def rref(matrix: BitMatrix, num_cols: int) -> BitMatrix:
     """
     Reduced Row Echelon Form (RREF) of a matrix
     """
     matrix = matrix[:]
     num_rows = len(matrix)
     next_row = 0
-    for col in range(n):
-        col_bitmask = 1 << (n - 1 - col)
+    for col in range(num_cols):
+        col_bitmask = 1 << (num_cols - 1 - col)
         for row in range(next_row, num_rows):
             if not matrix[row] & col_bitmask:
                 continue
@@ -263,9 +250,9 @@ def bits_to_int(bits: list[bool]) -> int:
     return int("".join(map(str, map(int, bits))), 2)
 
 
-def print_matrix(M: BitMatrix, n: int = SOLUTION_WIDTH) -> None:
+def print_matrix(M: BitMatrix, num_cols: int = SOLUTION_WIDTH) -> None:
     for row in M:
-        print(f"{row:0{n}b}")
+        print(f"{row:0{num_cols}b}")
     print()
 
 
@@ -312,6 +299,7 @@ def solve_in_rng_order(knowns: list[KnownRoll]) -> list[tuple[int, int]]:
             # Store the same number of bit matrix rows from the states
             bits_from_states += state0_matrix[:num_bits]
         elif known is None:
+            # This is fine, just no bits of info are added
             continue
         else:
             raise TypeError(f"Unknown type '{type(known)}' for known {known}")
