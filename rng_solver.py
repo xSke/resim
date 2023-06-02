@@ -184,7 +184,7 @@ def get_particular_solution(
             return None
         if row & 1:
             # Otherwise, set the relevant bit in the solution
-            solution |= IDENTITY128[i]
+            solution |= IDENTITY128[1 - row.bit_length()]
 
     return solution
 
