@@ -6,12 +6,18 @@ from typing import Optional, TypedDict, Union
 
 # original code by ubuntor: https://discord.com/channels/738107179294523402/875833188537208842/965050266258903070
 
-BIT_WIDTH = 128
-MASK_64 = 0xFFFFFFFFFFFFFFFF
-MASK128 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+# Each state is a 64-bit integer
+STATE_WIDTH = 64
+# Solution space is two states wide, so 128
+SOLUTION_WIDTH = 2 * STATE_WIDTH
+# 128x128 identity matrix, precomputed
+IDENTITY128 = [1 << (SOLUTION_WIDTH - 1 - i) for i in range(SOLUTION_WIDTH)]
+STATE_MASK = int("1" * STATE_WIDTH, 2)
+SOLUTION_MASK = int("1" * SOLUTION_WIDTH, 2)
 MAX_KERNEL_BASIS_SIZE = 20
 
 BitMatrix = list[int]
+KnownRoll = Union[float, tuple[float, float], None]
 
 
 @functools.cache
@@ -41,9 +47,9 @@ def initial_state_matrices() -> tuple[BitMatrix, BitMatrix]:
     """
     state0 = []
     state1 = []
-    for i in range(64):
-        state0.append(1 << (BIT_WIDTH - 1 - i))
-        state1.append(1 << (BIT_WIDTH - 1 - (64 + i)))
+    for i in range(STATE_WIDTH):
+        state0.append(IDENTITY128[i])
+        state1.append(IDENTITY128[i + STATE_WIDTH])
     return state0, state1
 
 
@@ -121,40 +127,40 @@ def transpose(matrix: BitMatrix) -> BitMatrix:
     """
     num_rows = len(matrix)
     flipped = []
-    for i in range(BIT_WIDTH):
+    for i in range(SOLUTION_WIDTH):
         cell = 0
         for j in range(num_rows):
-            bit = (matrix[j] >> (BIT_WIDTH - 1 - i)) & 1
+            bit = (matrix[j] >> (SOLUTION_WIDTH - 1 - i)) & 1
             cell |= bit << (num_rows - 1 - j)
         flipped.append(cell)
     return flipped
 
 
-def get_kernel_basis(bits_matrix: BitMatrix) -> BitMatrix:
+def get_kernel_basis(bits_from_states: BitMatrix) -> BitMatrix:
     """
     Find kernel basis (homogeneous solutions)
     https://en.wikipedia.org/wiki/Kernel_(linear_algebra)#Computation_by_Gaussian_elimination
     """
 
-    # bits_matrix is 128 cols wide and (# known bits) rows tall
+    # bits_from_states is 128 cols wide and (# known bits) rows tall
     # transpose it to 128 rows tall, and (# known bits) cols wide
-    M = transpose(bits_matrix)
+    M = transpose(bits_from_states)
 
     # Augment our matrix from M to [M|I], where I is the 128x128 identity matrix
     for i in range(len(M)):
         # Shifts the matrix left 128 spaces
-        M[i] <<= BIT_WIDTH
+        M[i] <<= SOLUTION_WIDTH
         # Draws the identity matrix in the righthand side of each row
-        M[i] |= 1 << (BIT_WIDTH - 1 - i)
+        M[i] |= IDENTITY128[i]
 
     # RREF to effectively solve the system of equations
-    M = rref(M, len(bits_matrix) + BIT_WIDTH)
+    M = rref(M, len(bits_from_states) + SOLUTION_WIDTH)
 
     kernel_basis = []
     for row in M:
-        if row >> BIT_WIDTH:
+        if row >> SOLUTION_WIDTH:
             continue
-        kernel_basis.append(row & MASK128)
+        kernel_basis.append(row & SOLUTION_MASK)
 
     size = len(kernel_basis)
     if size > 0:
@@ -163,19 +169,37 @@ def get_kernel_basis(bits_matrix: BitMatrix) -> BitMatrix:
     return kernel_basis
 
 
-def get_particular_solution(bits_matrix: BitMatrix, bits: list[bool]) -> Optional[int]:
-    M = [(row << 1) | bits[i] for i, row in enumerate(bits_matrix)]
-    M = rref(M, BIT_WIDTH + 1)
+def get_particular_solution(
+    bits_from_states: BitMatrix,
+    bits_from_knowns: list[bool],
+) -> Optional[int]:
+    """
+    Solve for the particular solution based on the bits
+    in the states and knowns. If this hits a contradiction
+    then there's no solveable solution within the knowns provided.
+    """
 
-    particular_solution = 0
+    # Augment our matrix to [S|K], where S = states and K = knowns
+    M = [(row << 1) | bits_from_knowns[i] for i, row in enumerate(bits_from_states)]
+
+    # RREF to effectively solve the system of equations
+    # Since S is 128 wide and K is 1 wide, the effective width of M is 129
+    M = rref(M, SOLUTION_WIDTH + 1)
+
+    # int holding the 128 bits of the solution
+    solution = 0
     for i, row in enumerate(M):
         if row == 0:
+            # Reached the rows of the RREF'd matrix which are 0, so stop
             break
         if row == 1:
+            # Contradiction found; no solution
             return None
-        particular_solution += (row & 1) << (BIT_WIDTH - 1 - i)
+        if row & 1:
+            # Otherwise, set the relevant bit in the solution
+            solution |= IDENTITY128[i]
 
-    return particular_solution
+    return solution
 
 
 def powerset(s: list[int]) -> list[tuple[int, ...]]:
@@ -189,14 +213,14 @@ def xs128p(state0: int, state1: int) -> tuple[int, int]:
     """
     Xorshift128+ implementation
     """
-    s1 = state0 & MASK_64
-    s0 = state1 & MASK_64
-    s1 ^= (s1 << 23) & MASK_64
-    s1 ^= (s1 >> 17) & MASK_64
-    s1 ^= s0 & MASK_64
-    s1 ^= (s0 >> 26) & MASK_64
-    state0 = state1 & MASK_64
-    state1 = s1 & MASK_64
+    s1 = state0 & STATE_MASK
+    s0 = state1 & STATE_MASK
+    s1 ^= (s1 << 23) & STATE_MASK
+    s1 ^= (s1 >> 17) & STATE_MASK
+    s1 ^= s0 & STATE_MASK
+    s1 ^= (s0 >> 26) & STATE_MASK
+    state0 = state1 & STATE_MASK
+    state1 = s1 & STATE_MASK
     return state0, state1
 
 
@@ -217,7 +241,7 @@ def reverse17(val: int) -> int:
 
 
 def reverse23(val: int) -> int:
-    return (val ^ (val << 23) ^ (val << 46)) & MASK_64
+    return (val ^ (val << 23) ^ (val << 46)) & STATE_MASK
 
 
 def state_to_double(s0: int) -> float:
@@ -227,7 +251,7 @@ def state_to_double(s0: int) -> float:
 
 def get_mantissa(val: float) -> int:
     if val == 1.0:
-        return MASK_64 >> 12
+        return STATE_MASK >> 12
     return struct.unpack("<Q", struct.pack("d", val + 1))[0] & 0x000FFFFFFFFFFFFF
 
 
@@ -239,15 +263,13 @@ def bits_to_int(bits: list[bool]) -> int:
     return int("".join(map(str, map(int, bits))), 2)
 
 
-def print_matrix(M: BitMatrix, n: int = BIT_WIDTH) -> None:
+def print_matrix(M: BitMatrix, n: int = SOLUTION_WIDTH) -> None:
     for row in M:
         print(f"{row:0{n}b}")
     print()
 
 
-def solve_in_rng_order(
-    knowns: list[Union[float, tuple[float, float], None]],
-) -> list[tuple[int, int]]:
+def solve_in_rng_order(knowns: list[KnownRoll]) -> list[tuple[int, int]]:
     """
     Determine valid RNG states which could output float values matching knowns
 
@@ -259,68 +281,97 @@ def solve_in_rng_order(
 
     Returns list of all possible solutions (s0, s1), or [] if no solution found
     """
-    bits: list[bool] = []
-    bits_matrix: BitMatrix = []
+
+    # bits_from_knowns holds the individual bits we are confident in
+    # from the knowns provided. It's effectively an 1xN bit matrix
+    bits_from_knowns: list[bool] = []
+    # bits_from_states holds the complementary bits from the state matrices
+    # which we're iterating over as we step to each known. 128xN bit matrix
+    bits_from_states: BitMatrix = []
 
     for i, known in enumerate(knowns):
         state0_matrix, _ = state_matrices(i)
         if type(known) == float:
             mantissa = get_mantissa(known)
-            known_bits = 52
-            bits.extend(int_to_bits(mantissa, known_bits))
-            bits_matrix.extend(state0_matrix[:known_bits])
+            # If the known is a float, then we capture and gain
+            # all 52 bits of entropy from that float's mantissa
+            num_bits = 52
+            # Store all of the mantissa's bits from the knowns
+            bits_from_knowns += int_to_bits(mantissa, num_bits)
+            # Store all of the bit matrix rows from the states
+            bits_from_states += state0_matrix[:num_bits]
         elif type(known) in [tuple, list]:
             lo, hi = known
             lo_mantissa = get_mantissa(lo)
             hi_mantissa = get_mantissa(hi)
-            known_bits = 52 - (lo_mantissa ^ hi_mantissa).bit_length()
-            bits.extend(int_to_bits(lo_mantissa >> (52 - known_bits), known_bits))
-            bits_matrix.extend(state0_matrix[:known_bits])
+            # If the known is a float range, then we capture the high bits
+            # which are stable between the mantissae of the range's bounds
+            num_bits = 52 - (lo_mantissa ^ hi_mantissa).bit_length()
+            # Store those stable high bits from the mantissa of the knowns
+            bits_from_knowns += int_to_bits(lo_mantissa >> (52 - num_bits), num_bits)
+            # Store the same number of bit matrix rows from the states
+            bits_from_states += state0_matrix[:num_bits]
         elif known is None:
             continue
         else:
             raise TypeError(f"Unknown type '{type(known)}' for known {known}")
 
-    # num_known_bits = len(bits)
-    # print(f"Solving with {len(bits)}...")
+    # Find the particular solution, if one exists, of the states and knowns
+    particular_solution = get_particular_solution(bits_from_states, bits_from_knowns)
+    if particular_solution is None:
+        # Contradiction found, no solutions
+        return []
 
-    kernel_basis = get_kernel_basis(bits_matrix)
+    # The kernel basis is a list of bit combos, derived from
+    # the state0 matrices, which represent the permutable space
+    # of possible homogeneous solutions. If we have enough known bits
+    # of information, then the basis will have a small (or even 0)
+    # length, and we won't need to check a bunch of permutations
+    # beyond the particular solution we just found.
+    kernel_basis = get_kernel_basis(bits_from_states)
 
     if len(kernel_basis) > MAX_KERNEL_BASIS_SIZE:
         print("Too many to bruteforce, giving up :(")
         return []
 
-    # TODO continue migrating comments here
-    # find particular solution
-    particular_solution = get_particular_solution(bits_matrix, bits)
-    if particular_solution is None:
-        # print('ERROR: contradiction found, no solution!')
-        return
-
+    # Now to check and save good solutions which satisfy our knowns
     solutions = []
 
     for homogeneous_solutions in powerset(kernel_basis):
+        # Start with the particular solution we found for our states and knowns
         solution = particular_solution
+        # Then XOR that particular solution with a permutation of
+        # possible homogeneous solutions found in the kernel basis step
         for vec in homogeneous_solutions:
             solution ^= vec
-        s0 = solution >> 64
-        s1 = solution & ((1 << 64) - 1)
+
+        # Our solution is a 128-bit-wide integer.
+        # The high and low 64 bits are s0 & s1, respectively
+        s0 = solution >> STATE_WIDTH
+        s1 = solution & STATE_MASK
         candidate_solution = (s0, s1)
-        # test solution
+
+        # Now test this solution state (s0, s1) against our knowns,
+        # iterating the state for each known and comparing the float
+        # associated with that state against the known constraints
         for known in knowns:
             value = state_to_double(s0)
             if type(known) == float:
                 if known != value:
+                    # Floats don't match, try next candidate
                     break
             elif type(known) in [tuple, list]:
                 lo, hi = known
                 if not (lo < value < hi):
+                    # Float outside bounds, try next candidate
                     break
+            # Step the state forward to try the next known
             s0, s1 = xs128p(s0, s1)
         else:
-            # good solution!
-            # print('found solution', candidate_solution)
+            # We did not contradict any of the knowns,
+            # so this is a good solution!
             solutions.append(candidate_solution)
+
     return solutions
 
 
@@ -334,9 +385,7 @@ class RNGStateSolution(TypedDict):
     crossesBlockBoundary: bool
 
 
-def solve_in_math_random_order(
-    rolls: list[Union[float, tuple[float, float], None]],
-) -> list[RNGStateSolution]:
+def solve_in_math_random_order(rolls: list[KnownRoll]) -> list[RNGStateSolution]:
     """
     Math.random() generates blocks of 64 values, and then reverses them:
 
@@ -382,13 +431,13 @@ def solve_in_math_random_order(
             continue
 
         for state in states:
-            for i in range((offset or 64) - 1):
+            for i in range((offset or BLOCK_SIZE) - 1):
                 state = xs128p(*state)
 
             solutions.append(
                 {
                     "state": state,
-                    "offset": (offset or 64) - 1,
+                    "offset": (offset or BLOCK_SIZE) - 1,
                     "roll": state_to_double(state[0]),
                     "crossesBlockBoundary": len(knowns) > BLOCK_SIZE,
                 }
