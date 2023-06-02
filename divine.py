@@ -1,4 +1,6 @@
-from resim import Resim
+import dataclasses
+import json
+from resim import LoggedRoll, Resim
 from io import StringIO
 
 # from multiprocessing import Pool
@@ -57,13 +59,28 @@ def main():
     start_timestamp = "2021-04-14T16:01:37.236Z"
     end_timestamp = "2021-04-14T16:22:37.236Z"
 
-    out_file = StringIO()
+    cache_file = (
+        f"cache/divine_rolls_{start_timestamp.replace(':', '_')}-"
+        f"{end_timestamp.replace(':', '_')}.json"
+    )
+    try:
+        with open(cache_file, "r") as f:
+            roll_log = list(map(lambda roll: LoggedRoll(**roll), json.load(f)))
+            print(f"got {len(roll_log)} rolls from cache")
+    except Exception as e:
+        roll_log = None
 
-    stub_rng = StubRng()
-    resim = Resim(stub_rng, out_file, run_name=None, raise_on_errors=False)
-    resim.run(start_timestamp, end_timestamp, None)
+    if not roll_log:
+        out_file = StringIO()
 
-    print(f"got {len(resim.roll_log)} rolls")
+        stub_rng = StubRng()
+        resim = Resim(stub_rng, out_file, run_name=None, raise_on_errors=False)
+        resim.run(start_timestamp, end_timestamp, None)
+        roll_log = resim.roll_log
+        print(f"got {len(roll_log)} rolls")
+
+        with open(cache_file, "w") as f:
+            json.dump(list(map(dataclasses.asdict, roll_log)), f)
 
     # todo: parallelize this in a way that doesn't make ctrl-c explode, and that supports tqdm
     # with Pool(1) as p:
@@ -73,8 +90,8 @@ def main():
     # but we don't want it to waste too much time on a range that def. doesn't work
     window_size = 2800
     step_size = 100
-    for window_pos in range(0, len(resim.roll_log) - window_size, step_size):
-        window = resim.roll_log[window_pos : window_pos + window_size]
+    for window_pos in range(0, len(roll_log) - window_size, step_size):
+        window = roll_log[window_pos : window_pos + window_size]
         args.append(window)
 
     for w in args:
