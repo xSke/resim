@@ -34,6 +34,10 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             if attr not in [
                 "patheticism",
                 "thwackability",
+                "buoyancy",
+
+                # todo: when did they fix this? i think it's s19, right
+                "ruthlessness" if meta.season < 18 else None,
             ]:  # , "ruthlessness"]:  #, "coldness"]:
                 multiplier += min(0.05, 0.05 * (meta.day / 99))
         elif mod == Mod.HIGH_PRESSURE:
@@ -49,8 +53,13 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
                     "thwackability",
                     "ruthlessness",
                     "coldness",
+                    "buoyancy",
                 ]:
                     multiplier += 0.05
+
+            if (not meta.top_of_inning) and position == "fielder":
+                multiplier += 0.05
+                pass
 
             # todo: do we ever want this?
             # elif not top_of_inning and position in ["fielder", "pitcher"]:
@@ -61,7 +70,8 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             if attr not in []:
                 multiplier += (14 - roster_size) * 0.01
         elif mod == Mod.AFFINITY_FOR_CROWS and meta.weather == Weather.BIRDS:
-            if attr not in []:
+            # ???
+            if attr not in ["buoyancy", "omniscience"]:
                 multiplier += 0.5
         elif mod == Mod.CHUNKY and meta.weather == Weather.PEANUTS:
             # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
@@ -99,6 +109,9 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
         elif mod == Mod.SLOW_BUILD and position == "batter":
             # guessing at how this works
             multiplier += meta.batter_at_bats * 0.01
+        elif mod == Mod.SHELLED and position == "fielder":
+            # lol
+            return 0
 
     if player.bat == "NIGHT_VISION_GOGGLES" and meta.weather == Weather.ECLIPSE:
         # Blessing description: Item. Random player on your team hits 50% better during Solar Eclipses.
@@ -378,3 +391,38 @@ def get_hr_threshold(
     opw_supp = (10 * opw + supp) / 11
     threshold = 0.12 + 0.16 * div - 0.08 * opw_supp - 0.18 * ballpark_sum
     return threshold
+
+def get_fly_or_ground_threshold(batter: PlayerData, batting_team: TeamData, pitcher: PlayerData, pitching_team: TeamData, stadium: StadiumData, meta: StatRelevantData):
+    # no vibes
+    buoy = batter.buoyancy / get_multiplier(batter, batting_team, "batter", "buoyancy", meta)
+
+    # note: passing the *batter* as the player and the *pitching team* as the team
+    # this is as weird as it sounds. we can only assume tgb accidentally passed the wrong player in or something
+    # since we use the batter suppression even if it makes more sense to use *pitcher* suppression here
+    supp = batter.suppression * get_multiplier(batter, pitching_team, "pitcher", "suppression", meta)
+    omi = stadium.ominousness - 0.5
+    return 0.18 + 0.3*buoy - 0.16*supp - 0.1*omi
+
+def get_out_threshold(batter: PlayerData, batting_team: TeamData, pitcher: PlayerData, pitching_team: TeamData, fielder: PlayerData, stadium: StadiumData, meta: StatRelevantData):
+    batter_vibes = batter.vibes(meta.day)
+    pitcher_vibes = pitcher.vibes(meta.day)
+    fielder_vibes = fielder.vibes(meta.day)
+
+    batter_thwack = batter.thwackability * (1+0.2*batter_vibes) * get_multiplier(batter, batting_team, "batter", "thwackability", meta)
+    pitcher_unthwack = pitcher.unthwackability * (1+0.2*pitcher_vibes) * get_multiplier(pitcher, pitching_team, "pitcher", "unthwackability", meta)
+    fielder_omni = fielder.omniscience * (1+0.2*fielder_vibes) * get_multiplier(fielder, pitching_team, "fielder", "omniscience", meta)
+
+    grand = stadium.grandiosity - 0.5
+    omi = stadium.ominousness - 0.5
+    incon = stadium.inconvenience - 0.5
+    visc = stadium.viscosity - 0.5
+    fwd = stadium.forwardness - 0.5
+    obt = stadium.obtuseness - 0.5
+
+    if meta.season in [11, 12]:
+        # 4 outliers on this dataset
+        return 0.315 + 0.1*batter_thwack - 0.08*pitcher_unthwack - 0.07*fielder_omni + 0.0145*grand + 0.0085*omi - 0.011*incon - 0.005*visc + 0.01*fwd
+    elif meta.season in [13]:
+        return 0.3115 + 0.1*batter_thwack - 0.08*pitcher_unthwack - 0.065*fielder_omni + 0.011*grand + 0.008*obt - 0.0033*omi - 0.002*incon - 0.0033*visc + 0.01*fwd
+    else:
+        return 0.311 + 0.1*batter_thwack - 0.08*pitcher_unthwack - 0.064*fielder_omni + 0.01*grand + 0.008*obt - 0.0025*omi - 0.0045*incon - 0.0035*visc + 0.011*fwd

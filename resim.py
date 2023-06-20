@@ -30,6 +30,8 @@ from formulas import (
     StatRelevantData,
     get_swing_ball_threshold,
     get_swing_strike_threshold,
+    get_fly_or_ground_threshold,
+    get_out_threshold,
 )
 
 
@@ -234,6 +236,7 @@ class Resim:
         # has to be rolled after party
         if self.handle_flooding():
             return
+        
         if self.handle_polarity():
             return
 
@@ -1052,7 +1055,13 @@ class Resim:
         if not self.is_flinching():
             swing_roll = self.roll_swing(False)
             if swing_roll < 0.05:
-                self.print("!!! very low swing roll on ball")
+                ball_threshold = get_swing_ball_threshold(
+                    self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
+                )
+
+                # lol. lmao.
+                if not math.isnan(ball_threshold):
+                    self.print("!!! very low swing roll on ball (threshold should be {})".format(ball_threshold))
             self.log_roll(Csv.SWING_ON_BALL, "Ball", swing_roll, False)
 
         if self.ty == EventType.WALK:
@@ -1202,6 +1211,36 @@ class Resim:
 
         return candidates[math.floor(fielder_roll * len(candidates))]
 
+    def roll_out(self, was_out):
+        out_fielder_roll, out_fielder = self.roll_fielder(check_name=False)
+        out_threshold = get_out_threshold(self.batter, self.batting_team, self.pitcher, self.pitching_team, out_fielder, self.stadium, self.get_stat_meta())
+
+        if was_out:
+            out_roll = self.roll("out", lower=out_threshold)
+
+            self.log_roll(
+                Csv.OUT,
+                "Out",
+                out_roll,
+                False,
+                fielder_roll=out_fielder_roll,
+                fielder=out_fielder,
+            )
+        else:
+            out_roll = self.roll("out", upper=out_threshold)
+
+            self.log_roll(
+                Csv.OUT,
+                "In",
+                out_roll,
+                True,
+                fielder_roll=out_fielder_roll,
+                fielder=out_fielder,
+            )
+
+
+        return out_roll
+
     def handle_out(self):
         self.throw_pitch()
         if not self.is_flinching():
@@ -1218,50 +1257,34 @@ class Resim:
 
         is_fc_dp = "into a double play!" in self.desc or "reaches on fielder's choice" in self.desc
 
+        fly_threshold = get_fly_or_ground_threshold(self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta())
+
         named_fielder = None
         if self.ty == EventType.FLY_OUT:  # flyout
-            out_fielder_roll = self.roll("out fielder")
-            out_roll = self.roll("out")
+            self.roll_out(True)
             fly_fielder_roll, fly_fielder = self.roll_fielder(check_name=not is_fc_dp)
-            fly_roll = self.roll("fly")
+            fly_roll = self.roll("fly", upper=fly_threshold)
             self.log_roll(
                 Csv.FLY,
                 "Flyout",
                 fly_roll,
                 True,
-                fielder_roll=out_fielder_roll,
-                fielder=self.get_fielder_for_roll(out_fielder_roll),
-            )
-            self.log_roll(
-                Csv.OUT,
-                "Flyout",
-                out_roll,
-                False,
-                fielder_roll=out_fielder_roll,
-                fielder=self.get_fielder_for_roll(out_fielder_roll),
+                fielder_roll=fly_fielder_roll,
+                fielder=fly_fielder,
             )
             named_fielder = fly_fielder
         elif self.ty == EventType.GROUND_OUT:  # ground out
-            out_fielder_roll = self.roll("out fielder")
-            out_roll = self.roll("out")
+            self.roll_out(True)
             fly_fielder_roll, fly_fielder = self.roll_fielder(check_name=False)
-            fly_roll = self.roll("fly")
+            fly_roll = self.roll("fly", lower=fly_threshold)
             ground_fielder_roll, ground_fielder = self.roll_fielder(check_name=not is_fc_dp)
             self.log_roll(
                 Csv.FLY,
                 "GroundOut",
                 fly_roll,
                 False,
-                fielder_roll=out_fielder_roll,
-                fielder=self.get_fielder_for_roll(out_fielder_roll),
-            )
-            self.log_roll(
-                Csv.OUT,
-                "GroundOut",
-                out_roll,
-                False,
-                fielder_roll=out_fielder_roll,
-                fielder=self.get_fielder_for_roll(out_fielder_roll),
+                fielder_roll=ground_fielder_roll,
+                fielder=ground_fielder,
             )
             named_fielder = ground_fielder
 
@@ -1529,17 +1552,7 @@ class Resim:
             self.log_roll(Csv.CONTACT, "HomeRun", contact_roll, True)
 
             self.roll_foul(False)
-            fielder_roll = self.roll("out fielder")
-            out_roll = self.roll("out")
-
-            self.log_roll(
-                Csv.OUT,
-                "HR",
-                out_roll,
-                True,
-                fielder_roll=fielder_roll,
-                fielder=self.get_fielder_for_roll(fielder_roll),
-            )
+            self.roll_out(False)
 
             hr_roll = self.roll_hr(True)
             self.log_roll(Csv.HR, "HomeRun", hr_roll, True)
@@ -1592,18 +1605,7 @@ class Resim:
         self.log_roll(Csv.CONTACT, "BaseHit", contact_roll, True)
 
         self.roll_foul(False)
-
-        fielder_roll = self.roll("out fielder")
-        out_roll = self.roll("out")
-
-        self.log_roll(
-            Csv.OUT,
-            "BaseHit",
-            out_roll,
-            True,
-            fielder_roll=fielder_roll,
-            fielder=self.get_fielder_for_roll(fielder_roll),
-        )
+        self.roll_out(False)
 
         hr_roll = self.roll_hr(False)
         self.log_roll(Csv.HR, "BaseHit", hr_roll, False)
@@ -1627,7 +1629,7 @@ class Resim:
                 f"Hit{hit_bases}",
                 double_roll,
                 hit_bases == 2,
-                fielder_roll=fielder_roll,
+                fielder_roll=defender_roll,
                 fielder=self.get_fielder_for_roll(defender_roll),
             )
 
@@ -1636,7 +1638,7 @@ class Resim:
             f"Hit{hit_bases}",
             triple_roll,
             hit_bases == 3,
-            fielder_roll=fielder_roll,
+            fielder_roll=defender_roll,
             fielder=self.get_fielder_for_roll(defender_roll),
         )
 
@@ -3407,6 +3409,21 @@ class Resim:
             a_location[a_idx] = b_player
             team.last_update_time = self.event["created"]
 
+        if event["type"] == EventType.PLAYER_BORN_FROM_INCINERATION:
+            # Roscoe Sundae replaced the incinerated Case Sports. etc
+            team = self.data.get_team(meta["teamId"])
+
+            location = (
+                team.rotation if meta["location"] == 1 else (team.lineup if meta["location"] == 0 else team.shadows)
+            )
+
+            out_player = meta["outPlayerId"]
+            in_player = meta["inPlayerId"]
+
+            replace_idx = location.index(out_player)
+            location[replace_idx] = in_player
+            team.last_update_time = self.event["created"]
+
         if event["type"] in [
             EventType.ITEM_BREAKS,
             EventType.ITEM_DAMAGE,
@@ -3447,6 +3464,9 @@ class Resim:
     def roll(self, label, lower: float = 0, upper: float = 1) -> float:
         value = self.rng.next()
         self.print(f"{label}: {value}")
+
+        if value < lower or value > upper:
+            self.print("!!! warn: value {}={} out of bounds (should be within {}-{})".format(label, value, lower, upper))
 
         # hacky way to figure out what index this roll is in the overall list
         idx = 0

@@ -100,8 +100,12 @@ def _get_multiplier(position, attr):
 
 def _get_stat_relevant_data(row):
     (weather, season, day, runner_count, top_of_inning, is_maximum_blaseball, batter_at_bats) = row
+    if isinstance(weather, int):
+        weather = Weather(weather)
+    else:
+        weather = Weather[weather.replace("Weather.", "")]
     return formulas.StatRelevantData(
-        weather=Weather[weather.replace("Weather.", "")],
+        weather=weather,
         season=season,
         day=day,
         runner_count=runner_count,
@@ -228,8 +232,13 @@ def player_attribute(
             broken_item = df[object_key + "_object"].apply(lambda obj: any(item.health == 0 for item in obj.items))
             attr = attr_raw / multiplier + attr_item * (~broken_item * multiplier + broken_item)
         else:
-            cols = [object_key + "_object", _team_for_object(object_key) + "_object", "stat_relevant_data"]
-            multiplier = df[cols].apply(_get_multiplier(object_key, attr_key), axis=1)
+            # todo: hardcoding this sucks but i can't think of a cleaner way to express this. it's real bad
+            if attr_key != "suppression":
+                cols = [object_key + "_object", _team_for_object(object_key) + "_object", "stat_relevant_data"]
+                multiplier = df[cols].apply(_get_multiplier(object_key, attr_key), axis=1)
+            else:
+                cols = [object_key + "_object", "pitching_team" + "_object", "stat_relevant_data"]
+                multiplier = df[cols].apply(_get_multiplier("pitcher", attr_key), axis=1)
             # attr = attr_raw * multiplier + attr_item * multiplier
             broken_item = df[object_key + "_object"].apply(lambda obj: any(item.health == 0 for item in obj.items))
             attr = attr_raw * multiplier + attr_item * (~broken_item * multiplier + broken_item)
