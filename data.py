@@ -808,6 +808,14 @@ class PlayerData(TeamOrPlayerMods):
 
     def stats_with_items(self) -> Dict[str, float]:
         return self._get_stats_with_items(self.data, self.items)
+    
+    def multiplied(self, stat: str, multiplier: float) -> float:
+        # we can do this nicer i think but whatevs
+        raw_stat = self.data[stat]
+        full_stat = getattr(self, stat)
+        item_stat = full_stat - raw_stat
+        return raw_stat * multiplier + item_stat
+
 
     def is_cache_equivalent(self, other: "PlayerData") -> bool:
         return (
@@ -862,7 +870,7 @@ class PlayerData(TeamOrPlayerMods):
         for item in items:
             # if item.health != 0:
             for stat, value in item.stats.items():
-                if stat in ["patheticism", "tragicness"]:
+                if stat in ["patheticism", "tragicness", "buoyancy"]:
                     # path increases from items seem to actually *decrease* path in the formulas (and the other way
                     # around for path decreases)... even though the star calculations on the site ding you for
                     # having an item that increases path! at least right now, through season 19.

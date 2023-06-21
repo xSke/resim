@@ -220,8 +220,8 @@ def player_attribute(
     attr_without_broken_items = df[object_key + "_object"].apply(_get_player_attribute(attr_key, items, False))
     attr_raw = df[object_key + "_object"].apply(_get_player_attribute(attr_key, False, False))
 
-    attr_unbroken_items = attr - attr_without_broken_items
-    attr_broken_items = (attr - attr_raw) - attr_unbroken_items
+    attr_broken_items = attr - attr_without_broken_items
+    attr_unbroken_items = (attr - attr_raw) - attr_broken_items
 
     if mods:
         if mods == "negative":
@@ -230,7 +230,7 @@ def player_attribute(
 
             attr = attr_raw / multiplier
             if items:
-                attr += attr_unbroken_items/multiplier
+                attr += attr_unbroken_items#*multiplier
             if broken_items:
                 attr += attr_broken_items
         else:
@@ -244,9 +244,9 @@ def player_attribute(
                 
             attr = attr_raw * multiplier
             if items:
-                attr += attr_unbroken_items*multiplier
+                attr += attr_unbroken_items#*multiplier
             if broken_items:
-                attr += attr_broken_items
+                attr += attr_broken_items#*multiplier
 
     if invert:
         attr = (1 - attr)

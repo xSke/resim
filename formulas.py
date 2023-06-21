@@ -35,8 +35,7 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
                 # still not sure what's up with those. swing on strikes s16+ requires them to be applied
                 "patheticism" if meta.season < 15 else None,
                 "thwackability" if meta.season < 15 else None,
-
-                "buoyancy",
+                "buoyancy" if meta.season < 15 else None,
 
                 # todo: when did they fix this? i think it's s19, right
                 "ruthlessness" if meta.season < 15 else None,
@@ -136,10 +135,12 @@ def get_strike_threshold(
     is_flinching: bool,
 ):
     vibes = pitcher.vibes(meta.day)
-    ruth = pitcher.ruthlessness * get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)
-    cold = pitcher.coldness * get_multiplier(pitcher, pitching_team, "pitcher", "coldness", meta)
-    musc = batter.musclitude * get_multiplier(batter, batting_team, "batter", "musclitude", meta)
-    mox = batter.moxie * get_multiplier(batter, batting_team, "batter", "moxie", meta)
+    ruth = pitcher.multiplied("ruthlessness", get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta))
+
+    # todo: do this to the rest?
+    cold = pitcher.multiplied("coldness", get_multiplier(pitcher, pitching_team, "pitcher", "coldness", meta))
+    musc = batter.multiplied("musclitude", get_multiplier(batter, batting_team, "batter", "musclitude", meta))
+    mox = batter.multiplied("moxie", get_multiplier(batter, batting_team, "batter", "moxie", meta))
     fwd = stadium.forwardness
 
     batter_hype = stadium.hype if not meta.top_of_inning else 0
@@ -193,25 +194,14 @@ def get_swing_strike_threshold(
     hypediff_b = (pitcher_hype - batter_hype) * (1 + 0.2 * batter_vibes)
     hypediff_p = (pitcher_hype - batter_hype) * (1 + 0.2 * pitcher_vibes)
 
-    div = batter.divinity * get_multiplier(batter, batting_team, "batter", "divinity", meta) * (1 + 0.2 * batter_vibes)
-    musc = (
-        batter.musclitude
-        * get_multiplier(batter, batting_team, "batter", "musclitude", meta)
-        * (1 + 0.2 * batter_vibes)
-    )
-    thwack = (
-        batter.thwackability
-        * get_multiplier(batter, batting_team, "batter", "thwackability", meta)
-        * (1 + 0.2 * batter_vibes)
-    )
-    invpath = (1 - batter.patheticism / get_multiplier(batter, batting_team, "batter", "patheticism", meta)) * (
-        1 + 0.2 * batter_vibes
-    )
-    ruth = (
-        pitcher.ruthlessness
-        * get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)
-        * (1 + 0.2 * pitcher_vibes)
-    )
+    div = batter.multiplied("divinity", get_multiplier(batter, batting_team, "batter", "divinity", meta)) * (1 + 0.2 * batter_vibes)
+    musc = batter.multiplied("musclitude", get_multiplier(batter, batting_team, "batter", "musclitude", meta)) * (1 + 0.2 * batter_vibes)
+    thwack = batter.multiplied("thwackability", get_multiplier(batter, batting_team, "batter", "thwackability", meta)) * (1 + 0.2 * batter_vibes)
+    path = batter.multiplied("patheticism", 1 / get_multiplier(batter, batting_team, "batter", "patheticism", meta))
+    invpath = (1 - path) * (1 + 0.2 * batter_vibes)
+
+    ruth = pitcher.multiplied("ruthlessness", get_multiplier(pitcher, pitching_team, "pitcher", "ruthlessness", meta)) * (1 + 0.2 * pitcher_vibes)
+
     visc = stadium.viscosity
 
     combined_batting = (div + musc + invpath + thwack) / 4
@@ -399,24 +389,26 @@ def get_hr_threshold(
     return threshold
 
 def get_fly_or_ground_threshold(batter: PlayerData, batting_team: TeamData, pitcher: PlayerData, pitching_team: TeamData, stadium: StadiumData, meta: StatRelevantData):
-    # no vibes
-    buoy = batter.buoyancy / get_multiplier(batter, batting_team, "batter", "buoyancy", meta)
+    # no vibes, flipped for some reason?
+    buoy = batter.multiplied("buoyancy", 1/get_multiplier(batter, batting_team, "batter", "buoyancy", meta))
 
     # note: passing the *batter* as the player and the *pitching team* as the team
     # this is as weird as it sounds. we can only assume tgb accidentally passed the wrong player in or something
     # since we use the batter suppression even if it makes more sense to use *pitcher* suppression here
-    supp = batter.suppression * get_multiplier(batter, pitching_team, "pitcher", "suppression", meta)
+    supp = batter.multiplied("suppression", get_multiplier(batter, pitching_team, "pitcher", "suppression", meta))
     omi = stadium.ominousness - 0.5
-    return 0.18 + 0.3*buoy - 0.16*supp - 0.1*omi
+    
+    threshold = 0.18 + 0.3*buoy - 0.16*supp - 0.1*omi
+    return max(threshold, 0.01) # todo: 0.01 might be 0.033?
 
 def get_out_threshold(batter: PlayerData, batting_team: TeamData, pitcher: PlayerData, pitching_team: TeamData, fielder: PlayerData, stadium: StadiumData, meta: StatRelevantData):
     batter_vibes = batter.vibes(meta.day)
     pitcher_vibes = pitcher.vibes(meta.day)
     fielder_vibes = fielder.vibes(meta.day)
 
-    batter_thwack = batter.thwackability * (1+0.2*batter_vibes) * get_multiplier(batter, batting_team, "batter", "thwackability", meta)
-    pitcher_unthwack = pitcher.unthwackability * (1+0.2*pitcher_vibes) * get_multiplier(pitcher, pitching_team, "pitcher", "unthwackability", meta)
-    fielder_omni = fielder.omniscience * (1+0.2*fielder_vibes) * get_multiplier(fielder, pitching_team, "fielder", "omniscience", meta)
+    batter_thwack = batter.multiplied("thwackability", get_multiplier(batter, batting_team, "batter", "thwackability", meta)) * (1+0.2*batter_vibes)
+    pitcher_unthwack = pitcher.multiplied("unthwackability", get_multiplier(pitcher, pitching_team, "pitcher", "unthwackability", meta)) * (1+0.2*pitcher_vibes)
+    fielder_omni = fielder.multiplied("omniscience", get_multiplier(fielder, pitching_team, "fielder", "omniscience", meta)) * (1+0.2*fielder_vibes)
 
     grand = stadium.grandiosity - 0.5
     omi = stadium.ominousness - 0.5

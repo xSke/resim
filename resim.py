@@ -791,7 +791,7 @@ class Resim:
             chests = {
                 "2021-04-20T21:43:13.835Z": 375,
                 "2021-04-22T06:15:48.986Z": 362,
-                "2021-05-11T16:05:03.662Z": 398,
+                "2021-05-11T16:05:03.662Z": 397,
                 "2021-05-18T13:07:33.068Z": 350,
                 "2021-05-21T01:06:02.371Z": 361,
             }
@@ -990,7 +990,17 @@ class Resim:
         elif not is_hr and roll < threshold:
             self.print("!!! warn: home run roll too low ({} < {})".format(roll, threshold))
         return roll
-
+    
+    def is_swing_check_relevant(self):
+        if self.is_flinching():
+            return False
+        if self.batting_team.has_mod(Mod.O_NO) and self.strikes == self.max_strikes - 1:
+            return False
+        if self.batting_team.has_mod(Mod.ZERO) and self.is_strike and self.balls == 0 and self.strikes == 0:
+            return False
+        if self.batting_team.has_mod(Mod.H20) and self.is_strike and self.outs == self.max_outs - 1:
+            return False
+        return True
     def roll_swing(self, did_swing: bool):
         roll = self.roll("swing")
 
@@ -1003,21 +1013,7 @@ class Resim:
                 self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
             )
 
-        swing_check_used = True
-
-        # todo: figure out what cases we can warn for contradictory rolls and then do that
-        if self.batting_team.has_mod(Mod.O_NO) and self.strikes == self.max_strikes - 1:
-            # 0 No blood cannot swing
-            swing_check_used = False
-        if self.batting_team.has_mod(Mod.ZERO) and self.is_strike and self.balls == 0 and self.strikes == 0:
-            # 0 blood must swing
-            swing_check_used = False
-        if self.batting_team.has_mod(Mod.H20) and self.is_strike and self.outs == self.max_outs - 1:
-            # todo: is this "specifically 2 outs" or "max - 1 outs"? only relevant for mechs MM which basically never proced lol
-            # H20 blood must swing
-            swing_check_used = False
-
-        if swing_check_used:
+        if self.is_swing_check_relevant():
             if did_swing and roll > threshold:
                 self.print(
                     "!!! warn: swing on {} roll too high ({} > {})".format(
@@ -1154,12 +1150,14 @@ class Resim:
             self.throw_pitch()
             if not self.is_flinching():
                 swing_roll = self.roll_swing(True)
-                self.log_roll(
-                    Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
-                    "StrikeSwinging",
-                    swing_roll,
-                    True,
-                )
+
+                if self.is_swing_check_relevant():
+                    self.log_roll(
+                        Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
+                        "StrikeSwinging",
+                        swing_roll,
+                        True,
+                    )
 
             contact_roll = self.roll_contact(False)
             self.log_roll(Csv.CONTACT, "StrikeSwinging", contact_roll, False)
@@ -1172,7 +1170,9 @@ class Resim:
 
             if not self.is_flinching():
                 swing_roll = self.roll_swing(False)
-                self.log_roll(Csv.SWING_ON_STRIKE, "StrikeLooking", swing_roll, False)
+
+                if self.is_swing_check_relevant():
+                    self.log_roll(Csv.SWING_ON_STRIKE, "StrikeLooking", swing_roll, False)
 
         if "strikes out thinking." in self.desc:
             # pitcher: convert walk to strikeout (success)
@@ -1263,12 +1263,13 @@ class Resim:
         self.throw_pitch()
         if not self.is_flinching():
             swing_roll = self.roll_swing(True)
-            self.log_roll(
-                Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
-                "Out",
-                swing_roll,
-                True,
-            )
+            if self.is_swing_check_relevant():
+                self.log_roll(
+                    Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
+                    "Out",
+                    swing_roll,
+                    True,
+                )
         contact_roll = self.roll_contact(True)
         self.log_roll(Csv.CONTACT, "Out", contact_roll, True)
         self.roll_foul(False)
@@ -1559,12 +1560,13 @@ class Resim:
             self.throw_pitch()
             if not self.is_flinching():
                 swing_roll = self.roll_swing(True)
-                self.log_roll(
-                    Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
-                    "HR",
-                    swing_roll,
-                    True,
-                )
+                if self.is_swing_check_relevant():
+                    self.log_roll(
+                        Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
+                        "HR",
+                        swing_roll,
+                        True,
+                    )
 
             contact_roll = self.roll_contact(True)
             self.log_roll(Csv.CONTACT, "HomeRun", contact_roll, True)
@@ -1612,12 +1614,13 @@ class Resim:
         self.throw_pitch()
         if not self.is_flinching():
             swing_roll = self.roll_swing(True)
-            self.log_roll(
-                Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
-                "BaseHit",
-                swing_roll,
-                True,
-            )
+            if self.is_swing_check_relevant():
+                self.log_roll(
+                    Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
+                    "BaseHit",
+                    swing_roll,
+                    True,
+                )
 
         contact_roll = self.roll_contact(True)
         self.log_roll(Csv.CONTACT, "BaseHit", contact_roll, True)
@@ -1731,12 +1734,13 @@ class Resim:
 
         if not self.is_flinching():
             swing_roll = self.roll_swing(True)
-            self.log_roll(
-                Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
-                "Foul",
-                swing_roll,
-                True,
-            )
+            if self.is_swing_check_relevant():
+                self.log_roll(
+                    Csv.SWING_ON_STRIKE if self.is_strike else Csv.SWING_ON_BALL,
+                    "Foul",
+                    swing_roll,
+                    True,
+                )
 
         contact_roll = self.roll_contact(True)
         self.log_roll(Csv.CONTACT, "Foul", contact_roll, True)
