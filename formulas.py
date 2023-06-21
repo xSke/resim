@@ -22,7 +22,7 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             # fix for late to party silently activating...
             if meta.day == 72:
                 # print(meta.day, team.mods, player.mods)
-                if "OVERPERFORMING" not in team.mods:
+                if not team.has_mod(Mod.OVERPERFORMING):
                     # print("adding multiplier")
                     multiplier += 0.2
         if mod == Mod.OVERPERFORMING:
@@ -189,10 +189,9 @@ def get_swing_strike_threshold(
     batter_vibes = batter.vibes(meta.day)
     pitcher_vibes = pitcher.vibes(meta.day)
 
-    batter_hype = stadium.hype if not meta.top_of_inning else 0
-    pitcher_hype = stadium.hype if meta.top_of_inning else 0
-    hypediff_b = (pitcher_hype - batter_hype) * (1 + 0.2 * batter_vibes)
-    hypediff_p = (pitcher_hype - batter_hype) * (1 + 0.2 * pitcher_vibes)
+    hype = stadium.hype * (1 if meta.top_of_inning else -1)
+    batter_hype = -hype * (1 + 0.2 * batter_vibes)
+    pitcher_hype = hype * (1 + 0.2 * pitcher_vibes)
 
     div = batter.multiplied("divinity", get_multiplier(batter, batting_team, "batter", "divinity", meta)) * (1 + 0.2 * batter_vibes)
     musc = batter.multiplied("musclitude", get_multiplier(batter, batting_team, "batter", "musclitude", meta)) * (1 + 0.2 * batter_vibes)
@@ -209,7 +208,7 @@ def get_swing_strike_threshold(
         threshold = 0.7 + 0.35 * combined_batting - 0.4 * ruth + 0.2 * (visc - 0.5)
     else:
         threshold = (
-            0.6 + 0.35 * (combined_batting + 0.2 * hypediff_b) - 0.2 * (ruth + 0.2 * hypediff_p) + 0.2 * (visc - 0.5)
+            0.6 + 0.35 * (combined_batting + 0.2 * batter_hype) - 0.2 * (ruth + 0.2 * pitcher_hype) + 0.2 * (visc - 0.5)
         )
     return threshold
 
@@ -233,7 +232,13 @@ def get_swing_ball_threshold(
     )
     visc = stadium.viscosity
 
-    combined = (12 * ruth - 5 * moxie + 5 * path + 4 * visc) / 20
+    if meta.season < 18:
+        combined = (12 * ruth - 5 * moxie + 5 * path + 4 * visc) / 20
+    else:
+        # this has some outliers even without hype, not sure what's up with it
+        # with hype it's hopeless :)
+        combined = 0.375*(ruth**0.25) + 0.2*visc - 0.25*moxie + 0.25*path
+
     if combined < 0:
         return float("nan")
 

@@ -755,6 +755,7 @@ class PlayerData(TeamOrPlayerMods):
     eDensity: float
     items: List[ItemData]
     season_mod_sources: Dict[str, List[str]]
+    permanent_mod_sources: Dict[str, List[str]]
     # Old incinerations don't have a peanut allergy field
     peanut_allergy: Optional[bool]
 
@@ -775,6 +776,7 @@ class PlayerData(TeamOrPlayerMods):
             soul=data.get("soul") or 0,
             eDensity=data.get("eDensity") or 0,
             season_mod_sources=data_state.get("seasModSources", {}),
+            permanent_mod_sources=data_state.get("permModSources", {}),
             peanut_allergy=data.get("peanutAllergy"),
             **cls.mods_init_args(data),
             **cls.stats_init_args(data, items),

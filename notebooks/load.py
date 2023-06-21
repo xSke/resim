@@ -84,7 +84,9 @@ def _get_vibes(row):
     # Original formula:
     # sin_phase = math.sin(math.pi * ((2 / frequency) * day + 0.5))
 
-    return 0.5 * ((sin_phase - 1) * player.pressurization + (sin_phase + 1) * player.cinnamon)
+    press = _get_player_attribute("pressurization", False, False)(player)
+    cinn =  _get_player_attribute("cinnamon", False, False)(player)
+    return 0.5 * ((sin_phase - 1) * press + (sin_phase + 1) * cinn)
 
 
 def _get_mods(item: Union[PlayerData, TeamData]):
@@ -205,6 +207,7 @@ def player_attribute(
     items: Union[bool, str] = True,
     invert: bool = False,
     broken_items: bool = False,
+    override_mod_team: str = None
 ):
     if not (items is True or items is False or items == "negative"):
         raise ValueError(
@@ -237,8 +240,8 @@ def player_attribute(
         else:
             # todo: hardcoding this sucks but i can't think of a cleaner way to express this. it's real bad
             if attr_key != "suppression":
-                cols = [object_key + "_object", _team_for_object(object_key) + "_object", "stat_relevant_data"]
-                multiplier = df[cols].apply(_get_multiplier(object_key, attr_key), axis=1)
+                cols = [object_key + "_object", override_mod_team or _team_for_object(object_key) + "_object", "stat_relevant_data"]
+                multiplier = df[cols].apply(_get_multiplier(override_mod_team or object_key, attr_key), axis=1)
             else:
                 cols = [object_key + "_object", "pitching_team" + "_object", "stat_relevant_data"]
                 multiplier = df[cols].apply(_get_multiplier("pitcher", attr_key), axis=1)

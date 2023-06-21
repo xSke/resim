@@ -151,6 +151,13 @@ class Resim:
                 caleb_novak.remove_mod(Mod.ELSEWHERE, ModType.PERMANENT)
                 caleb_novak.last_update_time = self.event["created"]
 
+        # missed a "happy to be home" event 45 secs before the fragment starts
+        if self.game_id == "ee0066a5-8408-4270-a5d8-8e66abf55d03":
+            vela = self.data.get_player("4ca52626-58cd-449d-88bb-f6d631588640")
+            if not vela.has_mod(Mod.OVERPERFORMING):
+                vela.add_mod(Mod.OVERPERFORMING, ModType.PERMANENT)
+                vela.remove_mod(Mod.UNDERPERFORMING, ModType.PERMANENT)
+
         # sometimes we start a fragment in the middle of a game and we wanna make sure we have the proper blood type
         a_blood_type_overrides = {
             "0aa57b7d-d78f-4090-8f0e-9273c285e698": Mod.PSYCHIC,
@@ -1073,6 +1080,9 @@ class Resim:
             if "strikes out looking" in self.desc:
                 # i hate mind trick so much
                 did_swing = True
+            if "strikes out swinging" in self.desc:
+                # i hate mind trick so much
+                did_swing = True
                 
             swing_roll = self.roll_swing(did_swing)
             if swing_roll < 0.05:
@@ -1083,7 +1093,7 @@ class Resim:
                 # lol. lmao.
                 if not math.isnan(ball_threshold):
                     self.print("!!! very low swing roll on ball (threshold should be {})".format(ball_threshold))
-            if self.is_swing_check_relevant():
+            if self.is_swing_check_relevant() and "uses a Mind Trick" not in self.desc:
                 self.log_roll(Csv.SWING_ON_BALL, "Ball", swing_roll, False)
 
         if self.ty == EventType.WALK:
@@ -3350,6 +3360,12 @@ class Resim:
                 player.add_mod(mod["mod"], mod["type"])
             for mod in meta.get("removes", []):
                 player.remove_mod(mod["mod"], mod["type"])
+
+                # see Wyatt Mason X, s19d28, echoing Magi Ruiz, getting rid of Homebody, and then losing OP
+                for secondary_mod, source in player.permanent_mod_sources.items():
+                    if source == [mod["mod"]]: # todo: what if multiple?
+                        player.remove_mod(secondary_mod, ModType.PERMANENT)
+
             player.last_update_time = self.event["created"]
 
         # cases where the tagged player needs to be refetched (party, consumer, incin replacement)
