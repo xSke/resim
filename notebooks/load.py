@@ -202,6 +202,7 @@ def player_attribute(
     vibes: bool = True,
     mods: Union[bool, str] = True,
     items: Union[bool, str] = True,
+    invert: bool = False,
     broken_items: bool = False,
 ):
     if not (items is True or items is False or items == "negative"):
@@ -215,22 +216,23 @@ def player_attribute(
             'Valid values: True, False, "negative"'
         )
 
-    attr = df[object_key + "_object"].apply(_get_player_attribute(attr_key, items, broken_items))
+    attr = df[object_key + "_object"].apply(_get_player_attribute(attr_key, items, True))
+    attr_without_broken_items = df[object_key + "_object"].apply(_get_player_attribute(attr_key, items, False))
     attr_raw = df[object_key + "_object"].apply(_get_player_attribute(attr_key, False, False))
-    attr_item = attr - attr_raw
-    # print(attr_item)
-    if vibes:
-        vibe = df[object_key + "_vibes"]
-        attr_raw = attr_raw * (1 + 0.2 * vibe)
-        attr_item = attr_item * (1 + 0.2 * vibe)
+
+    attr_unbroken_items = attr - attr_without_broken_items
+    attr_broken_items = (attr - attr_raw) - attr_unbroken_items
 
     if mods:
         if mods == "negative":
             cols = [object_key + "_object", _team_for_object(object_key) + "_object", "stat_relevant_data"]
             multiplier = df[cols].apply(_get_multiplier(object_key, attr_key), axis=1)
-            # attr = attr_raw * multiplier + attr_item * multiplier
-            broken_item = df[object_key + "_object"].apply(lambda obj: any(item.health == 0 for item in obj.items))
-            attr = attr_raw / multiplier + attr_item * (~broken_item * multiplier + broken_item)
+
+            attr = attr_raw / multiplier
+            if items:
+                attr += attr_unbroken_items/multiplier
+            if broken_items:
+                attr += attr_broken_items
         else:
             # todo: hardcoding this sucks but i can't think of a cleaner way to express this. it's real bad
             if attr_key != "suppression":
@@ -239,9 +241,19 @@ def player_attribute(
             else:
                 cols = [object_key + "_object", "pitching_team" + "_object", "stat_relevant_data"]
                 multiplier = df[cols].apply(_get_multiplier("pitcher", attr_key), axis=1)
-            # attr = attr_raw * multiplier + attr_item * multiplier
-            broken_item = df[object_key + "_object"].apply(lambda obj: any(item.health == 0 for item in obj.items))
-            attr = attr_raw * multiplier + attr_item * (~broken_item * multiplier + broken_item)
+                
+            attr = attr_raw * multiplier
+            if items:
+                attr += attr_unbroken_items*multiplier
+            if broken_items:
+                attr += attr_broken_items
+
+    if invert:
+        attr = (1 - attr)
+
+    if vibes:
+        vibe = df[object_key + "_vibes"]
+        attr = attr * (1 + 0.2 * vibe)
 
     return attr
 

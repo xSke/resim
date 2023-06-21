@@ -15,12 +15,13 @@ from data import (
     TeamData,
     Weather,
     get_feed_between,
+    stat_indices
 )
 from output import SaveCsv
 from rng import Rng
 from dataclasses import dataclass
 from enum import Enum, unique
-from typing import List
+from typing import List, Optional
 from formulas import (
     get_contact_strike_threshold,
     get_contact_ball_threshold,
@@ -32,6 +33,7 @@ from formulas import (
     get_swing_strike_threshold,
     get_fly_or_ground_threshold,
     get_out_threshold,
+    get_triple_threshold,
 )
 
 
@@ -692,6 +694,8 @@ class Resim:
                 "7cc6dbc2-a07f-48f9-8761-fddfbc0fcf66": 16,  # prize match
                 "95cf5ed9-4cec-44f2-8316-926c044b91e7": 10,  # prize match
                 "bcccb4bc-d725-489e-b4e8-b745040a7226": 11,  # prize match
+                "e0880bb0-60b2-4778-a209-977bd4b23ab6": 1,
+                "a12bbed2-68b4-4db0-b408-6727b28743c3": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -999,11 +1003,21 @@ class Resim:
                 self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
             )
 
-        can_swing = True
-        if self.batting_team.has_mod(Mod.O_NO) and self.strikes == self.max_strikes - 1:
-            can_swing = False
+        swing_check_used = True
 
-        if can_swing:
+        # todo: figure out what cases we can warn for contradictory rolls and then do that
+        if self.batting_team.has_mod(Mod.O_NO) and self.strikes == self.max_strikes - 1:
+            # 0 No blood cannot swing
+            swing_check_used = False
+        if self.batting_team.has_mod(Mod.ZERO) and self.is_strike and self.balls == 0 and self.strikes == 0:
+            # 0 blood must swing
+            swing_check_used = False
+        if self.batting_team.has_mod(Mod.H20) and self.is_strike and self.outs == self.max_outs - 1:
+            # todo: is this "specifically 2 outs" or "max - 1 outs"? only relevant for mechs MM which basically never proced lol
+            # H20 blood must swing
+            swing_check_used = False
+
+        if swing_check_used:
             if did_swing and roll > threshold:
                 self.print(
                     "!!! warn: swing on {} roll too high ({} > {})".format(
@@ -1048,7 +1062,12 @@ class Resim:
         return roll
 
     def handle_ball(self):
-        value = self.throw_pitch("ball")
+        known_outcome = "ball"
+        if "strikes out" in self.desc and "uses a Mind Trick" in self.desc:
+            # this was really rolled as a strike????? but not always????
+            known_outcome = None
+
+        value = self.throw_pitch(known_outcome)
         if "uses a Mind Trick" not in self.desc:
             self.log_roll(Csv.STRIKES, "Ball", value, False)
 
@@ -1215,9 +1234,10 @@ class Resim:
         out_fielder_roll, out_fielder = self.roll_fielder(check_name=False)
         out_threshold = get_out_threshold(self.batter, self.batting_team, self.pitcher, self.pitching_team, out_fielder, self.stadium, self.get_stat_meta())
 
-        if was_out:
-            out_roll = self.roll("out", lower=out_threshold)
+        # high roll = out, low roll = not out
+        out_roll = self.roll("out", threshold=out_threshold, passed=not was_out)
 
+        if was_out:
             self.log_roll(
                 Csv.OUT,
                 "Out",
@@ -1227,8 +1247,6 @@ class Resim:
                 fielder=out_fielder,
             )
         else:
-            out_roll = self.roll("out", upper=out_threshold)
-
             self.log_roll(
                 Csv.OUT,
                 "In",
@@ -1263,7 +1281,7 @@ class Resim:
         if self.ty == EventType.FLY_OUT:  # flyout
             self.roll_out(True)
             fly_fielder_roll, fly_fielder = self.roll_fielder(check_name=not is_fc_dp)
-            fly_roll = self.roll("fly", upper=fly_threshold)
+            fly_roll = self.roll("fly", threshold=fly_threshold, passed=True)
             self.log_roll(
                 Csv.FLY,
                 "Flyout",
@@ -1276,7 +1294,7 @@ class Resim:
         elif self.ty == EventType.GROUND_OUT:  # ground out
             self.roll_out(True)
             fly_fielder_roll, fly_fielder = self.roll_fielder(check_name=False)
-            fly_roll = self.roll("fly", lower=fly_threshold)
+            fly_roll = self.roll("fly", threshold=fly_threshold, passed=False)
             ground_fielder_roll, ground_fielder = self.roll_fielder(check_name=not is_fc_dp)
             self.log_roll(
                 Csv.FLY,
@@ -1610,10 +1628,7 @@ class Resim:
         hr_roll = self.roll_hr(False)
         self.log_roll(Csv.HR, "BaseHit", hr_roll, False)
 
-        defender_roll = self.roll("hit fielder")
-
-        double_roll = self.roll("double")
-        triple_roll = self.roll("triple")
+        fielder_roll, fielder = self.roll_fielder(check_name=False)
 
         hit_bases = 0
         if "hits a Single!" in self.desc:
@@ -1623,14 +1638,19 @@ class Resim:
         elif "hits a Triple!" in self.desc:
             hit_bases = 3
 
+        triple_threshold = get_triple_threshold(self.batter, self.batting_team, self.pitcher, self.pitching_team, fielder, self.stadium, self.get_stat_meta())
+
+        double_roll = self.roll("double")
+        triple_roll = self.roll("triple", threshold=triple_threshold, passed=hit_bases == 3)
+
         if hit_bases < 3:
             self.log_roll(
                 Csv.DOUBLES,
                 f"Hit{hit_bases}",
                 double_roll,
                 hit_bases == 2,
-                fielder_roll=defender_roll,
-                fielder=self.get_fielder_for_roll(defender_roll),
+                fielder_roll=fielder_roll,
+                fielder=fielder,
             )
 
         self.log_roll(
@@ -1638,8 +1658,8 @@ class Resim:
             f"Hit{hit_bases}",
             triple_roll,
             hit_bases == 3,
-            fielder_roll=defender_roll,
-            fielder=self.get_fielder_for_roll(defender_roll),
+            fielder_roll=fielder_roll,
+            fielder=fielder,
         )
 
         self.damage(self.pitcher, "pitcher")
@@ -1655,7 +1675,7 @@ class Resim:
             if not self.batter.has_mod(Mod.OVERPERFORMING, ModType.GAME):
                 self.roll("power chAArge")
 
-        self.handle_hit_advances(hit_bases, defender_roll)
+        self.handle_hit_advances(hit_bases, fielder_roll)
 
         # tentative: damage every runner at least once?
         for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
@@ -1694,10 +1714,7 @@ class Resim:
 
         meta = self.get_stat_meta()
         threshold = get_foul_threshold(self.batter, self.batting_team, self.stadium, meta)
-        lower_bound = threshold if known_outcome is False else 0
-        upper_bound = threshold if known_outcome is True else 1
-
-        foul_roll = self.roll("foul", lower=lower_bound, upper=upper_bound)
+        foul_roll = self.roll("foul", threshold=threshold, passed=known_outcome)
         if known_outcome is not None:
             if known_outcome and foul_roll > threshold:
                 self.print(f"!!! too high foul roll ({foul_roll} > {threshold})")
@@ -2528,7 +2545,7 @@ class Resim:
                             if item.health > 0:
                                 # pick item to break maybe? or something??
                                 self.roll("???")
-                                if self.event["created"] in ["2021-04-16T15:00:51.494Z", "2021-05-21T19:03:02.065Z"]:
+                                if self.event["created"] in ["2021-04-16T15:00:51.494Z", "2021-05-21T19:03:02.065Z", "2021-04-17T23:01:26.351Z"]:
                                     self.roll("??????")
                                 return True
 
@@ -2660,7 +2677,7 @@ class Resim:
                     "2021-04-15T22:21:35.826Z": 9,   # Shoes of Blaserunning
                     "2021-04-16T04:02:46.484Z": 9,   # Parasitic Ring
                     "2021-04-16T04:11:23.475Z": 13,  # Chaotic Jersey
-                    "2021-04-16T13:06:47.014Z": 14,  # Metaphorical Shoes
+                    "2021-04-16T13:06:47.014Z": 13,  # Metaphorical Shoes
                     "2021-04-20T09:00:31.366Z": 9,   # Parasitic Cap
                     "2021-04-20T09:12:45.083Z": 15,  # Inflatable Plastic Bat
                     "2021-04-20T13:00:31.463Z": 11,  # Brambly Glove
@@ -2986,10 +3003,13 @@ class Resim:
             self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, meta, self.is_flinching()
         )
 
-        lower_bound = threshold if known_result == "ball" else 0
-        upper_bound = threshold if known_result == "strike" else 1
+        passed_check = None
+        if known_result == "ball":
+            passed_check = False
+        elif known_result == "strike":
+            passed_check = True
 
-        roll = self.roll("strike", lower=lower_bound, upper=upper_bound)
+        roll = self.roll("strike", threshold=threshold, passed=passed_check)
         if self.pitching_team.has_mod(Mod.ACIDIC):
             acidic_roll = self.roll("acidic")
             success = "Acidic pitch" in self.desc
@@ -3324,6 +3344,8 @@ class Resim:
             EventType.PLAYER_STAT_INCREASE,
             EventType.PLAYER_STAT_DECREASE,
             EventType.PLAYER_HATCHED,
+            EventType.PLAYER_GAINED_ITEM,
+            EventType.PLAYER_LOST_ITEM,
         ]:
             for player_id in event["playerTags"]:
                 self.data.fetch_player_after(player_id, event["created"])
@@ -3442,6 +3464,18 @@ class Resim:
             self.stadium.hype = meta["after"]
             self.stadium.last_update_time = self.event["created"]
 
+        if event["type"] in [EventType.PLAYER_HIDDEN_STAT_INCREASE, EventType.PLAYER_HIDDEN_STAT_DECREASE]:
+            player_id = event["playerTags"][0]
+            player = self.data.get_player(player_id)
+
+            attr_name = stat_indices[meta["type"]]
+
+            # we just set to "after" so doesn't matter if it's increase or decrease
+            player.data[attr_name] = meta["after"]
+            player.update_stats()
+            player.last_update_time = self.event["created"]
+
+
     def find_start_of_inning_score(self, game_id, inning):
         for play in range(1000):
             update = self.data.get_update(game_id, play)
@@ -3461,9 +3495,15 @@ class Resim:
 
         self.save_data()
 
-    def roll(self, label, lower: float = 0, upper: float = 1) -> float:
+    def roll(self, label, lower: float = 0, upper: float = 1, passed: Optional[bool] = None, threshold: Optional[float] = None) -> float:
         value = self.rng.next()
         self.print(f"{label}: {value}")
+
+        if threshold is not None and passed is not None:
+            if passed:
+                upper = threshold
+            else:
+                lower = threshold
 
         if value < lower or value > upper:
             self.print("!!! warn: value {}={} out of bounds (should be within {}-{})".format(label, value, lower, upper))
@@ -3478,116 +3518,6 @@ class Resim:
         self.roll_log.append(log_obj)
         return value
 
-    def get_batter_multiplier(self, relevant_batter=None, relevant_attr=None):
-        # todo: retire in favor of get_multiplier() in formulas.py? this is only being used for logging right now...
-        batter = relevant_batter or self.batter
-
-        batter_multiplier = 1
-        for mod in itertools.chain(batter.mods, self.batting_team.mods):
-            mod = Mod.coerce(mod)
-            if mod == Mod.OVERPERFORMING:
-                batter_multiplier += 0.2
-            elif mod == Mod.UNDERPERFORMING:
-                batter_multiplier -= 0.2
-            elif mod == Mod.GROWTH:
-                batter_multiplier += min(0.05, 0.05 * (self.day / 99))
-            elif mod == Mod.HIGH_PRESSURE:
-                # checks for flooding weather and baserunners
-                if self.weather == Weather.FLOODING and len(self.update["baseRunners"]) > 0:
-                    # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
-                    batter_multiplier += 0.25
-            elif mod == Mod.TRAVELING:
-                if self.update["topOfInning"]:
-                    batter_multiplier += 0.05
-            elif mod == Mod.SINKING_SHIP:
-                roster_size = len(self.batting_team.lineup) + len(self.batting_team.rotation)
-                batter_multiplier += (14 - roster_size) * 0.01
-            elif mod == Mod.AFFINITY_FOR_CROWS and self.weather == Weather.BIRDS:
-                batter_multiplier += 0.5
-            elif mod == Mod.CHUNKY and self.weather == Weather.PEANUTS:
-                # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
-                #  by half of what the other two attributes got. (+0.05 instead of +0.10, in a "10% boost")
-                # gfric boost hasn't been "tested" necessarily
-                if relevant_attr in ["musclitude", "divinity"]:
-                    batter_multiplier += 1.0
-                elif relevant_attr == "ground_friction":
-                    batter_multiplier += 0.5
-            elif mod == Mod.SMOOTH and self.weather == Weather.PEANUTS:
-                # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted everything in
-                #  strange ways: for a "15% boost", musc got +0.0225, cont and gfric got +0.075, laser got +0.12.
-                # the musc boost here has been "tested in the data", the others have not
-                if relevant_attr == "musclitude":
-                    batter_multiplier += 0.15
-                elif relevant_attr == "continuation":
-                    batter_multiplier += 0.50
-                elif relevant_attr == "ground_friction":
-                    batter_multiplier += 0.50
-                elif relevant_attr == "laserlikeness":
-                    batter_multiplier += 0.80
-            elif mod == Mod.ON_FIRE:
-                # still some room for error here (might include gf too)
-                if relevant_attr == "thwackability":
-                    batter_multiplier += 4 if self.season >= 13 else 3
-                if relevant_attr == "moxie":
-                    batter_multiplier += 2 if self.season >= 13 else 1
-        return batter_multiplier
-
-    def get_pitcher_multiplier(self, relevant_attr=None):
-        # todo: retire in favor of get_multiplier() in formulas.py? this is only being used for logging right now...
-        pitcher_multiplier = 1
-
-        # growth or traveling do not work for pitchers as of s14
-        for mod in itertools.chain(self.pitcher.mods, self.pitching_team.mods):
-            mod = Mod.coerce(mod)
-            if mod == Mod.OVERPERFORMING:
-                pitcher_multiplier += 0.2
-            elif mod == Mod.UNDERPERFORMING:
-                pitcher_multiplier -= 0.2
-            elif mod == Mod.SINKING_SHIP:
-                roster_size = len(self.pitching_team.lineup) + len(self.pitching_team.rotation)
-                pitcher_multiplier += (14 - roster_size) * 0.01
-            elif mod == Mod.AFFINITY_FOR_CROWS and self.weather == Weather.BIRDS:
-                pitcher_multiplier += 0.5
-            elif mod == Mod.HIGH_PRESSURE:
-                # "should we really boost the pitcher when the *other* team's batters are on base" yes.
-                if self.weather == Weather.FLOODING and len(self.update["baseRunners"]) > 0:
-                    pitcher_multiplier += 0.25
-        return pitcher_multiplier
-
-    def get_fielder_multiplier(self, relevant_fielder=None, relevant_attr=None):
-        # todo: retire in favor of get_multiplier() in formulas.py? this is only being used for logging right now...
-        if not relevant_fielder:
-            return 1
-        fielder = relevant_fielder
-
-        fielder_multiplier = 1
-        for mod in itertools.chain(fielder.mods, self.pitching_team.mods):
-            mod = Mod.coerce(mod)
-            if mod == Mod.OVERPERFORMING:
-                fielder_multiplier += 0.2
-            elif mod == Mod.UNDERPERFORMING:
-                fielder_multiplier -= 0.2
-            elif mod == Mod.GROWTH:
-                fielder_multiplier += min(0.05, 0.05 * (self.day / 99))
-            elif mod == Mod.HIGH_PRESSURE:
-                # checks for flooding weather and baserunners
-                if self.weather == Weather.FLOODING and len(self.update["baseRunners"]) > 0:
-                    # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
-                    fielder_multiplier += 0.25
-            elif mod == Mod.TRAVELING:
-                if not self.update["topOfInning"]:
-                    fielder_multiplier += 0.05
-            elif mod == Mod.SINKING_SHIP:
-                roster_size = len(self.pitching_team.lineup) + len(self.pitching_team.rotation)
-                fielder_multiplier += (14 - roster_size) * 0.01
-            # elif mod == Mod.AFFINITY_FOR_CROWS and self.weather == Weather.BIRDS:
-            #     fielder_multiplier += 0.5
-            elif mod == Mod.SHELLED:
-                # lol, lmao
-                # is it this, or is it "mul = 0", I wonder
-                fielder_multiplier -= 1.0
-        return fielder_multiplier
-
     def generate_player(self):
         self.roll("first name")
         self.roll("last name")
@@ -3599,13 +3529,6 @@ class Resim:
         self.roll("ritual")
         self.roll("blood")
         self.roll("coffee")
-
-    def get_runner_multiplier(self, runner, relevant_attr=None):
-        runner_multiplier = 1
-
-        # It looks like no multipliers apply based on hit advancement.
-
-        return runner_multiplier
 
     def save_data(self):
         for csv in self.csvs.values():

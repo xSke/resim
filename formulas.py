@@ -1,4 +1,4 @@
-from data import Mod, PlayerData, TeamData, StadiumData, Weather
+from data import Mod, ModType, PlayerData, TeamData, StadiumData, Weather
 import itertools
 from dataclasses import dataclass
 
@@ -32,12 +32,14 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
         elif mod == Mod.GROWTH:
             # todo: do we ever want this for other positions?
             if attr not in [
-                "patheticism",
-                "thwackability",
+                # still not sure what's up with those. swing on strikes s16+ requires them to be applied
+                "patheticism" if meta.season < 15 else None,
+                "thwackability" if meta.season < 15 else None,
+
                 "buoyancy",
 
                 # todo: when did they fix this? i think it's s19, right
-                "ruthlessness" if meta.season < 18 else None,
+                "ruthlessness" if meta.season < 15 else None,
             ]:  # , "ruthlessness"]:  #, "coldness"]:
                 multiplier += min(0.05, 0.05 * (meta.day / 99))
         elif mod == Mod.HIGH_PRESSURE:
@@ -46,7 +48,9 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
                 # "won't this stack with the overperforming mod it gives the team" yes. yes it will.
                 # "should we really boost the pitcher when the *other* team's batters are on base" yes.
                 multiplier += 0.25
-        elif mod == Mod.TRAVELING:
+        elif mod == Mod.TRAVELING and not player.has_mod(Mod.TRAVELING):
+            # ^^^ this gets rid of one outlier for triples (7750cd54-34a4-4cbe-8781-5fc8eaff16d3/108) where Don Mitchell has the traveling item mod
+            # still unsure if traveling as a personal mod never applies, or only if it's specifically an item mod... more research needed :p
             if (meta.top_of_inning and position == "batter") or (not meta.top_of_inning and position == "pitcher"):
                 if attr not in [
                     "patheticism",
@@ -71,7 +75,9 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
                 multiplier += (14 - roster_size) * 0.01
         elif mod == Mod.AFFINITY_FOR_CROWS and meta.weather == Weather.BIRDS:
             # ???
-            if attr not in ["buoyancy", "omniscience"]:
+            # i *believe* this consistently does not apply to fielders
+            # so really the omni check is about excluding fielders and not excluding omni
+            if position != "fielder" and attr not in ["buoyancy", "omniscience"]:
                 multiplier += 0.5
         elif mod == Mod.CHUNKY and meta.weather == Weather.PEANUTS:
             # todo: handle carefully! historical blessings boosting "power" (Ooze, S6) boosted groundfriction
@@ -79,7 +85,7 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
             # gfric boost hasn't been "tested" necessarily
             if attr in ["musclitude", "divinity"]:
                 multiplier += 1.0
-            elif attr == "ground_friction":
+            elif attr in ["ground_friction", "groundFriction"]: # todo: be consistent here
                 multiplier += 0.5
         elif mod == Mod.SMOOTH and meta.weather == Weather.PEANUTS:
             # todo: handle carefully! historical blessings boosting "speed" (Spin Attack, S6) boosted everything in
@@ -89,7 +95,7 @@ def get_multiplier(player: PlayerData, team: TeamData, position: str, attr: str,
                 multiplier += 0.15
             elif attr == "continuation":
                 multiplier += 0.50
-            elif attr == "ground_friction":
+            elif attr in ["ground_friction", "groundFriction"]:
                 multiplier += 0.50
             elif attr == "laserlikeness":
                 multiplier += 0.80
@@ -426,3 +432,25 @@ def get_out_threshold(batter: PlayerData, batting_team: TeamData, pitcher: Playe
         return 0.3115 + 0.1*batter_thwack - 0.08*pitcher_unthwack - 0.065*fielder_omni + 0.011*grand + 0.008*obt - 0.0033*omi - 0.002*incon - 0.0033*visc + 0.01*fwd
     else:
         return 0.311 + 0.1*batter_thwack - 0.08*pitcher_unthwack - 0.064*fielder_omni + 0.01*grand + 0.008*obt - 0.0025*omi - 0.0045*incon - 0.0035*visc + 0.011*fwd
+
+def get_triple_threshold(batter: PlayerData, batting_team: TeamData, pitcher: PlayerData, pitching_team: TeamData, fielder: PlayerData, stadium: StadiumData, meta: StatRelevantData):
+    batter_vibes = batter.vibes(meta.day)
+    pitcher_vibes = pitcher.vibes(meta.day)
+    fielder_vibes = fielder.vibes(meta.day)
+
+    batter_gf = batter.ground_friction * (1+0.2*batter_vibes) * get_multiplier(batter, batting_team, "batter", "ground_friction", meta)
+    pitcher_opw = pitcher.overpowerment * (1+0.2*pitcher_vibes) * get_multiplier(pitcher, pitching_team, "pitcher", "overpowerment", meta)
+    fielder_chase = fielder.chasiness * (1+0.2*fielder_vibes) * get_multiplier(fielder, pitching_team, "fielder", "chasiness", meta)
+
+    fwd = stadium.forwardness - 0.5
+    grand = stadium.grandiosity - 0.5
+    obt = stadium.obtuseness - 0.5
+    visc = stadium.viscosity - 0.5
+    omi = stadium.ominousness - 0.5
+
+    ballpark_sum = (3*fwd + 5*grand + 5*obt - visc - omi)/15
+
+    if meta.season in [11, 12]:
+        return 0.05 + 0.2*batter_gf - 0.04*pitcher_opw - 0.06*fielder_chase + 0.1*ballpark_sum
+    else: # accurate up to s18 at least
+        return 0.045 + 0.2*batter_gf - 0.04*pitcher_opw - 0.05*fielder_chase + 0.1*ballpark_sum
