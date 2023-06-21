@@ -814,7 +814,7 @@ class PlayerData(TeamOrPlayerMods):
     
     def multiplied(self, stat: str, multiplier: float) -> float:
         # we can do this nicer i think but whatevs
-        raw_stat = self.data[stat]
+        raw_stat = self.data[stat.replace("ground_friction", "groundFriction")]
         full_stat = getattr(self, stat)
         item_stat = full_stat - raw_stat
         return raw_stat * multiplier + item_stat

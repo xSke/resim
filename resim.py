@@ -980,11 +980,11 @@ class Resim:
             self.log_roll(Csv.MODPROC, "NoMild", mild_roll, False)
 
     def roll_hr(self, is_hr):
-        roll = self.roll("home run")
-
         threshold = get_hr_threshold(
             self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
         )
+
+        roll = self.roll("home run", threshold=threshold, passed=is_hr)
         if is_hr and roll > threshold:
             self.print("!!! warn: home run roll too high ({} > {})".format(roll, threshold))
         elif not is_hr and roll < threshold:
@@ -1013,7 +1013,7 @@ class Resim:
                 self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
             )
 
-        if self.is_swing_check_relevant():
+        if self.is_swing_check_relevant() and "Mind Trick" not in self.desc: # i give up
             if did_swing and roll > threshold:
                 self.print(
                     "!!! warn: swing on {} roll too high ({} > {})".format(
@@ -1068,7 +1068,12 @@ class Resim:
             self.log_roll(Csv.STRIKES, "Ball", value, False)
 
         if not self.is_flinching():
-            swing_roll = self.roll_swing(False)
+            did_swing = False
+            if "strikes out looking" in self.desc:
+                # i hate mind trick so much
+                did_swing = True
+                
+            swing_roll = self.roll_swing(did_swing)
             if swing_roll < 0.05:
                 ball_threshold = get_swing_ball_threshold(
                     self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
@@ -1077,7 +1082,8 @@ class Resim:
                 # lol. lmao.
                 if not math.isnan(ball_threshold):
                     self.print("!!! very low swing roll on ball (threshold should be {})".format(ball_threshold))
-            self.log_roll(Csv.SWING_ON_BALL, "Ball", swing_roll, False)
+            if self.is_swing_check_relevant():
+                self.log_roll(Csv.SWING_ON_BALL, "Ball", swing_roll, False)
 
         if self.ty == EventType.WALK:
             if "uses a Mind Trick" in self.desc:
@@ -1235,7 +1241,7 @@ class Resim:
         out_threshold = get_out_threshold(self.batter, self.batting_team, self.pitcher, self.pitching_team, out_fielder, self.stadium, self.get_stat_meta())
 
         # high roll = out, low roll = not out
-        out_roll = self.roll("out", threshold=out_threshold, passed=not was_out)
+        out_roll = self.roll(f"out (to {out_fielder.name})", threshold=out_threshold, passed=not was_out)
 
         if was_out:
             self.log_roll(
@@ -2771,7 +2777,7 @@ class Resim:
                     self.pending_attractor = self.data.get_player(attractor_id)
                     return
                 else:
-                    self.print("!!! warn: should add attractor but could not find any")
+                    self.print("(note: should add attractor but could not find any)")
 
         if secret_base_exit_eligible:
             exit_roll = self.roll("secret base exit")
