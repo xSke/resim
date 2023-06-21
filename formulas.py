@@ -425,6 +425,31 @@ def get_out_threshold(batter: PlayerData, batting_team: TeamData, pitcher: Playe
         return 0.311 + 0.1*batter_thwack - 0.08*pitcher_unthwack - 0.064*fielder_omni + 0.02*bp_sum
 
 
+def get_double_threshold(batter: PlayerData, batting_team: TeamData, pitcher: PlayerData, pitching_team: TeamData, fielder: PlayerData, stadium: StadiumData, meta: StatRelevantData):
+    batter_vibes = batter.vibes(meta.day)
+    pitcher_vibes = pitcher.vibes(meta.day)
+    fielder_vibes = fielder.vibes(meta.day)
+
+    batter_musc = batter.multiplied("musclitude", get_multiplier(batter, batting_team, "batter", "musclitude", meta)) * (1+0.2*batter_vibes)
+    pitcher_opw = pitcher.multiplied("overpowerment", get_multiplier(pitcher, pitching_team, "pitcher", "overpowerment", meta)) * (1+0.2*pitcher_vibes)
+    fielder_chase = fielder.multiplied("chasiness", get_multiplier(fielder, pitching_team, "fielder", "chasiness", meta)) * (1+0.2*fielder_vibes)
+
+    fwd = stadium.forwardness - 0.5
+    elong = stadium.elongation - 0.5
+    visc = stadium.viscosity - 0.5
+    omi = stadium.ominousness - 0.5
+
+    ballpark_sum = 0.027*fwd - 0.015*elong - 0.01*omi - 0.008*visc
+
+    if meta.season in [11, 12]:
+        return 0.17 + 0.2*batter_musc - 0.04*pitcher_opw - 0.1*fielder_chase + ballpark_sum
+    elif meta.season == 13:
+        return 0.165 + 0.2*batter_musc - 0.04*pitcher_opw - 0.09*fielder_chase + ballpark_sum
+    else:
+        # accurate up to s18 at least
+        return 0.16 + 0.2*batter_musc - 0.04*pitcher_opw - 0.08*fielder_chase + ballpark_sum
+
+
 def get_triple_threshold(batter: PlayerData, batting_team: TeamData, pitcher: PlayerData, pitching_team: TeamData, fielder: PlayerData, stadium: StadiumData, meta: StatRelevantData):
     batter_vibes = batter.vibes(meta.day)
     pitcher_vibes = pitcher.vibes(meta.day)
