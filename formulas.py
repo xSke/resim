@@ -398,8 +398,11 @@ def get_fly_or_ground_threshold(batter: PlayerData, batting_team: TeamData, pitc
     # since we use the batter suppression even if it makes more sense to use *pitcher* suppression here
     supp = batter.multiplied("suppression", get_multiplier(batter, pitching_team, "pitcher", "suppression", meta))
     omi = stadium.ominousness - 0.5
+
+    # applying hype this way works and i don't know why
+    hype = stadium.hype * (1 if meta.top_of_inning else -1)
     
-    threshold = 0.18 + 0.3*buoy - 0.16*supp - 0.1*omi
+    threshold = 0.18 + 0.3*(buoy + 0.2*hype) - 0.16*(supp + 0.2*hype) - 0.1*omi
     return max(threshold, 0.01) # todo: 0.01 might be 0.033?
 
 def get_out_threshold(batter: PlayerData, batting_team: TeamData, pitcher: PlayerData, pitching_team: TeamData, fielder: PlayerData, stadium: StadiumData, meta: StatRelevantData):

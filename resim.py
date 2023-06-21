@@ -1716,7 +1716,7 @@ class Resim:
             and self.update["basesOccupied"] == [Base.THIRD, Base.SECOND, Base.FIRST]
         )
         batter_count = (
-            self.update["awayTeamBatterCount"] if self.update["topOfInning"] else self.update["homeTeamBatterCount"]
+            self.next_update["awayTeamBatterCount"] if self.next_update["topOfInning"] else self.next_update["homeTeamBatterCount"]
         )
         batter_at_bats = batter_count // len(self.batting_team.lineup)  # todo: +1?
         return StatRelevantData(
@@ -2707,7 +2707,7 @@ class Resim:
                     "2021-04-20T13:23:25.792Z": 13,  # Metaphorical Shoes - why is this 13 when the other metaphorical shoes are 14??? # noqa: E501
                     "2021-04-22T05:22:34.529Z": 9,   # Paper Shoes
                     "2021-05-18T15:03:17.013Z": 5,   # Socks
-                    "2021-05-21T08:06:07.589Z": 8,   # Flickering Bat
+                    "2021-05-21T08:06:07.589Z": 9,   # Flickering Bat
                 }
                 # fmt: on
                 for _ in range(glitter_lengths.get(self.event["created"], 5)):
