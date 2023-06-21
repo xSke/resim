@@ -76,7 +76,8 @@ def _get_vibes(row):
     if "SCATTERED" in player.mods:
         return 0
 
-    frequency = 6 + round(10 * player.buoyancy)
+    # must be pre-item
+    frequency = 6 + round(10 * player.data["buoyancy"])
 
     # Pull from pre-computed sin values
     sin_phase = SIN_PHASES[frequency][day]

@@ -796,7 +796,10 @@ class PlayerData(TeamOrPlayerMods):
         return self.raw_vibes(day)
 
     def raw_vibes(self, day) -> float:
-        frequency = 6 + round(10 * self.buoyancy)
+        # must use pre-item buoyancy
+        # todo: does this apply to pressurization and cinnamon too?
+        frequency = 6 + round(10 * self.data["buoyancy"])
+        
         # Pull from pre-computed sin values
         sin_phase = SIN_PHASES[frequency][day]
         # Original formula:
