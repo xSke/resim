@@ -463,9 +463,16 @@ def get_triple_threshold(batter: PlayerData, batting_team: TeamData, pitcher: Pl
     pitcher_vibes = pitcher.vibes(meta.day)
     fielder_vibes = fielder.vibes(meta.day)
 
-    batter_gf = batter.multiplied("ground_friction", get_multiplier(batter, batting_team, "batter", "ground_friction", meta)) * (1+0.2*batter_vibes)
-    pitcher_opw = pitcher.multiplied("overpowerment", get_multiplier(pitcher, pitching_team, "pitcher", "overpowerment", meta)) * (1+0.2*pitcher_vibes)
-    fielder_chase = fielder.multiplied("chasiness", get_multiplier(fielder, pitching_team, "fielder", "chasiness", meta)) * (1+0.2*fielder_vibes)
+    hype = stadium.hype * (1 if meta.top_of_inning else -1)
+
+    batter_gf = batter.multiplied("ground_friction", get_multiplier(batter, batting_team, "batter", "ground_friction", meta))
+    batter_gf = (batter_gf - 0.2*hype) * (1+0.2*batter_vibes)
+
+    pitcher_opw = pitcher.multiplied("overpowerment", get_multiplier(pitcher, pitching_team, "pitcher", "overpowerment", meta))
+    pitcher_opw = (pitcher_opw + 0.2*hype) * (1+0.2*pitcher_vibes)
+
+    fielder_chase = fielder.multiplied("chasiness", get_multiplier(fielder, pitching_team, "fielder", "chasiness", meta))
+    fielder_chase = (fielder_chase + 0.2*hype) * (1+0.2*fielder_vibes)
 
     fwd = stadium.forwardness - 0.5
     grand = stadium.grandiosity - 0.5
@@ -477,5 +484,11 @@ def get_triple_threshold(batter: PlayerData, batting_team: TeamData, pitcher: Pl
 
     if meta.season in [11, 12]:
         return 0.05 + 0.2*batter_gf - 0.04*pitcher_opw - 0.06*fielder_chase + 0.1*ballpark_sum
-    else: # accurate up to s18 at least
+    elif meta.season in [13, 14, 15, 16, 17]:
         return 0.045 + 0.2*batter_gf - 0.04*pitcher_opw - 0.05*fielder_chase + 0.1*ballpark_sum
+    else:
+        if pitcher_opw < 0:
+            # ...did this ever happen?
+            return float("nan")
+        opw_pow = pitcher_opw**1.5
+        return 0.042 + 0.2*batter_gf - 0.056*opw_pow - 0.05*fielder_chase + 0.1*ballpark_sum

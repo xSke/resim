@@ -1662,8 +1662,8 @@ class Resim:
         triple_threshold = get_triple_threshold(self.batter, self.batting_team, self.pitcher, self.pitching_team, fielder, self.stadium, self.get_stat_meta())
 
         double_passed = {1: False, 2: True, 3: None}[hit_bases]
-        double_roll = self.roll("double", threshold=double_threshold, passed=double_passed)
-        triple_roll = self.roll("triple", threshold=triple_threshold, passed=hit_bases == 3)
+        double_roll = self.roll(f"double (to {fielder.name})", threshold=double_threshold, passed=double_passed)
+        triple_roll = self.roll(f"triple (to {fielder.name})", threshold=triple_threshold, passed=hit_bases == 3)
 
         if hit_bases < 3:
             self.log_roll(

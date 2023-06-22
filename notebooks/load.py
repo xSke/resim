@@ -73,19 +73,21 @@ def _get_stadium_attribute(attr_key: str):
 
 def _get_vibes(row):
     player, day = row
-    if "SCATTERED" in player.mods:
+    if player.has_mod("SCATTERED"):
         return 0
 
     # must be pre-item
-    frequency = 6 + round(10 * player.data["buoyancy"])
+    buoy = _get_player_attribute("buoyancy", False, False)(player)
+    press = _get_player_attribute("pressurization", False, False)(player)
+    cinn = _get_player_attribute("cinnamon", False, False)(player)
+
+    frequency = 6 + round(10 * buoy)
 
     # Pull from pre-computed sin values
     sin_phase = SIN_PHASES[frequency][day]
     # Original formula:
     # sin_phase = math.sin(math.pi * ((2 / frequency) * day + 0.5))
 
-    press = _get_player_attribute("pressurization", False, False)(player)
-    cinn =  _get_player_attribute("cinnamon", False, False)(player)
     return 0.5 * ((sin_phase - 1) * press + (sin_phase + 1) * cinn)
 
 
@@ -207,7 +209,8 @@ def player_attribute(
     items: Union[bool, str] = True,
     invert: bool = False,
     broken_items: bool = False,
-    override_mod_team: str = None
+    override_mod_team: str = None,
+    hype_coef: float = 0,
 ):
     if not (items is True or items is False or items == "negative"):
         raise ValueError(
@@ -233,10 +236,6 @@ def player_attribute(
             multiplier = df[cols].apply(_get_multiplier(object_key, attr_key), axis=1)
 
             attr = attr_raw / multiplier
-            if items:
-                attr += attr_unbroken_items#*multiplier
-            if broken_items:
-                attr += attr_broken_items
         else:
             # todo: hardcoding this sucks but i can't think of a cleaner way to express this. it's real bad
             if attr_key != "suppression":
@@ -247,10 +246,14 @@ def player_attribute(
                 multiplier = df[cols].apply(_get_multiplier("pitcher", attr_key), axis=1)
                 
             attr = attr_raw * multiplier
-            if items:
-                attr += attr_unbroken_items#*multiplier
-            if broken_items:
-                attr += attr_broken_items#*multiplier
+
+    if items:
+        attr += attr_unbroken_items#*multiplier
+    if broken_items:
+        attr += attr_broken_items#*multiplier
+
+    hype = df["pitching_team_hype"] - df["batting_team_hype"]
+    attr += hype * hype_coef
 
     if invert:
         attr = (1 - attr)
