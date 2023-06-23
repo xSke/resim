@@ -781,8 +781,8 @@ class Resim:
             EventType.BROKEN_ITEM_REPAIRED,
             EventType.DAMAGED_ITEM_REPAIRED,
         ]:
-            if self.ty in [EventType.ITEM_BREAKS, EventType.ITEM_DAMAGE] and "CONSUMERS" not in self.desc:
-                self.roll("which item")
+            # if self.ty in [EventType.ITEM_BREAKS, EventType.ITEM_DAMAGE] and "CONSUMERS" not in self.desc:
+            #     self.roll("which item")
 
             if self.ty == EventType.PLAYER_GAINED_ITEM and "gained the Prized" in self.desc:
                 # prize match reward
@@ -1159,8 +1159,10 @@ class Resim:
                     if runner.raw_name in self.desc:
                         self.damage(runner, "runner")
 
+            self.damage(self.pitcher, "pitcher")
             self.damage(self.batter, "batter")
-        self.damage(self.pitcher, "pitcher")
+        else:
+            self.damage(self.pitcher, "pitcher")
 
     def handle_strike(self):
         if ", swinging" in self.desc or "strikes out swinging." in self.desc:
@@ -1327,16 +1329,16 @@ class Resim:
         if self.outs < self.max_outs - 1:
             if self.ty == EventType.FLY_OUT:
                 self.damage(self.pitcher, "pitcher")
-                self.damage(named_fielder, "fielder")
                 self.damage(self.batter, "fielder")
+                self.damage(named_fielder, "fielder")
             self.handle_out_advances(named_fielder)
         if not self.outs < self.max_outs - 1:
             self.try_roll_batter_debt(named_fielder)
             self.damage(self.pitcher, "pitcher")
-            if named_fielder and not is_fc_dp:
-                self.damage(named_fielder, "fielder")
             if not is_fc_dp:
                 self.damage(self.batter, "fielder")
+            if named_fielder and not is_fc_dp:
+                self.damage(named_fielder, "fielder")
 
     def try_roll_batter_debt(self, fielder):
         if self.batter.has_mod(Mod.DEBT_THREE) and fielder and not fielder.has_mod(Mod.COFFEE_PERIL):
@@ -1492,19 +1494,22 @@ class Resim:
                         elif self.update["basesOccupied"] == [0]:
                             damage_runners = []
 
+                        self.damage(self.pitcher, "pitcher")
+
                         for rbase in damage_runners:
                             idx = self.update["basesOccupied"].index(rbase)
                             runner_id = self.update["baseRunners"][idx]
                             runner = self.data.get_player(runner_id)
                             self.damage(runner, "runner")
 
-                        self.damage(self.pitcher, "pitcher")
-
                         return
 
             self.damage(self.pitcher, "pitcher")
-            self.damage(self.batter, "fielder")
-            self.damage(fielder, "fielder")
+            # there's some weird stuff with damage rolls in the first fragment of s16
+            # this seems to work for groundouts but something similar might be up for flyouts
+            if (self.season, self.day) >= (15, 3):
+                self.damage(self.batter, "fielder")
+                self.damage(fielder, "fielder")
             self.try_roll_batter_debt(fielder)
 
             forced_bases = 0
@@ -1538,7 +1543,15 @@ class Resim:
                     self.damage(runner, "batter")
 
                     if base == Base.THIRD:
-                        self.damage(runner, "batter")
+                        if (self.season, self.day) >= (15, 3):
+                            self.damage(runner, "batter")
+                        else:
+                            self.damage(self.batter, "batter")
+                        
+            if (self.season, self.day) < (15, 3):
+                self.damage(self.batter, "fielder")
+                self.damage(fielder, "fielder")
+                pass
 
     def handle_hit_advances(self, bases_hit, defender_roll):
         bases_before = make_base_map(self.update)
@@ -3083,18 +3096,32 @@ class Resim:
 
         # threshold seems to vary between 0.0002 and >0.0015
         # depending on which position or which type of roll?
-        # i tried a few things here but i'm not confident in anything
-        # so the "which item to break" is just moved into the misc handler for now
-        self.roll(f"item damage ({player.name})")
+        damage_roll = self.roll(f"item damage ({player.name})")
+
+        was_item_broken_this_event = " broke!" in self.desc or " were damaged" in self.desc or " was damaged" in self.desc
 
         # so, there are a few(?) cases in early s16 where an item was damaged and broke,
         # and no event was logged or displayed.
-        # in this case there's still an extra roll for damage location.
         if (self.event["created"], player.id) in [
             ("2021-04-12T16:22:51.087Z", "c09e64b6-8248-407e-b3af-1931b880dbee")  # Lenny Spruce
         ]:
-            self.roll(f"which item? (manual override for {player.name}, see comments)")
+            was_item_broken_this_event = True
 
+        # assuming threshold upper bound
+        # if an item was broken, we need to guess whether *this particular roll* is the one that did it
+        damage_roll_successful = was_item_broken_this_event and damage_roll < 0.003
+
+        manual_damage_overrides = {
+            # gloria bugsnax must NOT trigger break here (pitcher threshold lower??)
+            ("2021-05-11T09:09:39.742Z", "8cd06abf-be10-4a35-a3ab-1a408a329147"): False,
+        }
+        damage_roll_successful = manual_damage_overrides.get((self.event["created"], player.id), damage_roll_successful)
+        
+        if damage_roll_successful:
+            self.roll(F"which item? ({player.name})")
+
+            if f"{player.raw_name}'s " not in self.desc and f"{player.raw_name}' " not in self.desc:
+                self.print(f"!!! warn: wrong item damage player? (expected {player.raw_name})")
     def log_roll(
         self,
         csv: Csv,
