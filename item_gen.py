@@ -67,6 +67,7 @@ ELEMENTS_S15 = {
         StatRoll("coldness", 0.075, 0.075),
         StatRoll("overpowerment", 0.06, 0.06),
     ],
+    "Golden": [],
     "Metaphorical": [
         StatRoll("Shakespearianism", 0.05, 0.07),
         StatRoll("watchfulness", 0.05, 0.07),
@@ -84,11 +85,18 @@ ELEMENTS_S15 = {
         StatRoll("overpowerment", 0.04, -0.08),
         StatRoll("patheticism", 0.075, 0.075),
     ],
+    "Leg": [
+        StatRoll("laserlikeness", 0.05, 0.05),
+        StatRoll("chasiness", 0.05, 0.05),
+    ],
+    "Parasitic": [],
     "Plant-Based": [
         StatRoll("watchfulness", 0.1, 0.1),
         StatRoll("suppression", 0.1, 0.1),
         StatRoll("buoyancy", -0.14, -0.075),
     ],
+    # suffixes
+    "Blaserunning": [],
     "Vanity": [
         StatRoll("martyrdom", 0.05, -0.1),
         StatRoll("musclitude", 0.05, 0.05),
@@ -932,7 +940,7 @@ def roll_item(
             prefix_pool.remove(element)
 
         elements = ELEMENTS if season > 15 else ELEMENTS_S15
-        for stat_roll in ELEMENTS[element]:
+        for stat_roll in elements[element]:
             value = roll(f"{element} {stat_roll.stat}")
             expected = stat_roll.apply(value)
 

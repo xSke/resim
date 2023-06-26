@@ -110,6 +110,8 @@ class Resim:
         self.away_team = self.data.get_team(None)
         self.stadium = self.data.get_stadium(None)
         self.pending_attractor = None
+        self.event = None
+        self.prev_event = None
 
         if run_name:
             os.makedirs("roll_data", exist_ok=True)
@@ -397,7 +399,7 @@ class Resim:
                 self.roll("a blood type")
 
             if self.ty == EventType.PRIZE_MATCH:
-                self.create_item(self.event, ItemRollType.PRIZE)
+                self.create_item(self.event, ItemRollType.PRIZE, self.prev_event)
 
             # skipping pregame messages
             return True
@@ -802,7 +804,7 @@ class Resim:
                 self.roll("prize target")
 
             if self.ty == EventType.PLAYER_GAINED_ITEM and "The Community Chest Opens" in self.desc:
-                self.create_item(self.event, ItemRollType.CHEST)
+                self.create_item(self.event, ItemRollType.CHEST, self.prev_event)
             return True
         if self.ty == EventType.PLAYER_SWAP:
             return True
@@ -2704,7 +2706,7 @@ class Resim:
                 self.log_roll(Csv.WEATHERPROC, "LootDrop", glitter_roll, True)
                 self.roll("receiving team")
                 self.roll("receiving player")
-                self.create_item(self.event, ItemRollType.GLITTER)
+                self.create_item(self.event, ItemRollType.GLITTER, self.prev_event)
                 return True
 
             else:
@@ -3004,7 +3006,7 @@ class Resim:
                 # don't roll twice when holding hands
                 break
 
-    def create_item(self, event, roll_type: ItemRollType):
+    def create_item(self, event, roll_type: ItemRollType, prev_event):
         match = re.search("(?:gained|The Winner gets) (.+?)( and ditched| and dropped|\.?$)", self.desc)
 
         expected_item_name = match.group(1) if match else ""
@@ -3021,7 +3023,11 @@ class Resim:
         else:
             expected = expected_item_name
 
-        item_name = roll_item(self.season, self.day, roll_type, self.roll, expected)
+        try:
+            item_name = roll_item(self.season, self.day, roll_type, self.roll, expected)
+        except KeyError:
+            self.error(f"Unknown element for item created at {event['created']}. This probably means either the roll is in the wrong position or the item pool needs to be updated.")
+            raise
         if event["created"] in [
             "2021-04-20T21:43:04.935Z",
         ]:
@@ -3039,7 +3045,7 @@ class Resim:
         player = self.data.get_player(playerTags[0]) if playerTags else None
         if player:
             max_items = player.data.get("evolution", 0) + 1
-            if len(player.items) == max_items:
+            if self.prev_event and self.prev_event["type"] == EventType.PLAYER_LOST_ITEM:
                 self.roll("item to replace???")
         elif match.group(2) in (" and ditched", " and dropped"):
             self.roll("item to replace???")
@@ -3208,6 +3214,7 @@ class Resim:
         )
 
     def setup_data(self, event):
+        self.prev_event = self.event
         self.apply_event_changes(event)
 
         meta = event.get("metadata") or {}
