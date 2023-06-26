@@ -40,11 +40,12 @@ STAT_RELEVANT_DATA_KEYS = [
 
 
 def braced_glob(path):
-    l = []
+    paths = []
     for x in braceexpand(path):
-        l.extend(glob(x))
-            
-    return l
+        paths.extend(glob(x))
+
+    return paths
+
 
 def _get_player_attribute(attr_key: str, use_items: Union[bool, str], use_broken_items: bool):
     def player_attribute_extractor(player: PlayerData):
@@ -72,17 +73,22 @@ def _get_stadium_attribute(attr_key: str):
 
 def _get_vibes(row):
     player, day = row
-    if "SCATTERED" in player.mods:
+    if player.has_mod("SCATTERED"):
         return 0
 
-    frequency = 6 + round(10 * player.buoyancy)
+    # must be pre-item
+    buoy = _get_player_attribute("buoyancy", False, False)(player)
+    press = _get_player_attribute("pressurization", False, False)(player)
+    cinn = _get_player_attribute("cinnamon", False, False)(player)
+
+    frequency = 6 + round(10 * buoy)
 
     # Pull from pre-computed sin values
     sin_phase = SIN_PHASES[frequency][day]
     # Original formula:
     # sin_phase = math.sin(math.pi * ((2 / frequency) * day + 0.5))
 
-    return 0.5 * ((sin_phase - 1) * player.pressurization + (sin_phase + 1) * player.cinnamon)
+    return 0.5 * ((sin_phase - 1) * press + (sin_phase + 1) * cinn)
 
 
 def _get_mods(item: Union[PlayerData, TeamData]):
@@ -99,8 +105,12 @@ def _get_multiplier(position, attr):
 
 def _get_stat_relevant_data(row):
     (weather, season, day, runner_count, top_of_inning, is_maximum_blaseball, batter_at_bats) = row
+    if isinstance(weather, int):
+        weather = Weather(weather)
+    else:
+        weather = Weather[weather.replace("Weather.", "")]
     return formulas.StatRelevantData(
-        weather=Weather[weather.replace("Weather.", "")],
+        weather=weather,
         season=season,
         day=day,
         runner_count=runner_count,
@@ -197,7 +207,10 @@ def player_attribute(
     vibes: bool = True,
     mods: Union[bool, str] = True,
     items: Union[bool, str] = True,
+    invert: bool = False,
     broken_items: bool = False,
+    override_mod_team: str = None,
+    hype_coef: float = 0,
 ):
     if not (items is True or items is False or items == "negative"):
         raise ValueError(
@@ -210,28 +223,44 @@ def player_attribute(
             'Valid values: True, False, "negative"'
         )
 
-    attr = df[object_key + "_object"].apply(_get_player_attribute(attr_key, items, broken_items))
+    attr = df[object_key + "_object"].apply(_get_player_attribute(attr_key, items, True))
+    attr_without_broken_items = df[object_key + "_object"].apply(_get_player_attribute(attr_key, items, False))
     attr_raw = df[object_key + "_object"].apply(_get_player_attribute(attr_key, False, False))
-    attr_item = attr - attr_raw
-    # print(attr_item)
-    if vibes:
-        vibe = df[object_key + "_vibes"]
-        attr_raw = attr_raw * (1 + 0.2 * vibe)
-        attr_item = attr_item * (1 + 0.2 * vibe)
+
+    attr_broken_items = attr - attr_without_broken_items
+    attr_unbroken_items = (attr - attr_raw) - attr_broken_items
 
     if mods:
         if mods == "negative":
             cols = [object_key + "_object", _team_for_object(object_key) + "_object", "stat_relevant_data"]
             multiplier = df[cols].apply(_get_multiplier(object_key, attr_key), axis=1)
-            # attr = attr_raw * multiplier + attr_item * multiplier
-            broken_item = df[object_key + "_object"].apply(lambda obj: any(item.health == 0 for item in obj.items))
-            attr = attr_raw / multiplier + attr_item * (~broken_item * multiplier + broken_item)
+
+            attr = attr_raw / multiplier
         else:
-            cols = [object_key + "_object", _team_for_object(object_key) + "_object", "stat_relevant_data"]
-            multiplier = df[cols].apply(_get_multiplier(object_key, attr_key), axis=1)
-            # attr = attr_raw * multiplier + attr_item * multiplier
-            broken_item = df[object_key + "_object"].apply(lambda obj: any(item.health == 0 for item in obj.items))
-            attr = attr_raw * multiplier + attr_item * (~broken_item * multiplier + broken_item)
+            # todo: hardcoding this sucks but i can't think of a cleaner way to express this. it's real bad
+            if attr_key != "suppression":
+                cols = [object_key + "_object", override_mod_team or _team_for_object(object_key) + "_object", "stat_relevant_data"]
+                multiplier = df[cols].apply(_get_multiplier(override_mod_team or object_key, attr_key), axis=1)
+            else:
+                cols = [object_key + "_object", "pitching_team" + "_object", "stat_relevant_data"]
+                multiplier = df[cols].apply(_get_multiplier("pitcher", attr_key), axis=1)
+                
+            attr = attr_raw * multiplier
+
+    if items:
+        attr += attr_unbroken_items#*multiplier
+    if broken_items:
+        attr += attr_broken_items#*multiplier
+
+    hype = df["pitching_team_hype"] - df["batting_team_hype"]
+    attr += hype * hype_coef
+
+    if invert:
+        attr = (1 - attr)
+
+    if vibes:
+        vibe = df[object_key + "_vibes"]
+        attr = attr * (1 + 0.2 * vibe)
 
     return attr
 

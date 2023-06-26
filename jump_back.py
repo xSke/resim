@@ -172,7 +172,7 @@ def main():
 
         rng = Rng(rng_state, rng_offset)
         rng.step(step)
-        with (RngCountContext(rng) as rng_counter, tqdm(total=total_events, unit="events") as _):
+        with RngCountContext(rng) as rng_counter, tqdm(total=total_events, unit="events") as _:
             resim = Resim(rng, None, run_name=start_time, raise_on_errors=False, csvs_to_log=args.csv)
             resim.run(start_time, end_time, progress_callback=None)
             rolls = rng_counter.count
@@ -184,7 +184,7 @@ def main():
     rng.step(-rolls)
     print(f"to state {rng.get_state_str()}")
     s0, s1, offset = rng.get_state()
-    with (RngCountContext(rng) as rng_counter, tqdm(total=total_events, unit="events") as _):
+    with RngCountContext(rng) as rng_counter, tqdm(total=total_events, unit="events") as _:
         resim = Resim(rng, out_file, run_name=start_time, raise_on_errors=False, csvs_to_log=args.csv)
         resim.run(start_time, end_time, progress_callback=None)
         tqdm.write(f"rolls used: {rng_counter.count}/{rolls}")
@@ -231,7 +231,7 @@ def main():
     s0, s1, offset = rng.get_state()
     out_file.close()
     out_file = io.StringIO()
-    with (RngCountContext(rng) as rng_counter, tqdm(total=total_events, unit="events") as _):
+    with RngCountContext(rng) as rng_counter, tqdm(total=total_events, unit="events") as _:
         resim = Resim(rng, out_file, run_name=start_time, raise_on_errors=False, csvs_to_log=args.csv)
         resim.run(start_time, end_time, progress_callback=None)
         tqdm.write(f"rolls used: {rng_counter.count}/{rolls}")

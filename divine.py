@@ -1,26 +1,11 @@
-from resim import Resim
+import dataclasses
+import json
+from resim import LoggedRoll, Resim
 from io import StringIO
-import closed_form_solver_faster_no_numpy
 
 # from multiprocessing import Pool
-from rng import Rng, xs128p
-
-
-def flip_blocks(input, offset):
-    block_series = [None] * offset + input
-
-    rem = 64 - (len(block_series) % 64)
-    block_series.extend([None] * rem)
-
-    for x in range(len(block_series) // 64 + 1):
-        block_series[x * 64 : (x + 1) * 64] = block_series[x * 64 : (x + 1) * 64][::-1]
-
-    return block_series
-
-
-def block_permutations(input):
-    for i in range(64):
-        yield i, flip_blocks(input, i)
+from rng import Rng
+from rng_solver import solve_in_math_random_order
 
 
 class StubRng:
@@ -34,6 +19,11 @@ class StubRng:
 
     def get_state_str(self):
         return "[STUB]"
+
+
+def get_rng_url(solution):
+    state = solution["state"]
+    return f"https://rng.sibr.dev/?state=({state[0]},{state[1]})+{solution['offset']}"
 
 
 def inner(window):
@@ -51,33 +41,46 @@ def inner(window):
 
     print(f"trying window {start_time} - {end_time}")
 
-    for i, knowns_block in block_permutations(knowns):
-        res = closed_form_solver_faster_no_numpy.solve(knowns_block)
-        if res:
-            # step through the block-corrected rolls for the first roll of an event and print that
-            window_flipped = flip_blocks(window, i)
-            state = res[0]
-            for i, k in enumerate(window_flipped):
-                if k and k.index == 0:
-                    r = Rng(state, i % 64)
-                    r.step(-1)  # account for our indexing being the coords *before* consuming the roll
-                    print(f"found event at {k.timestamp}: {r.get_state_str()}, first roll {r.next()}")
-                    break
-
-                state = xs128p(state)
+    solutions = solve_in_math_random_order(knowns)
+    for solution in solutions:
+        rng = Rng(solution["state"], solution["offset"])
+        for roll in window:
+            if roll and roll.index == 0:
+                rng.step(-1)  # account for our indexing being the coords *before* consuming the roll
+                print(
+                    f"found event at {roll.timestamp} ({roll.roll_name}): "
+                    f"{rng.get_state_str()}, first roll {rng.next()}"
+                )
+                break
+            rng.step(1)
 
 
 def main():
     start_timestamp = "2021-04-14T16:01:37.236Z"
     end_timestamp = "2021-04-14T16:22:37.236Z"
 
-    out_file = StringIO()
+    cache_file = (
+        f"cache/divine_rolls_{start_timestamp.replace(':', '_')}-"
+        f"{end_timestamp.replace(':', '_')}.json"
+    )
+    try:
+        with open(cache_file, "r") as f:
+            roll_log = list(map(lambda roll: LoggedRoll(**roll), json.load(f)))
+            print(f"got {len(roll_log)} rolls from cache")
+    except Exception as e:
+        roll_log = None
 
-    stub_rng = StubRng()
-    resim = Resim(stub_rng, out_file, run_name=None, raise_on_errors=False)
-    resim.run(start_timestamp, end_timestamp, None)
+    if not roll_log:
+        out_file = StringIO()
 
-    print(f"got {len(resim.roll_log)} rolls")
+        stub_rng = StubRng()
+        resim = Resim(stub_rng, out_file, run_name=None, raise_on_errors=False)
+        resim.run(start_timestamp, end_timestamp, None)
+        roll_log = resim.roll_log
+        print(f"got {len(roll_log)} rolls")
+
+        with open(cache_file, "w") as f:
+            json.dump(list(map(dataclasses.asdict, roll_log)), f)
 
     # todo: parallelize this in a way that doesn't make ctrl-c explode, and that supports tqdm
     # with Pool(1) as p:
@@ -87,8 +90,8 @@ def main():
     # but we don't want it to waste too much time on a range that def. doesn't work
     window_size = 2800
     step_size = 100
-    for window_pos in range(0, len(resim.roll_log) - window_size, step_size):
-        window = resim.roll_log[window_pos : window_pos + window_size]
+    for window_pos in range(0, len(roll_log) - window_size, step_size):
+        window = roll_log[window_pos : window_pos + window_size]
         args.append(window)
 
     for w in args:

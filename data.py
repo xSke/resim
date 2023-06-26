@@ -452,7 +452,7 @@ class TeamOrPlayerMods(DataClassJsonMixin):
             ModType.ITEM: "itemAttr",
         }
         mods_by_type = {}
-        for (mod_type, key) in MOD_KEYS.items():
+        for mod_type, key in MOD_KEYS.items():
             mods_by_type[mod_type] = set(data.get(key, []))
         return dict(_mods_by_type=mods_by_type, mods=cls._concatenate_mods(mods_by_type))
 
@@ -757,6 +757,7 @@ class PlayerData(TeamOrPlayerMods):
     eDensity: float
     items: List[ItemData]
     season_mod_sources: Dict[str, List[str]]
+    permanent_mod_sources: Dict[str, List[str]]
     # Old incinerations don't have a peanut allergy field
     peanut_allergy: Optional[bool]
 
@@ -777,6 +778,7 @@ class PlayerData(TeamOrPlayerMods):
             soul=data.get("soul") or 0,
             eDensity=data.get("eDensity") or 0,
             season_mod_sources=data_state.get("seasModSources", {}),
+            permanent_mod_sources=data_state.get("permModSources", {}),
             peanut_allergy=data.get("peanutAllergy"),
             **cls.mods_init_args(data),
             **cls.stats_init_args(data, items),
@@ -798,7 +800,10 @@ class PlayerData(TeamOrPlayerMods):
         return self.raw_vibes(day)
 
     def raw_vibes(self, day) -> float:
-        frequency = 6 + round(10 * self.buoyancy)
+        # must use pre-item buoyancy
+        # todo: does this apply to pressurization and cinnamon too?
+        frequency = 6 + round(10 * self.data["buoyancy"])
+        
         # Pull from pre-computed sin values
         sin_phase = SIN_PHASES[frequency][day]
         # Original formula:
@@ -810,6 +815,14 @@ class PlayerData(TeamOrPlayerMods):
 
     def stats_with_items(self) -> Dict[str, float]:
         return self._get_stats_with_items(self.data, self.items)
+    
+    def multiplied(self, stat: str, multiplier: float) -> float:
+        # we can do this nicer i think but whatevs
+        raw_stat = self.data[stat.replace("ground_friction", "groundFriction")]
+        full_stat = getattr(self, stat)
+        item_stat = full_stat - raw_stat
+        return raw_stat * multiplier + item_stat
+
 
     def is_cache_equivalent(self, other: "PlayerData") -> bool:
         return (
@@ -864,7 +877,7 @@ class PlayerData(TeamOrPlayerMods):
         for item in items:
             # if item.health != 0:
             for stat, value in item.stats.items():
-                if stat in ["patheticism", "tragicness"]:
+                if stat in ["patheticism", "tragicness", "buoyancy"]:
                     # path increases from items seem to actually *decrease* path in the formulas (and the other way
                     # around for path decreases)... even though the star calculations on the site ding you for
                     # having an item that increases path! at least right now, through season 19.
