@@ -3025,8 +3025,8 @@ class Resim:
 
         try:
             item_name = roll_item(self.season, self.day, roll_type, self.roll, expected)
-        except KeyError:
-            self.error(f"Unknown element for item created at {event['created']}. This probably means either the roll is in the wrong position or the item pool needs to be updated.")
+        except KeyError as e:
+            self.error(f"Unknown element {e} for item created at {event['created']}. This probably means either the roll is in the wrong position or the item pool needs to be updated.")
             raise
         if event["created"] in [
             "2021-04-20T21:43:04.935Z",
