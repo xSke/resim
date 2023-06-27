@@ -199,14 +199,30 @@ class Resim:
             "2021-04-14T17:06:28.047Z": -2,  # i don't know
             "2021-04-14T19:07:51.129Z": -2,  # may be attractor-relayed?
             "2021-04-20T12:00:00.931Z": -1,  # item damage at end of game??
+            "2021-05-10T18:05:08.668Z": 1,
             "2021-05-10T19:28:42.723Z": 1,
+            "2021-05-12T06:00:17.186Z": 1,
+            "2021-05-12T12:24:31.667Z": 1,
+            "2021-05-12T13:01:28.057Z": 1,
+            "2021-05-12T13:20:27.391Z": 2,
+            "2021-05-12T15:20:57.747Z": 1,
+            "2021-05-12T18:15:59.133Z": 1,
+            "2021-05-13T08:07:07.199Z": -1,
+            "2021-05-13T13:03:37.832Z": 1,
+            "2021-05-17T17:20:09.894Z": 1,
+            "2021-05-17T19:19:27.120Z": 2,
+            "2021-05-17T20:03:16.538Z": 1,  # end of the first inning???
+            "2021-05-17T20:03:31.704Z": -1,
             "2021-05-17T23:10:48.902Z": 1,  # dp item damage rolls...?
-            # "2021-05-21T01:02:36.430Z": 1,  # party time align?
+            "2021-05-20T04:20:24.586Z": -1,  # item damage
             "2021-05-21T01:02:40.772Z": 1,
             # these three all seem double strike related, but i can't figure out why
             "2021-05-21T15:11:59.315Z": -1,
             "2021-05-21T15:18:16.240Z": -1,
             "2021-05-21T16:03:01.690Z": -1,
+            "2021-05-22T01:02:42.588Z": 1,  # end of the first inning???
+            "2021-05-22T19:02:16.310Z": 1,  # end of the first inning???
+            "2021-05-23T00:02:26.559Z": 1,  # end of the first inning???
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -617,7 +633,7 @@ class Resim:
                 if "caught in the bind!" in self.desc:
                     self.roll("salmon cannons player")
 
-                    if self.event["created"] == "2021-05-20T10:21:04.424Z":
+                    if self.event["created"] in ["2021-05-20T10:21:04.424Z", "2021-05-20T03:11:03.357Z"]:
                         # sigh.
                         self.roll("undertaker")
                         self.roll("undertaker")
@@ -726,6 +742,16 @@ class Resim:
                 "4f8ce860-fb5e-4cff-8111-d687fa438876": 7,
                 "e0880bb0-60b2-4778-a209-977bd4b23ab6": 1,
                 "a12bbed2-68b4-4db0-b408-6727b28743c3": 1,
+                "fa320c4c-ceab-48a5-b3a1-8a064977d974": 217,  # earlsiesta reading
+                "426196ac-8600-4929-af6f-d750517eec87": 1,
+                "0486ea3c-9a94-4fdc-82cd-78feca6e00d7": 1,
+                "9485f77d-3c78-40dc-a6ba-d56e231a5902": 1,
+                "3dfdcc5d-f3f5-49ae-a826-451843e1177b": 1,
+                "48c355e1-b656-4afb-b05b-17e0e9b13f07": 1,
+                "2a712340-9a47-430a-8645-5ab61a4fa6da": 1,
+                "2d4465c0-60e4-42e3-a630-712d9bcfb253": 1,
+                "9df98fb5-e015-497b-bc47-6a6701a5e69a": 1,
+                "3954b1cc-01bc-48a5-b2d1-936ae28997db": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -2145,6 +2171,9 @@ class Resim:
                 self.roll("player 1 fate")
                 self.roll("player 2 fate")
 
+                if "LCD Soundsystem" in self.desc:
+                    for _ in range(50):
+                        self.roll("stat")
                 # i think it would be extremely funny if these are item damage rolls
                 # imagine getting feedbacked to charleston *and* you lose your shoes.
                 if self.season >= 15:
@@ -2210,22 +2239,23 @@ class Resim:
                 if self.ty == EventType.ECHO_CHAMBER:
                     self.roll("echo chamber")
                     return True
-
-            wiggle_roll = self.roll("reverbproc")
-            if self.ty == EventType.REVERB_ROSTER_SHUFFLE:
-                self.log_roll(
-                    Csv.WEATHERPROC,
-                    "Shuffle",
-                    wiggle_roll,
-                    True,
-                )
-            else:
-                self.log_roll(
-                    Csv.WEATHERPROC,
-                    "NoShuffle",
-                    wiggle_roll,
-                    False,
-                )
+            # This might not be the right place to remove it, but ECHO_MESSAGE events with ECHO_CHAMBERs seem to have one fewer roll.
+            if not self.stadium.has_mod(Mod.ECHO_CHAMBER) or self.ty != EventType.ECHO_MESSAGE:
+                wiggle_roll = self.roll("reverbproc")
+                if self.ty == EventType.REVERB_ROSTER_SHUFFLE:
+                    self.log_roll(
+                        Csv.WEATHERPROC,
+                        "Shuffle",
+                        wiggle_roll,
+                        True,
+                    )
+                else:
+                    self.log_roll(
+                        Csv.WEATHERPROC,
+                        "NoShuffle",
+                        wiggle_roll,
+                        False,
+                    )
             if self.ty == EventType.REVERB_ROSTER_SHUFFLE:
                 # todo: how many rolls? this needs a refactor and doesn't support lineup shuffles rn
 
@@ -2240,6 +2270,8 @@ class Resim:
                         "2021-04-19T17:17:55.926Z": 7,
                         "2021-04-20T15:01:43.618Z": 11,
                         "2021-04-22T18:12:16.362Z": 11,
+                        "2021-05-12T03:09:08.233Z": 11,
+                        "2021-05-13T02:10:41.696Z": 7,
                     }
                     amount = shuffles.get(self.event["created"], 9)
 
@@ -2338,7 +2370,7 @@ class Resim:
 
                 return True
 
-            if self.batter.has_mod(Mod.COFFEE_PERIL):
+            if self.batter.has_mod(Mod.COFFEE_PERIL) or self.pitcher.has_mod(Mod.COFFEE_PERIL):
                 self.roll("observed?")
 
         elif self.weather == Weather.COFFEE_2:
@@ -2358,11 +2390,11 @@ class Resim:
                 flavor_two_roll = self.roll("coffee 2 proc3")  # noqa: F841
                 return True
 
-            if self.batter.has_mod(Mod.COFFEE_PERIL):
+            if self.batter.has_mod(Mod.COFFEE_PERIL) or self.pitcher.has_mod(Mod.COFFEE_PERIL):
                 self.roll("observed?")
 
         elif self.weather == Weather.COFFEE_3S:
-            if self.batter.has_mod(Mod.COFFEE_PERIL):
+            if self.batter.has_mod(Mod.COFFEE_PERIL) or self.pitcher.has_mod(Mod.COFFEE_PERIL):
                 self.roll("observed?")
             pass
 
@@ -2617,6 +2649,8 @@ class Resim:
                         # todo: find out where this is
                         if self.stadium.has_mod(Mod.SALMON_CANNONS):
                             self.roll("salmon cannons?")
+                        if "CONSUMER EXPELLED" in self.desc:
+                            return True
 
                         for _ in range(25):
                             self.roll("stat change")
@@ -2767,7 +2801,14 @@ class Resim:
         if (
             self.season >= 18
             and secret_runner_id == "114100a4-1bf7-4433-b304-6aad75904055"
-            and self.game_id != "2a314b60-a36b-4e22-bee8-5da17c8e0d05"
+            and secret_runner_id not in self.batting_team.shadows
+        ):
+            secret_base_exit_eligible = False
+
+        if (
+            (17, 27) <= (self.season, self.day)
+            and secret_runner_id == "114100a4-1bf7-4433-b304-6aad75904055"
+            and secret_runner_id not in self.batting_team.shadows
         ):
             secret_base_exit_eligible = False
 
@@ -3409,18 +3450,19 @@ class Resim:
             EventType.REMOVED_MULTIPLE_MODIFICATIONS_ECHO,
             EventType.ADDED_MULTIPLE_MODIFICATIONS_ECHO,
         ]:
-            player = self.data.get_player(event["playerTags"][0])
-            for mod in meta.get("adds", []):
-                player.add_mod(mod["mod"], mod["type"])
-            for mod in meta.get("removes", []):
-                player.remove_mod(mod["mod"], mod["type"])
+            if event["playerTags"]:
+                player = self.data.get_player(event["playerTags"][0])
+                for mod in meta.get("adds", []):
+                    player.add_mod(mod["mod"], mod["type"])
+                for mod in meta.get("removes", []):
+                    player.remove_mod(mod["mod"], mod["type"])
 
-                # see Wyatt Mason X, s19d28, echoing Magi Ruiz, getting rid of Homebody, and then losing OP
-                for secondary_mod, source in player.permanent_mod_sources.items():
-                    if source == [mod["mod"]]: # todo: what if multiple?
-                        player.remove_mod(secondary_mod, ModType.PERMANENT)
+                    # see Wyatt Mason X, s19d28, echoing Magi Ruiz, getting rid of Homebody, and then losing OP
+                    for secondary_mod, source in player.permanent_mod_sources.items():
+                        if source == [mod["mod"]]: # todo: what if multiple?
+                            player.remove_mod(secondary_mod, ModType.PERMANENT)
 
-            player.last_update_time = self.event["created"]
+                player.last_update_time = self.event["created"]
 
         # cases where the tagged player needs to be refetched (party, consumer, incin replacement)
         if event["type"] in [

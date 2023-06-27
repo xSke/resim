@@ -20,6 +20,8 @@ class StubRng:
     def get_state_str(self):
         return "[STUB]"
 
+    def step(self, step=1):
+        return 0.5
 
 def get_rng_url(solution):
     state = solution["state"]
