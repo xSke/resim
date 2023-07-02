@@ -194,6 +194,8 @@ class Resim:
             self.roll("???")
 
         event_adjustments = {
+            "2021-04-12T15:19:56.073Z": -2,
+            "2021-04-12T15:22:50.866Z": 1,
             "2021-04-14T15:11:07.771Z": -1,  # fix for missing data
             "2021-04-14T15:08:13.155Z": -1,  # fix for missing data
             "2021-04-14T17:06:28.047Z": -2,  # i don't know
@@ -209,6 +211,19 @@ class Resim:
             "2021-05-12T18:15:59.133Z": 1,
             "2021-05-13T08:07:07.199Z": -1,
             "2021-05-13T13:03:37.832Z": 1,
+            "2021-05-13T15:00:17.580Z": -1,
+            "2021-05-14T02:17:18.316Z": 1,
+            "2021-05-14T07:02:16.833Z": 1,
+            "2021-05-14T07:02:41.825Z": 1,
+            "2021-05-14T07:04:02.187Z": 1,
+            "2021-05-14T11:02:36.939Z": 1,
+            "2021-05-14T11:21:37.843Z": 1,  # instability?
+            "2021-05-14T12:02:42.014Z": 1,
+            "2021-05-14T12:02:56.734Z": 1,
+            "2021-05-14T15:17:08.833Z": 1,
+            "2021-05-14T17:02:16.387Z": 1,
+            "2021-05-14T22:03:48.349Z": 1,
+            "2021-05-15T01:00:00.842Z": -2,
             "2021-05-17T17:20:09.894Z": 1,
             "2021-05-17T19:19:27.120Z": 2,
             "2021-05-17T20:03:16.538Z": 1,  # end of the first inning???
@@ -365,7 +380,7 @@ class Resim:
             and self.next_update["gameStartPhase"] >= 0
             and self.ty != EventType.ADDED_MOD_FROM_OTHER_MOD
         ):
-            min_roll, max_roll = (0, 0.017) if self.ty == EventType.PRIZE_MATCH else (0.017, 1)
+            min_roll, max_roll = (0, 0.019) if self.ty == EventType.PRIZE_MATCH else (0.019, 1)
             self.roll("prize match", min_roll, max_roll)
 
         PSYCHO_ACOUSTICS_PHASE_BY_SEASON = {
@@ -408,6 +423,9 @@ class Resim:
             EventType.PRIZE_MATCH,
             EventType.A_BLOOD_TYPE,
             EventType.COASTING,
+            EventType.TEAM_RECEIVED_GIFT,
+            EventType.BLESSING_OR_GIFT_WON,
+            EventType.PLAYER_SOUL_INCREASED,
         ]:
             if self.ty == EventType.PSYCHO_ACOUSTICS:
                 self.roll("which mod?")
@@ -448,6 +466,7 @@ class Resim:
         if self.ty in [
             EventType.PLAYER_STAT_INCREASE,
             EventType.PLAYER_STAT_DECREASE,
+            EventType.PLAYER_STAT_DECREASE_FROM_SUPERALLERGIC,
         ]:
             if "are Bottom Dwellers" in self.desc:
                 team = self.data.get_team(self.event["teamTags"][0])
@@ -752,6 +771,10 @@ class Resim:
                 "2d4465c0-60e4-42e3-a630-712d9bcfb253": 1,
                 "9df98fb5-e015-497b-bc47-6a6701a5e69a": 1,
                 "3954b1cc-01bc-48a5-b2d1-936ae28997db": 1,
+                "30f866e2-af0d-4609-8973-19d1c9be96d2": 1,
+                "75961c1b-d2e1-4ed3-bd44-0a2d49ad9962": 1,
+                "2c64f251-fc1f-4c38-bd10-af37f39de0b6": 1,
+                "3445c14f-87ee-49a0-8fa0-53bcb940bc02": 2,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -1904,6 +1927,17 @@ class Resim:
                     self.roll("target")
                     return True
 
+            # I don't know what this extra roll is, but it's definitely happening before the grindrail roll and after batterup. Both games are during an eclipse.
+            if (self.game_id in [
+                    "713c05c7-7060-4e1a-b593-823f11f6101b",
+                    "396ac99e-f5ab-4989-b413-9ab99d518125",
+                ] and self.pitching_team.nickname == "Crabs") or (
+                self.game_id in [
+                    "3e041e13-17cb-4d51-89f3-1b127b5a63f8",
+                    "cecbda18-129f-4012-a410-c1e1a2280b17"
+                    ] and self.pitching_team.nickname == "Georgias"):
+                self.roll("???")
+
             fire_eater_eligible = self.pitching_team.lineup + [
                 self.batter.id,
                 self.pitcher.id,
@@ -2052,7 +2086,7 @@ class Resim:
 
             if has_allergic_players:
                 allergy_roll = self.roll("peanuts")
-                if self.ty == EventType.ALLERGIC_REACTION:
+                if self.ty == EventType.ALLERGIC_REACTION or self.ty == EventType.SUPERALLERGIC_REACTION:
                     self.log_roll(
                         Csv.WEATHERPROC,
                         "Allergy",
@@ -2060,6 +2094,8 @@ class Resim:
                         True,
                     )
                     self.roll("target")
+                    if self.ty == EventType.SUPERALLERGIC_REACTION:
+                        self.roll("superallergy???")
                     return True
                 else:
                     self.log_roll(
@@ -2479,7 +2515,7 @@ class Resim:
                     # we have Pitching Machine (with ego2) swept elsewhere on season 16 day 10
                     # and Aldon Cashmoney (also ego2) kept on base on season 16 day 65
                     if (self.season, self.day) >= (15, 64):
-                        exempt_mods += [Mod.EGO2, Mod.EGO3, Mod.EGO4]
+                        exempt_mods += [Mod.EGO2, Mod.EGO3, Mod.EGO4, Mod.LEGENDARY]
                     if not runner.has_any(*exempt_mods):
                         self.roll(f"sweep ({runner.name})")
 
@@ -2630,20 +2666,47 @@ class Resim:
                                 f"incorrect consumer target (rolled {target.name}, expected {attacked_player.name})"
                             )
 
-                        for item in attacked_player.items:
-                            if item.health > 0:
-                                # pick item to break maybe? or something??
-                                self.roll("???")
-                                if self.event["created"] in ["2021-04-16T15:00:51.494Z", "2021-05-21T19:03:02.065Z", "2021-04-17T23:01:26.351Z"]:
-                                    self.roll("??????")
-                                return True
-
-                        # The item breaking can get processed before the attack event, causing the above check to fail
-                        # e.g., @2021-04-16T23:15:56.568Z
                         if "DEFENDS" in self.desc:
                             self.roll("???")
-                            if self.event["created"] in ["2021-04-16T23:16:01.541Z"]:
-                                self.roll("??????")
+                            # It's unclear what causes this extra roll, but it doesn't line up
+                            # consistently with level nor with the "incorrect consumer target" 
+                            # errors we're currently getting.
+                            if ((self.season == 15 and self.day >= 91) or 
+                                    (self.season == 17 and self.day >= 76) or
+                                    self.season >= 18):
+                                if self.event["created"] not in [
+                                    "2021-05-13T22:21:29.061Z",
+                                    "2021-05-13T23:12:12.390Z",
+                                    "2021-05-14T01:15:39.037Z",
+                                    "2021-05-14T02:16:29.555Z",
+                                    "2021-05-14T02:17:17.748Z",
+                                    "2021-05-14T05:04:57.785Z",
+                                    "2021-05-14T06:13:28.506Z",
+                                    "2021-05-14T07:06:27.668Z",
+                                    "2021-05-14T07:07:17.192Z",
+                                    "2021-05-14T08:17:34.734Z",
+                                    "2021-05-14T09:12:47.780Z",
+                                    "2021-05-14T09:24:09.921Z",
+                                    "2021-05-14T10:22:12.687Z",
+                                    "2021-05-14T11:23:31.062Z",
+                                    "2021-05-14T12:18:18.351Z",
+                                    "2021-05-14T14:05:50.809Z",
+                                    "2021-05-14T15:08:47.983Z",
+                                    "2021-05-14T15:19:36.092Z",
+                                    "2021-05-14T16:13:53.235Z",
+                                    "2021-05-14T17:03:56.622Z",
+                                    "2021-05-14T17:24:09.522Z",
+                                    "2021-05-14T18:15:39.886Z",
+                                    "2021-05-14T18:18:05.117Z",
+                                    "2021-05-14T18:22:18.385Z",
+                                    "2021-05-14T19:09:13.432Z",
+                                    "2021-05-14T19:19:39.689Z",
+                                    "2021-05-14T20:04:17.271Z",
+                                    "2021-05-14T20:27:54.000Z",
+                                    "2021-05-15T01:14:50.004Z",
+                                    "2021-05-15T16:20:06.618Z",
+                                ]:
+                                    self.roll("??????")
                             return True
 
                         # todo: find out where this is
@@ -3468,6 +3531,7 @@ class Resim:
         if event["type"] in [
             EventType.PLAYER_STAT_INCREASE,
             EventType.PLAYER_STAT_DECREASE,
+            EventType.PLAYER_STAT_DECREASE_FROM_SUPERALLERGIC,
             EventType.PLAYER_HATCHED,
             EventType.PLAYER_GAINED_ITEM,
             EventType.PLAYER_LOST_ITEM,

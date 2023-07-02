@@ -124,6 +124,7 @@ class Mod(Enum):
     HOTEL_MOTEL = auto()
     INHABITING = auto()
     LATE_TO_PARTY = auto()
+    LEGENDARY = auto()
     LOVE = auto()
     MARKED = auto()
     MAXIMALIST = auto()
@@ -334,8 +335,10 @@ class EventType(IntEnum):
     FAX_MACHINE_ACTIVATION = 191
     HOLIDAY_INNING = 192
     PRIZE_MATCH = 193
+    TEAM_RECEIVED_GIFT = 194
     SMITHY_ACTIVATION = 195
     A_BLOOD_TYPE = 198
+    PLAYER_SOUL_INCREASED = 199
     HYPE_BUILT = 206
     RUNS_SCORED = 209
     WIN_COLLECTED_REGULAR = 214
