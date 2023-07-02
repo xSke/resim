@@ -23,6 +23,7 @@ class StubRng:
     def step(self, step=1):
         return 0.5
 
+
 def get_rng_url(solution):
     state = solution["state"]
     return f"https://rng.sibr.dev/?state=({state[0]},{state[1]})+{solution['offset']}"
@@ -61,10 +62,7 @@ def main():
     start_timestamp = "2021-04-14T16:01:37.236Z"
     end_timestamp = "2021-04-14T16:22:37.236Z"
 
-    cache_file = (
-        f"cache/divine_rolls_{start_timestamp.replace(':', '_')}-"
-        f"{end_timestamp.replace(':', '_')}.json"
-    )
+    cache_file = f"cache/divine_rolls_{start_timestamp.replace(':', '_')}-" f"{end_timestamp.replace(':', '_')}.json"
     try:
         with open(cache_file, "r") as f:
             roll_log = list(map(lambda roll: LoggedRoll(**roll), json.load(f)))

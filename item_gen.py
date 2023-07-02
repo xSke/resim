@@ -406,7 +406,6 @@ ELEMENTS = {
     ],
     "Containment": [],
     "Dexterity": [
-    
         StatRoll("thwackability", 0.1, 0.1),
         StatRoll("omniscience", 0.1, 0.1),
         StatRoll("continuation", 0.1, 0.1),
@@ -741,7 +740,7 @@ PREFIX_POOL = {
         "Wooden",
         "Sharp",
         "Chaotic",
-        #"Lucky",
+        # "Lucky",
     ),
     (16, 77): (
         "Careful",
@@ -915,13 +914,11 @@ PREFIX_POOL = {
         "Fire Eating",
         "Golden",
         "Squiddish",
-        
         "Parasitic",
         "Clutch",
         "Chunky",
         "Smooth",
         "Travelling",
-
         "Fireproof",
         "Noise-Cancelling",
         "Gravity",
@@ -940,7 +937,6 @@ PREFIX_POOL = {
         "Inflatable",
         "Slimy",
         "Greedy",
-        
         "Charitable",
         "Passionate",
         "Hard",
@@ -953,7 +949,7 @@ PREFIX_POOL = {
         "Chaotic",
         "Lucky",
     ),
-        (17, 94): (
+    (17, 94): (
         "Careful",
         "Ambitious",
         "Fire Eating",
@@ -1049,16 +1045,13 @@ PREFIX_POOL = {
         "Repeating",
         "Fireproof",
         "Noise-Cancelling",
-        
         "Actual",
         "Hearty",
         "Holey",
-        
         "Gravity",
         "Cryogenic",
         "Plant-Based",
         "Metaphorical",
-        
         "Limestone",
         "Mesh",
         "Rubber",
@@ -1132,7 +1125,7 @@ PREFIX_POOL = {
         "Parasitic",
         "Clutch",
         "Chunky",
-        #"Smooth",
+        # "Smooth",
         "Repeating",
         "Fireproof",
         "Noise-Cancelling",

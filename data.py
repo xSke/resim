@@ -806,7 +806,7 @@ class PlayerData(TeamOrPlayerMods):
         # must use pre-item buoyancy
         # todo: does this apply to pressurization and cinnamon too?
         frequency = 6 + round(10 * self.data["buoyancy"])
-        
+
         # Pull from pre-computed sin values
         sin_phase = SIN_PHASES[frequency][day]
         # Original formula:
@@ -818,14 +818,13 @@ class PlayerData(TeamOrPlayerMods):
 
     def stats_with_items(self) -> Dict[str, float]:
         return self._get_stats_with_items(self.data, self.items)
-    
+
     def multiplied(self, stat: str, multiplier: float) -> float:
         # we can do this nicer i think but whatevs
         raw_stat = self.data[stat.replace("ground_friction", "groundFriction")]
         full_stat = getattr(self, stat)
         item_stat = full_stat - raw_stat
         return raw_stat * multiplier + item_stat
-
 
     def is_cache_equivalent(self, other: "PlayerData") -> bool:
         return (

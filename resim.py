@@ -16,7 +16,7 @@ from data import (
     TeamData,
     Weather,
     get_feed_between,
-    stat_indices
+    stat_indices,
 )
 from output import SaveCsv
 from rng import Rng
@@ -281,7 +281,7 @@ class Resim:
         # has to be rolled after party
         if self.handle_flooding():
             return
-        
+
         if self.handle_polarity():
             return
 
@@ -1068,7 +1068,7 @@ class Resim:
         elif not is_hr and roll < threshold:
             self.print("!!! warn: home run roll too low ({} < {})".format(roll, threshold))
         return roll
-    
+
     def is_swing_check_relevant(self):
         if self.is_flinching():
             return False
@@ -1079,6 +1079,7 @@ class Resim:
         if self.batting_team.has_mod(Mod.H20) and self.is_strike and self.outs == self.max_outs - 1:
             return False
         return True
+
     def roll_swing(self, did_swing: bool):
         roll = self.roll("swing")
 
@@ -1091,7 +1092,7 @@ class Resim:
                 self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
             )
 
-        if self.is_swing_check_relevant() and "Mind Trick" not in self.desc: # i give up
+        if self.is_swing_check_relevant() and "Mind Trick" not in self.desc:  # i give up
             if did_swing and roll > threshold:
                 self.print(
                     "!!! warn: swing on {} roll too high ({} > {})".format(
@@ -1153,7 +1154,7 @@ class Resim:
             if "strikes out swinging" in self.desc:
                 # i hate mind trick so much
                 did_swing = True
-                
+
             swing_roll = self.roll_swing(did_swing)
             if swing_roll < 0.05:
                 ball_threshold = get_swing_ball_threshold(
@@ -1321,7 +1322,15 @@ class Resim:
 
     def roll_out(self, was_out):
         out_fielder_roll, out_fielder = self.roll_fielder(check_name=False)
-        out_threshold = get_out_threshold(self.batter, self.batting_team, self.pitcher, self.pitching_team, out_fielder, self.stadium, self.get_stat_meta())
+        out_threshold = get_out_threshold(
+            self.batter,
+            self.batting_team,
+            self.pitcher,
+            self.pitching_team,
+            out_fielder,
+            self.stadium,
+            self.get_stat_meta(),
+        )
 
         # high roll = out, low roll = not out
         out_roll = self.roll(f"out (to {out_fielder.name})", threshold=out_threshold, passed=not was_out)
@@ -1345,7 +1354,6 @@ class Resim:
                 fielder=out_fielder,
             )
 
-
         return out_roll
 
     def handle_out(self):
@@ -1365,7 +1373,9 @@ class Resim:
 
         is_fc_dp = "into a double play!" in self.desc or "reaches on fielder's choice" in self.desc
 
-        fly_threshold = get_fly_or_ground_threshold(self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta())
+        fly_threshold = get_fly_or_ground_threshold(
+            self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
+        )
 
         named_fielder = None
         if self.ty == EventType.FLY_OUT:  # flyout
@@ -1617,7 +1627,7 @@ class Resim:
                             self.damage(runner, "batter")
                         else:
                             self.damage(self.batter, "batter")
-                        
+
             if (self.season, self.day) < (15, 3):
                 self.damage(self.batter, "fielder")
                 self.damage(fielder, "fielder")
@@ -1741,8 +1751,24 @@ class Resim:
         elif "hits a Triple!" in self.desc:
             hit_bases = 3
 
-        double_threshold = get_double_threshold(self.batter, self.batting_team, self.pitcher, self.pitching_team, fielder, self.stadium, self.get_stat_meta())
-        triple_threshold = get_triple_threshold(self.batter, self.batting_team, self.pitcher, self.pitching_team, fielder, self.stadium, self.get_stat_meta())
+        double_threshold = get_double_threshold(
+            self.batter,
+            self.batting_team,
+            self.pitcher,
+            self.pitching_team,
+            fielder,
+            self.stadium,
+            self.get_stat_meta(),
+        )
+        triple_threshold = get_triple_threshold(
+            self.batter,
+            self.batting_team,
+            self.pitcher,
+            self.pitching_team,
+            fielder,
+            self.stadium,
+            self.get_stat_meta(),
+        )
 
         double_passed = {1: False, 2: True, 3: None}[hit_bases]
         double_roll = self.roll(f"double (to {fielder.name})", threshold=double_threshold, passed=double_passed)
@@ -1799,7 +1825,9 @@ class Resim:
             and self.update["basesOccupied"] == [Base.THIRD, Base.SECOND, Base.FIRST]
         )
         batter_count = (
-            self.next_update["awayTeamBatterCount"] if self.next_update["topOfInning"] else self.next_update["homeTeamBatterCount"]
+            self.next_update["awayTeamBatterCount"]
+            if self.next_update["topOfInning"]
+            else self.next_update["homeTeamBatterCount"]
         )
         batter_at_bats = batter_count // len(self.batting_team.lineup)  # todo: +1?
         return StatRelevantData(
@@ -1928,14 +1956,17 @@ class Resim:
                     return True
 
             # I don't know what this extra roll is, but it's definitely happening before the grindrail roll and after batterup. Both games are during an eclipse.
-            if (self.game_id in [
+            if (
+                self.game_id
+                in [
                     "713c05c7-7060-4e1a-b593-823f11f6101b",
                     "396ac99e-f5ab-4989-b413-9ab99d518125",
-                ] and self.pitching_team.nickname == "Crabs") or (
-                self.game_id in [
-                    "3e041e13-17cb-4d51-89f3-1b127b5a63f8",
-                    "cecbda18-129f-4012-a410-c1e1a2280b17"
-                    ] and self.pitching_team.nickname == "Georgias"):
+                ]
+                and self.pitching_team.nickname == "Crabs"
+            ) or (
+                self.game_id in ["3e041e13-17cb-4d51-89f3-1b127b5a63f8", "cecbda18-129f-4012-a410-c1e1a2280b17"]
+                and self.pitching_team.nickname == "Georgias"
+            ):
                 self.roll("???")
 
             fire_eater_eligible = self.pitching_team.lineup + [
@@ -2669,11 +2700,13 @@ class Resim:
                         if "DEFENDS" in self.desc:
                             self.roll("???")
                             # It's unclear what causes this extra roll, but it doesn't line up
-                            # consistently with level nor with the "incorrect consumer target" 
+                            # consistently with level nor with the "incorrect consumer target"
                             # errors we're currently getting.
-                            if ((self.season == 15 and self.day >= 91) or 
-                                    (self.season == 17 and self.day >= 76) or
-                                    self.season >= 18):
+                            if (
+                                (self.season == 15 and self.day >= 91)
+                                or (self.season == 17 and self.day >= 76)
+                                or self.season >= 18
+                            ):
                                 if self.event["created"] not in [
                                     "2021-05-13T22:21:29.061Z",
                                     "2021-05-13T23:12:12.390Z",
@@ -3130,7 +3163,9 @@ class Resim:
         try:
             item_name = roll_item(self.season, self.day, roll_type, self.roll, expected)
         except KeyError as e:
-            self.error(f"Unknown element {e} for item created at {event['created']}. This probably means either the roll is in the wrong position or the item pool needs to be updated.")
+            self.error(
+                f"Unknown element {e} for item created at {event['created']}. This probably means either the roll is in the wrong position or the item pool needs to be updated."
+            )
             raise
         if event["created"] in [
             "2021-04-20T21:43:04.935Z",
@@ -3228,7 +3263,9 @@ class Resim:
         # depending on which position or which type of roll?
         damage_roll = self.roll(f"item damage ({player.name})")
 
-        was_item_broken_this_event = " broke!" in self.desc or " were damaged" in self.desc or " was damaged" in self.desc
+        was_item_broken_this_event = (
+            " broke!" in self.desc or " were damaged" in self.desc or " was damaged" in self.desc
+        )
 
         # so, there are a few(?) cases in early s16 where an item was damaged and broke,
         # and no event was logged or displayed.
@@ -3246,12 +3283,13 @@ class Resim:
             ("2021-05-11T09:09:39.742Z", "8cd06abf-be10-4a35-a3ab-1a408a329147"): False,
         }
         damage_roll_successful = manual_damage_overrides.get((self.event["created"], player.id), damage_roll_successful)
-        
+
         if damage_roll_successful:
-            self.roll(F"which item? ({player.name})")
+            self.roll(f"which item? ({player.name})")
 
             if f"{player.raw_name}'s " not in self.desc and f"{player.raw_name}' " not in self.desc:
                 self.print(f"!!! warn: wrong item damage player? (expected {player.raw_name})")
+
     def log_roll(
         self,
         csv: Csv,
@@ -3522,7 +3560,7 @@ class Resim:
 
                     # see Wyatt Mason X, s19d28, echoing Magi Ruiz, getting rid of Homebody, and then losing OP
                     for secondary_mod, source in player.permanent_mod_sources.items():
-                        if source == [mod["mod"]]: # todo: what if multiple?
+                        if source == [mod["mod"]]:  # todo: what if multiple?
                             player.remove_mod(secondary_mod, ModType.PERMANENT)
 
                 player.last_update_time = self.event["created"]
@@ -3664,7 +3702,6 @@ class Resim:
             player.update_stats()
             player.last_update_time = self.event["created"]
 
-
     def find_start_of_inning_score(self, game_id, inning):
         for play in range(1000):
             update = self.data.get_update(game_id, play)
@@ -3684,7 +3721,14 @@ class Resim:
 
         self.save_data()
 
-    def roll(self, label, lower: float = 0, upper: float = 1, passed: Optional[bool] = None, threshold: Optional[float] = None) -> float:
+    def roll(
+        self,
+        label,
+        lower: float = 0,
+        upper: float = 1,
+        passed: Optional[bool] = None,
+        threshold: Optional[float] = None,
+    ) -> float:
         value = self.rng.next()
         self.print(f"{label}: {value}")
 
@@ -3695,7 +3739,9 @@ class Resim:
                 lower = threshold
 
         if value < lower or value > upper:
-            self.print("!!! warn: value {}={} out of bounds (should be within {}-{})".format(label, value, lower, upper))
+            self.print(
+                "!!! warn: value {}={} out of bounds (should be within {}-{})".format(label, value, lower, upper)
+            )
 
         # hacky way to figure out what index this roll is in the overall list
         idx = 0

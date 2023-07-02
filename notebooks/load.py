@@ -239,24 +239,28 @@ def player_attribute(
         else:
             # todo: hardcoding this sucks but i can't think of a cleaner way to express this. it's real bad
             if attr_key != "suppression":
-                cols = [object_key + "_object", override_mod_team or _team_for_object(object_key) + "_object", "stat_relevant_data"]
+                cols = [
+                    object_key + "_object",
+                    override_mod_team or _team_for_object(object_key) + "_object",
+                    "stat_relevant_data",
+                ]
                 multiplier = df[cols].apply(_get_multiplier(override_mod_team or object_key, attr_key), axis=1)
             else:
                 cols = [object_key + "_object", "pitching_team" + "_object", "stat_relevant_data"]
                 multiplier = df[cols].apply(_get_multiplier("pitcher", attr_key), axis=1)
-                
+
             attr = attr_raw * multiplier
 
     if items:
-        attr += attr_unbroken_items#*multiplier
+        attr += attr_unbroken_items  # *multiplier
     if broken_items:
-        attr += attr_broken_items#*multiplier
+        attr += attr_broken_items  # *multiplier
 
     hype = df["pitching_team_hype"] - df["batting_team_hype"]
     attr += hype * hype_coef
 
     if invert:
-        attr = (1 - attr)
+        attr = 1 - attr
 
     if vibes:
         vibe = df[object_key + "_vibes"]

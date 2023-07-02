@@ -45,7 +45,12 @@ def parse_args():
         help="Only log these CSV types. Default is logging all CSV types. Use --csv-list to see possible CSVs.",
     )
     parser.add_argument("--csv-list", default=False, action="store_true", help="List the CSVs which can be included")
-    parser.add_argument("--ignore-deploys", default=False, action="store_true", help="Try running even if it crosses a known deploy time.")
+    parser.add_argument(
+        "--ignore-deploys",
+        default=False,
+        action="store_true",
+        help="Try running even if it crosses a known deploy time.",
+    )
     parser.add_argument("--no-retry", default=False, action="store_true")
 
     args = parser.parse_args()
@@ -163,7 +168,7 @@ def main():
 
     if args.no_retry:
         with open("jump.txt", "w") as out:
-                out.write(out_file.getvalue())
+            out.write(out_file.getvalue())
         return
 
     rng = Rng(rng_state, rng_offset)
