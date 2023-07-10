@@ -202,7 +202,14 @@ class Resim:
             "2021-04-14T19:07:51.129Z": -2,  # may be attractor-relayed?
             "2021-04-20T12:00:00.931Z": -1,  # item damage at end of game??
             "2021-05-10T18:05:08.668Z": 1,
-            "2021-05-10T19:28:42.723Z": 1,
+            "2021-05-10T20:21:59.360Z": 1,
+            "2021-05-10T21:06:01.788Z": 1,
+            "2021-05-10T21:06:17.243Z": -1,
+            "2021-05-10T21:29:20.815Z": 1,
+            #"2021-05-10T21:13:03.765Z": 1,
+            "2021-05-10T22:26:11.164Z": 1,
+            "2021-05-11T00:00:17.142Z": 1,
+            "2021-05-11T01:00:16.921Z": 1,
             "2021-05-12T06:00:17.186Z": 1,
             "2021-05-12T12:24:31.667Z": 1,
             "2021-05-12T13:01:28.057Z": 1,
@@ -380,7 +387,7 @@ class Resim:
             and self.next_update["gameStartPhase"] >= 0
             and self.ty != EventType.ADDED_MOD_FROM_OTHER_MOD
         ):
-            min_roll, max_roll = (0, 0.019) if self.ty == EventType.PRIZE_MATCH else (0.019, 1)
+            min_roll, max_roll = (0, 0.02) if self.ty == EventType.PRIZE_MATCH else (0.02, 1)
             self.roll("prize match", min_roll, max_roll)
 
         PSYCHO_ACOUSTICS_PHASE_BY_SEASON = {

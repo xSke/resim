@@ -1166,7 +1166,8 @@ POST_PREFIX_POOL = {
     (16, 27): ("Skate", "Rock", "Concrete", "Arm", "Leg", "Head", "Blood", "Air"),
     (16, 60): ("Skate", "Rock", "Concrete", "Arm", "Paper", "Leg", "Head", "Blood", "Air"),
     (16, 72): ("Skate", "Rock", "Concrete", "Arm", "Leg", "Head", "Blood", "Air"),
-    (17, 0): ("Skate", "Rock", "Concrete", "Arm", "Leg", "Head", "Blood", "Air"),
+    (17, 0): ("Skate", "Rock", "Concrete", "Arm", "Leg",  "Spirit",  "Air"),
+    (17, 11): ("Skate", "Rock", "Concrete", "Arm", "Leg", "Head", "Blood", "Air"),
     (18, 0): ("Skate", "Rock", "Concrete", "Paper", "Arm", "Leg", "Head", "Blood", "Air"),
     (18, 72): ("Skate", "Rock", "Concrete", "Arm", "Leg", "Head", "Blood", "Air"),
     (18, 85): ("Rock", "Leg", "Arm", "Head", "Blood", "Air"),  # WTF???
