@@ -46,4 +46,4 @@
 - Consumer target selection
 - consumer attack activation rates
 - Figure out how Spicy/On Fire works (tentatively correct, need to check ground_friction)
-- Fill out coverage for seasons we already have data for (missing S12D1-30, S13D24, S14D26&27, S15D1-10, S15D112&113, and a few minutes of S12D88)
+- Fill out coverage for seasons we already have data for (missing S12D1-30, S13D24, S14D26&27, S15D4, S15D112&113, S17D1, S17D76, S17D79+, S18D1, S18D26, S18D51-57, S18D71, S18D72, S18D79, and a few minutes of S12D88)

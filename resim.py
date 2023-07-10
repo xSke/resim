@@ -194,6 +194,7 @@ class Resim:
             self.roll("???")
 
         event_adjustments = {
+            "2021-04-05T15:23:26.102Z": 1,
             "2021-04-12T15:19:56.073Z": -2,
             "2021-04-12T15:22:50.866Z": 1,
             "2021-04-14T15:11:07.771Z": -1,  # fix for missing data
@@ -782,6 +783,7 @@ class Resim:
                 "75961c1b-d2e1-4ed3-bd44-0a2d49ad9962": 1,
                 "2c64f251-fc1f-4c38-bd10-af37f39de0b6": 1,
                 "3445c14f-87ee-49a0-8fa0-53bcb940bc02": 2,
+                "178842c6-56f6-42c2-b4b1-a729c6e7ca9a": 2,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -2654,7 +2656,8 @@ class Resim:
             if elsewhere_time > 18:
                 should_scatter = True
         if "season" in self.desc:
-            should_scatter = True
+            if self.event["created"] not in ["2021-04-05T16:24:45.346Z", "2021-04-05T20:08:23.286Z"]:
+                should_scatter = True
 
         if should_scatter:
             scatter_times = (len(player.raw_name) - 2) * 2
