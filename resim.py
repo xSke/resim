@@ -194,6 +194,12 @@ class Resim:
             self.roll("???")
 
         event_adjustments = {
+            "2021-03-01T20:22:00.461Z": -1,  # fix for missing data
+            "2021-03-01T21:00:16.006Z": -1,  # fix for missing data
+            "2021-03-02T12:24:43.753Z": 1,  # fix for missing data
+            # "2021-03-02T08:02:06.107Z": 1,
+            "2021-03-02T13:25:06.682Z": -1,  # fix for missing data
+            "2021-03-02T14:00:15.843Z": 1,
             "2021-04-05T15:23:26.102Z": 1,
             "2021-04-12T15:19:56.073Z": -2,
             "2021-04-12T15:22:50.866Z": 1,
@@ -207,7 +213,6 @@ class Resim:
             "2021-05-10T21:06:01.788Z": 1,
             "2021-05-10T21:06:17.243Z": -1,
             "2021-05-10T21:29:20.815Z": 1,
-            #"2021-05-10T21:13:03.765Z": 1,
             "2021-05-10T22:26:11.164Z": 1,
             "2021-05-11T00:00:17.142Z": 1,
             "2021-05-11T01:00:16.921Z": 1,
@@ -217,9 +222,11 @@ class Resim:
             "2021-05-12T13:20:27.391Z": 2,
             "2021-05-12T15:20:57.747Z": 1,
             "2021-05-12T18:15:59.133Z": 1,
+            "2021-05-12T23:19:44.789Z": 2,
             "2021-05-13T08:07:07.199Z": -1,
             "2021-05-13T13:03:37.832Z": 1,
             "2021-05-13T15:00:17.580Z": -1,
+            "2021-05-13T16:38:59.820Z": 386,  # skipping latesiesta
             "2021-05-14T02:17:18.316Z": 1,
             "2021-05-14T07:02:16.833Z": 1,
             "2021-05-14T07:02:41.825Z": 1,
@@ -512,6 +519,12 @@ class Resim:
 
             if "entered the Shadows" in self.desc:
                 # fax machine dunk
+                # boost amounts are 0.04 * roll + 0.01, rolled in this order:
+                # Shakespearianism, Suppression, Unthwackability, Coldness, Overpowerment, Ruthlessness, Tragicness,
+                # Buoyancy, Thwackability, Moxie, Divinity, Musclitude, Patheticism, Martyrdom,
+                # Base Thirst, Laserlikeness, Ground Friction, Continuation, Indulgence,
+                # Omniscience, Tenaciousness, Watchfulness, Anticapitalism, Chasiness, Cinnamon
+
                 for _ in range(25):
                     self.roll("stat")
 
@@ -766,7 +779,7 @@ class Resim:
                 "9291e5ce-a49f-44dc-9bb4-747bc783c351": 1,
                 "33415dda-9822-4bfd-b943-b8f7c4fb3af4": 1,
                 "0b82745a-e797-4256-9ce7-9868253a9e4b": 1,
-                "4f8ce860-fb5e-4cff-8111-d687fa438876": 7,
+                "4f8ce860-fb5e-4cff-8111-d687fa438876": 2,
                 "e0880bb0-60b2-4778-a209-977bd4b23ab6": 1,
                 "a12bbed2-68b4-4db0-b408-6727b28743c3": 1,
                 "fa320c4c-ceab-48a5-b3a1-8a064977d974": 217,  # earlsiesta reading
@@ -784,6 +797,10 @@ class Resim:
                 "2c64f251-fc1f-4c38-bd10-af37f39de0b6": 1,
                 "3445c14f-87ee-49a0-8fa0-53bcb940bc02": 2,
                 "178842c6-56f6-42c2-b4b1-a729c6e7ca9a": 2,
+                "41a1a650-e904-4680-931e-32668eacf05c": 1,
+                "87734e6d-ef2f-4fd8-b500-07a28be7460d": 1,
+                "df4179c0-2f9e-404d-b0bf-533d9dba8708": 1,
+                "b02f8c3e-af15-4b9c-ad9e-9d7b4e89f668": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -1823,7 +1840,7 @@ class Resim:
             self.damage(runner, "batter")
 
             is_force_score = base >= (3 - hit_bases)  # fifth base lol
-            if is_force_score:
+            if is_force_score and self.event["created"] != "2021-04-23T13:30:43.331Z":
                 self.damage(runner, "batter")
 
     def get_stat_meta(self):
@@ -2346,7 +2363,9 @@ class Resim:
                         "2021-04-19T17:17:55.926Z": 7,
                         "2021-04-20T15:01:43.618Z": 11,
                         "2021-04-22T18:12:16.362Z": 11,
+                        "2021-04-23T14:21:19.716Z": 11,
                         "2021-05-12T03:09:08.233Z": 11,
+                        "2021-05-12T21:03:23.052Z": 7,
                         "2021-05-13T02:10:41.696Z": 7,
                     }
                     amount = shuffles.get(self.event["created"], 9)
@@ -2364,6 +2383,7 @@ class Resim:
                         "2021-04-22T04:16:58.215Z": 8,
                         "2021-04-22T14:02:46.069Z": 9,
                         "2021-05-11T02:19:07.285Z": 8,
+                        "2021-05-12T22:08:28.693Z": 9,
                         "2021-05-18T03:10:44.033Z": 11,
                     }
                     amount = shuffles.get(self.event["created"], 10)
@@ -2714,12 +2734,21 @@ class Resim:
                             # errors we're currently getting.
                             if (
                                 (self.season == 15 and self.day >= 91)
+                                or (self.season == 16 and self.day >= 76)
                                 or (self.season == 17 and self.day >= 76)
                                 or self.season >= 18
                             ):
                                 if self.event["created"] not in [
+                                    "2021-04-23T19:07:32.974Z",
+                                    "2021-04-23T22:04:12.376Z",
+                                    "2021-04-23T22:20:57.334Z",
+                                    "2021-04-23T23:02:26.588Z",
+                                    "2021-04-23T23:04:11.725Z",
+                                    "2021-04-23T23:15:05.201Z",
+                                    "2021-04-24T00:07:38.277Z",
                                     "2021-05-13T22:21:29.061Z",
                                     "2021-05-13T23:12:12.390Z",
+                                    "2021-05-14T00:03:22.023Z",
                                     "2021-05-14T01:15:39.037Z",
                                     "2021-05-14T02:16:29.555Z",
                                     "2021-05-14T02:17:17.748Z",
@@ -2777,11 +2806,10 @@ class Resim:
                     self.log_roll(Csv.CONSUMERS, "Miss", attack_roll, False, attacked_team=team)
 
     def handle_party(self):
-        if self.season != 16:
+        if self.season != 16 or self.day >= 85:
             # lol. turns out it just rolls party all the time and throws out the roll if the team isn't partying
             party_roll = self.roll("party time")
         else:
-            # todo: what do we do in s17? i haven't gotten that far
             party_roll = 1
 
         if self.ty == EventType.PARTY:
@@ -2900,8 +2928,13 @@ class Resim:
         if (
             (17, 0) <= (self.season, self.day)
             and secret_runner_id == "070758a0-092a-4a2c-8a16-253c835887cb"
-            # both firefighters games, where alx is in the ffs shadows
-            and self.game_id not in ["377f87df-36aa-4fac-bc97-59c24efb684b", "bfd8dc98-f35a-49d0-b810-2ee38fb6886f"]
+            # all firefighters games, where alx is in the ffs shadows
+            and self.game_id
+            not in [
+                "377f87df-36aa-4fac-bc97-59c24efb684b",
+                "bfd8dc98-f35a-49d0-b810-2ee38fb6886f",
+                "1ad48feb-eb1e-43eb-b28f-aff79d7a3473",
+            ]
         ):
             secret_base_exit_eligible = False
         if (
@@ -3388,7 +3421,33 @@ class Resim:
         update = self.data.get_update(self.game_id, self.play)
         next_update = self.data.get_update(self.game_id, self.play + 1)
         if not update:
-            if next_update:
+            # This list is events where using the prev_event is more accurate.
+            if next_update and self.event["created"] not in [
+                "2021-03-01T16:31:50.029Z",
+                "2021-03-01T17:23:04.303Z",
+                "2021-03-01T20:21:59.527Z",
+                "2021-03-01T20:28:29.487Z",
+                "2021-03-01T20:30:01.929Z",
+                "2021-03-01T21:19:19.226Z",
+                "2021-03-01T21:19:52.469Z",
+                "2021-03-01T21:19:52.494Z",
+                "2021-03-01T21:33:49.349Z",
+                "2021-03-01T22:07:52.618Z",
+                "2021-03-01T22:07:53.281Z",
+                "2021-03-01T22:07:53.307Z",
+                "2021-03-01T22:24:36.120Z",
+                "2021-03-01T22:24:37.784Z",
+                "2021-03-02T08:02:06.414Z",
+                "2021-03-02T08:02:06.485Z",
+                "2021-03-02T09:21:45.373Z",
+                "2021-03-02T11:26:53.751Z",
+                "2021-03-02T11:26:56.343Z",
+                "2021-03-02T12:23:40.536Z",
+                "2021-03-02T12:24:43.753Z",
+                "2021-03-02T12:26:07.445Z",
+                "2021-03-02T13:25:06.682Z",
+                "2021-03-02T14:00:17.408Z",
+            ]:
                 update = NullUpdate(next_update)
             else:
                 if self.play <= 0:
@@ -3400,31 +3459,49 @@ class Resim:
                 update = NullUpdate(prev_update)
 
         # manual fixes for missing data
-        if self.game_id == "9b1c6091-7f04-46c7-af78-0a7af4d31991" and self.play == 98:
-            update["basesOccupied"] = [1]
-            update["atBatStrikes"] = 1
-            update["halfInningOuts"] = 1
         if self.game_id == "9b1c6091-7f04-46c7-af78-0a7af4d31991" and self.play == 250:
             update = NullUpdate(self.data.get_update(self.game_id, 252))
-
-        if self.game_id == "4c8e2cbc-08be-4102-b2dc-0cf7855ded53" and self.play == 252:
-            update["basesOccupied"] = [1]
-            update["baseRunners"] = ["b643a520-af38-42e3-8f7b-f660e52facc9"]
-            update["secretBaserunner"] = []
-
-        if self.game_id == "bdb1aacf-a6be-4003-b018-10ef94c50c78" and self.play == 249:
+        elif self.game_id == "bdb1aacf-a6be-4003-b018-10ef94c50c78" and self.play == 249:
             update = NullUpdate(self.data.get_update(self.game_id, 251))
             update["basesOccupied"] = [0]
-        if self.game_id == "bdb1aacf-a6be-4003-b018-10ef94c50c78" and self.play == 250:
-            update["basesOccupied"] = [0]
-        if self.game_id == "bdb1aacf-a6be-4003-b018-10ef94c50c78" and self.play == 251:
-            update["basesOccupied"] = [1]
 
-        if self.game_id == "1ad15780-2ed4-40d6-9747-e1fb66c49bc3" and self.play == 251:
-            update["basesOccupied"] = [0]
-        if self.game_id == "e401c20c-81e6-4cd8-b885-c34f76ed89cc" and self.play == 252:
-            update["basesOccupied"] = [2, 0]
-            update["baseRunners"] = ["4b01cc3f-c59f-486d-9c00-b8a82624e620", "5361e381-6658-488b-8236-dde6a264554f"]
+        missing_update_adjustments = {
+            "2021-03-01T20:21:57.896Z": {"homeBatter": "5eac7fd9-0d19-4bf4-a013-994acc0c40c0"},
+            "2021-03-01T20:31:34.705Z": {"homeBatter": "cbd19e6f-3d08-4734-b23f-585330028665"},
+            "2021-03-02T08:02:06.485Z": {"homeBatter": "cc11963b-a05b-477b-b154-911dc31960df"},
+            "2021-03-02T13:25:04.036Z": {"awayBatter": "126fb128-7c53-45b5-ac2b-5dbf9943d71b"},
+            "2021-03-02T08:02:06.107Z": {"awayBatter": "8ecea7e0-b1fb-4b74-8c8c-3271cb54f659"},
+            "2021-03-02T14:00:17.408Z": {"awayBatter": "32810dca-825c-4dbc-8b65-0702794c424e"},
+            "2021-03-02T14:00:17.613Z": {"awayBatter": "cbd19e6f-3d08-4734-b23f-585330028665"},
+            "2021-03-02T14:24:41.163Z": {"homeBatter": "7932c7c7-babb-4245-b9f5-cdadb97c99fb"},
+            "2021-03-02T14:24:41.888Z": {"homeBatter": "d89da2d2-674c-4b85-8959-a4bd406f760a"},
+            "2021-03-02T14:24:43.752Z": {"homeBatter": "413b3ddb-d933-4567-a60e-6d157480239d"},
+            "2021-03-02T14:24:45.582Z": {"awayBatter": "4ecee7be-93e4-4f04-b114-6b333e0e6408"},
+            "2021-03-02T14:24:46.430Z": {"awayBatter": "4ecee7be-93e4-4f04-b114-6b333e0e6408"},
+            "2021-03-02T14:24:50.559Z": {"homeBatter": "e16c3f28-eecd-4571-be1a-606bbac36b2b"},
+            "2021-03-02T14:24:51.485Z": {"homeBatter": "7932c7c7-babb-4245-b9f5-cdadb97c99fb"},
+            "2021-04-14T15:08:13.123Z": {
+                "basesOccupied": [1],
+                "atBatStrikes": 1,
+                "halfInningOuts": 1,
+            },
+            "2021-04-14T15:21:12.199Z": {
+                "basesOccupied": [2, 0],
+                "baseRunners": ["4b01cc3f-c59f-486d-9c00-b8a82624e620", "5361e381-6658-488b-8236-dde6a264554f"],
+            },
+            "2021-04-14T15:21:10.904Z": {"basesOccupied": [0]},
+            "2021-04-14T15:21:15.954Z": {"basesOccupied": [1]},
+            "2021-04-14T15:21:16.255Z": {"basesOccupied": [0]},
+            "2021-04-14T15:21:16.683Z": {
+                "basesOccupied": [1],
+                "baseRunners": ["b643a520-af38-42e3-8f7b-f660e52facc9"],
+                "secretBaserunner": [],
+            },
+        }
+
+        if self.event["created"] in missing_update_adjustments:
+            for k, v in missing_update_adjustments[self.event["created"]].items():
+                update[k] = v
 
         self.update = update
         self.next_update = next_update
