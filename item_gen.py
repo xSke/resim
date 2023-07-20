@@ -110,9 +110,8 @@ ELEMENTS_S15 = {
     ],
     "Frosty": [
         StatRoll("coldness", 0.05, 0.1),
-        # I couldn't figure these two out.
-        StatRoll("chasiness", None, None),
-        StatRoll("watchfulness", None, None),
+        StatRoll("chasiness", 0.3, 0.1),
+        StatRoll("watchfulness", 0.3, 0.1),
     ],
     "Inflatable": [
         StatRoll("buoyancy", 0.075, 0.075),
@@ -187,9 +186,9 @@ ELEMENTS = {
         StatRoll("patheticism", None, None),
     ],
     "Charitable": [
-        StatRoll("anticapitalism", None, None),
-        StatRoll("martyrdom", None, None),
-        StatRoll("tragicness", None, None),
+        StatRoll("martyrdom", 0.075, 0.075),
+        StatRoll("anticapitalism", 0.075, 0.075),
+        StatRoll("tragicness", 0.125, -0.2),
     ],
     "Chunky": [],
     "Clutch": [],
@@ -481,8 +480,8 @@ ELEMENTS = {
     ],
     "Subtraction": [],
     "Vanity": [
-        StatRoll("musclitude", None, None),
-        StatRoll("martyrdom", None, None),
+        StatRoll("martyrdom", 0.1, -0.2),
+        StatRoll("musclitude", 0.1, 0.1),
     ],
     "Vitality": [
         StatRoll("Ground Friction", 0.1, 0.1),
@@ -497,7 +496,7 @@ ELEMENTS = {
 }
 
 
-BASE_STAT_PARAMS = {15: (0.1, 0.05), 16: (0.1, 0.1), 17: (0.1, 0.1), 18: (0.1, 0.1)}
+BASE_STAT_PARAMS = {15: (0.1, 0.05), 16: (0.1, 0.1), 17: (0.1, 0.1), 18: (0.1, 0.1), 19: (0.1, 0.1)}
 
 
 BASE_TYPE_POOL = {
@@ -545,6 +544,18 @@ BASE_TYPE_POOL = {
         "Helmet",
         "Socks",
     ),
+    19: (
+        "Bat",
+        "Cap",
+        "Necklace",
+        "Ring",
+        "Glove",
+        "Shoes",
+        "Jersey",
+        "Sunglasses",
+        "Helmet",
+        "Socks",
+    ),
 }
 
 
@@ -572,8 +583,8 @@ NUM_ELEMENTS_FN = {
 
 
 PREFIX_POOL_GLITTER = {
-# This is mostly a guess, being close to the reverse of non-glitter S16
-(15, 0): (
+    # This is mostly a guess, being close to the reverse of non-glitter S16
+    (15, 0): (
         "Lucky",
         "Sharp",
         "Chaotic",
@@ -627,10 +638,49 @@ PREFIX_POOL_GLITTER = {
         "Cool",
         "?????",
     ),
+    # Very low n. Probably wrong
+    (19, 0): (
+        "Coasting",
+        "Flickering",
+        "Squiddish",
+        "Parasitic",
+        "Repeating",
+        "Gravity",
+        "Metaphorical",
+        "Inflatable",
+        "Charitable",
+        "Brambly",
+        "Hard",
+        "Cool",
+        "?????",
+    ),
+}
+
+# Prior to S20, prizes used the chest pool.
+# It might be possible to reconcile this with one of the
+# other pools still, but I couldn't figure it out.
+PREFIX_POOL_PRIZE = {
+    (19, 0): (
+        "???",
+        "????",
+        "Parasitic",
+        "Repeating",
+        "Fireproof",
+        "Plant-Based",
+        "Hearty",
+        "Limestone",
+        "Rubber",
+        "Charitable",
+        "?????",
+        "Frosty",
+        "Hot",
+        "??????",
+        "Offworld",
+    )
 }
 
 
-PREFIX_POOL_NO_GLITTER = {
+PREFIX_POOL_CHEST = {
     (16, 0): (
         "Careful",
         "Ambitious",
@@ -672,10 +722,95 @@ PREFIX_POOL_NO_GLITTER = {
         "Chaotic",
         "Lucky",
     ),
+    (19, 0): (
+        "Careful",
+        "Ambitious",
+        "Fire Eating",
+        "Golden",
+        "Squiddish",
+        "Travelling",
+        "Parasitic",
+        "Clutch",
+        "Chunky",
+        "Smooth",
+        "Repeating",
+        "Fireproof",
+        "Noise-Cancelling",
+        "Gravity",
+        "Cryogenic",
+        "Plant-Based",
+        "Metaphorical",
+        "Actual",
+        "Hearty",
+        "Holey",
+        "Limestone",
+        "Mesh",
+        "Rubber",
+        "Aluminum",
+        "Weird",
+        "Smokey",
+        "Charitable",
+        "Slimy",
+        "Greedy",
+        "Passionate",
+        "Hard",
+        "Brambly",
+        "Frosty",
+        "Hot",
+        "Cool",
+        "Wooden",
+        "Sharp",
+        "Chaotic",
+        "Lucky",
+    ),
+    # There is definitely a change at or before day 40 because including day 40 creates a contradiction.
+    (19, 40): (
+        "Careful",
+        "Ambitious",
+        "Fire Eating",
+        "Golden",
+        "Squiddish",
+        "Travelling",
+        "Parasitic",
+        "Clutch",
+        "Chunky",
+        "Smooth",
+        "Repeating",
+        "Fireproof",
+        "Noise-Cancelling",
+        "Gravity",
+        "Cryogenic",
+        "Plant-Based",
+        "Metaphorical",
+        "Actual",
+        "Hearty",
+        "Holey",
+        "Limestone",
+        "Mesh",
+        "Rubber",
+        "Aluminum",
+        "Weird",
+        "Smokey",
+        "Charitable",
+        "Slimy",
+        "Greedy",
+        "Passionate",
+        "Hard",
+        "Brambly",
+        "Frosty",
+        "Hot",
+        "Cool",
+        "Wooden",
+        "Sharp",
+        "Chaotic",
+        "Lucky",
+        "??????",
+        "???????",
+    ),
 }
 
 
-POST_PREFIX_POOL_NO_GLITTER = {
+POST_PREFIX_POOL_CHEST = {
     (16, 0): ("Skate", "Rock", "Concrete", "Arm", "Leg", "Head", "Blood", "Air"),
 }
 
@@ -712,8 +847,10 @@ SUFFIX_POOL = {
 
 DELTA = 0.00000000000001
 
+
 def get_pool_for_day(pool: Mapping[tuple[int, int], Any], season: int, day: int):
     return pool[max(filter(lambda key: key <= (season, day), pool))]
+
 
 # TODO: pass in the actual item, so we can compare with expected rolls
 def roll_item(
@@ -749,7 +886,7 @@ def roll_item(
     if expected and isinstance(expected, Mapping):
         base_stat_value = expected["root"]["adjustments"][0]["value"]
         slope, intercept = BASE_STAT_PARAMS[season]
-        if base_stat == "pressurization":
+        if base_stat == "pressurization" and season < 19:
             slope /= 2
         expected_roll = (base_stat_value - intercept) / slope
 
@@ -765,9 +902,15 @@ def roll_item(
     suffix = ""
     prefixes = []
 
-    prefix_pool = PREFIX_POOL_GLITTER if roll_type == ItemRollType.GLITTER else PREFIX_POOL_NO_GLITTER
+    if roll_type == ItemRollType.GLITTER:
+        prefix_pool = PREFIX_POOL_GLITTER
+    elif roll_type == ItemRollType.PRIZE and season == 19:
+        prefix_pool = PREFIX_POOL_PRIZE
+    else:
+        prefix_pool = PREFIX_POOL_CHEST
+
     prefix_pool = list(get_pool_for_day(prefix_pool, season, day))
-    post_prefix_pool = POST_PREFIX_POOL_GLITTER if roll_type == ItemRollType.GLITTER else POST_PREFIX_POOL_NO_GLITTER
+    post_prefix_pool = POST_PREFIX_POOL_GLITTER if roll_type == ItemRollType.GLITTER else POST_PREFIX_POOL_CHEST
     post_prefix_pool = get_pool_for_day(post_prefix_pool, season, day)
     suffix_pool = get_pool_for_day(SUFFIX_POOL, season, day)
     for _ in range(num_elements):
@@ -793,14 +936,14 @@ def roll_item(
         element = pool[index]
         if pool == post_prefix_pool:
             post_prefix = element
-            category = 'post_prefix'
+            category = "post_prefix"
             prefix_index = -1
         elif pool == suffix_pool:
             suffix = element
-            category = 'suffix'
+            category = "suffix"
             prefix_index = -1
         else:
-            category = 'prefix'
+            category = "prefix"
             prefix_index = len(prefixes)
             prefixes.append(element)
             prefix_pool.remove(element)

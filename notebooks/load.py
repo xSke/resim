@@ -5,6 +5,7 @@ from typing import Dict, Union, Iterable
 from braceexpand import braceexpand
 
 import pandas as pd
+import numpy as np
 import sys
 
 # I don't want this to be required, but I don't know how to make the import work otherwise
@@ -97,8 +98,8 @@ def _get_mods(item: Union[PlayerData, TeamData]):
 
 def _get_multiplier(position, attr):
     def multiplier_extractor(row):
-        player, team, meta = row
-        return formulas.get_multiplier(player, team, position, attr, meta)
+        player, team, meta, stadium = row
+        return formulas.get_multiplier(player, team, position, attr, meta, stadium)
 
     return multiplier_extractor
 
@@ -140,8 +141,17 @@ def _team_for_object(object_key: str) -> str:
     raise ValueError(f"Object '{object_key}' does not have an associated team")
 
 
+NULL_OBJECTS = (
+    {k: PlayerData.make_null() for k in PLAYER_OBJECTS}
+    | {k: TeamData.make_null() for k in TEAM_OBJECTS}
+    | {
+        "stadium": StadiumData.make_null(),
+    }
+)
+
+
 def _load_objects(df: pd.DataFrame, object_key: str) -> DataObjectMap:
-    filenames = df[object_key + "_file"].unique()
+    filenames = df[object_key + "_file"].dropna().unique()
     object_map: DataObjectMap = {}
     for i, filename in enumerate(filenames):
         with open("../" + filename, "r") as f:
@@ -154,6 +164,8 @@ def _load_objects(df: pd.DataFrame, object_key: str) -> DataObjectMap:
             object_map[filename] = StadiumData.from_json(obj["data"])
         else:
             raise ValueError(f"Cannot load object of unknown type '{obj['type']}'")
+
+    object_map[np.nan] = NULL_OBJECTS[object_key]
 
     return object_map
 
@@ -179,7 +191,9 @@ def data(
         season_str = "{" + ",".join(str(s) for s in season) + "}"
     all_files = braced_glob(f"../roll_data/s{season_str}*-{roll_type}.csv")
 
-    df = pd.concat((pd.read_csv(f, dtype={"stadium_id": "string"}) for f in all_files), ignore_index=True)
+    df = pd.concat(
+        (pd.read_csv(f, dtype={"stadium_id": "string", "is_strike": "boolean"}) for f in all_files), ignore_index=True
+    )
 
     df["stat_relevant_data"] = df[STAT_RELEVANT_DATA_KEYS].apply(_get_stat_relevant_data, axis=1)
     for object_key in itertools.chain(roles, TEAM_OBJECTS, OTHER_OBJECTS):
@@ -232,7 +246,12 @@ def player_attribute(
 
     if mods:
         if mods == "negative":
-            cols = [object_key + "_object", _team_for_object(object_key) + "_object", "stat_relevant_data"]
+            cols = [
+                object_key + "_object",
+                _team_for_object(object_key) + "_object",
+                "stat_relevant_data",
+                "stadium_object",
+            ]
             multiplier = df[cols].apply(_get_multiplier(object_key, attr_key), axis=1)
 
             attr = attr_raw / multiplier
@@ -243,10 +262,11 @@ def player_attribute(
                     object_key + "_object",
                     override_mod_team or _team_for_object(object_key) + "_object",
                     "stat_relevant_data",
+                    "stadium_object",
                 ]
                 multiplier = df[cols].apply(_get_multiplier(override_mod_team or object_key, attr_key), axis=1)
             else:
-                cols = [object_key + "_object", "pitching_team" + "_object", "stat_relevant_data"]
+                cols = [object_key + "_object", "pitching_team" + "_object", "stat_relevant_data", "stadium_object"]
                 multiplier = df[cols].apply(_get_multiplier("pitcher", attr_key), axis=1)
 
             attr = attr_raw * multiplier

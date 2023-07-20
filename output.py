@@ -68,6 +68,11 @@ class SaveCsv:
         # fmt: on
 
         for save_key, obj in save_objects.items():
+            # S20 (1-based) spends a ridiculous amount of time repeatedly
+            # converting NullPlayer to JSON without this check.
+            # I think it's because of KLoNGs whose stats aren't available yet.
+            if obj.id == None and obj.last_update_time == "1970-01-01T00:00:00.000Z":
+                continue
             file_path = f"{self.object_dir}/{obj.id}-{obj.last_update_time}.json".replace(":", "_")
             if obj.id not in self.last_saved_object or self.last_saved_object[obj.id] != obj.last_update_time:
                 to_save = {
@@ -88,7 +93,9 @@ class SaveCsv:
 
         self.csv.writerow(row)
 
-    def writeItem(self, element: str, roll: float, season: int, day: int, roll_type: str, category: str, prefix_index: int = -1):
+    def writeItem(
+        self, element: str, roll: float, season: int, day: int, roll_type: str, category: str, prefix_index: int = -1
+    ):
         row = {
             "season": season,
             "day": day,
@@ -105,7 +112,6 @@ class SaveCsv:
             self.csv.writeheader()
 
         self.csv.writerow(row)
-    
 
     def close(self):
         if not self.file:

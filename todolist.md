@@ -1,11 +1,29 @@
 ## To do
 - Expand to Discipline Era
 - Expand to remainder of Expansion Era
-- Investigate items
 - Investigate weird EE mechanics
   - weird ballpark modifications
-  - hype (derogatory)
+	- holiday inning threshold
+	- pop balloons threshold, number of birds scared
+	- salmon thresholds
+	- big buckets threshold
+	- hoops thresholds
+	- investigate tunnels rolls
+  - elsewhere
+	- undertaker threshold
+	- seeker threshold
+	- elsewhere return threshold
+	- scatter letter rolls
 - Clean up formulas in general
+- Check formulas for season 19
+- Update formulas for season 20
+- Find quadruples formula
+- Fix consumer target selection sometimes mismatching
+- Find acidic pitch formula
+- Cleanup manual roll corrections
+- Figure out the logic for extra rolls between games
+- Figure out the rolls for initial stadium stats?
+- Properly account for the rolls for election results and siesta events instead of just skipping over x rolls?
 
 ## In progress
 - Runner advancement on flyouts (weird formula for 1st->2nd)
@@ -21,6 +39,7 @@
   - SMOOTH: tentatively correct, could use more checking
 - work out what the hardcoded blooddrain exceptions are actually for (there's probably a simple pattern)
   - didn't Kidror figure out something, or am I misremembering?
+- Fix item pools for season 20
 
 ## Done (for now) (ignoring weird modifiers)
 - Strike zone formula
@@ -43,7 +62,30 @@
 - Advancment formula (groundouts)
 - Runner extra advancement on hits
 - Haunted rates
-- Consumer target selection
 - consumer attack activation rates
 - Figure out how Spicy/On Fire works (tentatively correct, need to check ground_friction)
-- Fill out coverage for seasons we already have data for (missing S12D3, S12D4, S12D8-17, S12D24–30, S13D24, S14D26&27, S15D4, S15D7, S15D9, S15D112, S15D113, S17D76, S17D79–S17D85, S17D110–114, S18D1, S18D26, the end of S12D7, the end of S12D23, a few minutes of S12D88, and most of S17D1)
+- Investigate items
+- hype (derogatory)
+- Account for fifth base
+- Figure out number of tunnels rolls.
+- Figure out number of rolls for reverb shuffle.
+- Fill out coverage for seasons we already have data for. Most are due to missing data, short isolated segments that we don't have enough information to solve (yet?), or problems getting rolls to line up for a bit after a mid-game restart. Still missing:
+  - Season 12:
+	- days 3, 4, 8-17, 24–30
+	- the end of day 7
+	- the end of day 23
+	- a few minutes of day 88
+  - Season 13:
+    - day 24
+  - Season 14:
+    - days 26, 27
+  - Season 15:
+    -  days 4, 7, 9, 112, 113
+  - Season 17:
+    - days 76, 79–85, 110–114
+	- most of day 1
+  - Season 18:
+    - days 1, 26,
+  - Season 20:
+    - day 13
+	- a few minutes each of days 15 and 104

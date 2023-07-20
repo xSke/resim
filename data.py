@@ -92,6 +92,7 @@ class Mod(Enum):
     ACIDIC = auto()
     AFFINITY_FOR_CROWS = auto()
     AFTER_PARTY = auto()
+    AIR_BALLOONS = auto()
     ATTRACTOR = auto()
     BASE_INSTINCTS = auto()
     BIG_BUCKET = auto()
@@ -108,14 +109,19 @@ class Mod(Enum):
     EGO4 = auto()
     ELECTRIC = auto()
     ELSEWHERE = auto()
+    EXTRA_BASE = auto()
+    FIERY = auto()
     FIRE_EATER = auto()
     FIREPROOF = auto()
     FLINCH = auto()
     FLOOD_PUMPS = auto()
     FRIEND_OF_CROWS = auto()
     FORCE = auto()
+    GAUDY = auto()
+    GRAVITY = auto()
     GRIND_RAIL = auto()
     GROWTH = auto()
+    GUARDED = auto()
     H20 = auto()
     HAUNTED = auto()
     HIGH_PRESSURE = auto()
@@ -129,8 +135,10 @@ class Mod(Enum):
     MARKED = auto()
     MAXIMALIST = auto()
     MINIMALIST = auto()
+    NEGATIVE = auto()
     O_NO = auto()
     ON_FIRE = auto()
+    OUTDOORSY = auto()
     OVERPERFORMING = auto()
     PARASITE = auto()
     PARTY_TIME = auto()
@@ -326,6 +334,7 @@ class EventType(IntEnum):
     PLAYER_HIDDEN_STAT_DECREASE = 180
     ENTERING_CRIMESCENE = 181
     AMBITIOUS = 182
+    UNAMBITIOUS = 183
     COASTING = 184
     ITEM_BREAKS = 185
     ITEM_DAMAGE = 186
@@ -339,11 +348,19 @@ class EventType(IntEnum):
     SMITHY_ACTIVATION = 195
     A_BLOOD_TYPE = 198
     PLAYER_SOUL_INCREASED = 199
+    BALLPARK_MOD_RATIFIED = 203
     HYPE_BUILT = 206
+    PRACTICING_MODERATION = 208
     RUNS_SCORED = 209
+    BALLOONS_INFLATED = 213
     WIN_COLLECTED_REGULAR = 214
     WIN_COLLECTED_POSTSEASON = 215
     GAME_OVER = 216
+    SUN_SUN_PRESSURE = 217
+    TUNNEL_FOUND_NOTHING = 218
+    TUNNEL_FLED_ELSEWHERE = 219
+    TUNNEL_STOLE_ITEM = 220
+    WEATHER_EVENT = 223
     STORM_WARNING = 263
     SNOWFLAKES = 264
 
@@ -405,6 +422,7 @@ class Base(IntEnum):
     SECOND = 1
     THIRD = 2
     FOURTH = 3
+    FIFTH = 4
 
 
 @unique
@@ -1011,7 +1029,7 @@ CHRONICLER_URI = "https://api.sibr.dev/chronicler"
 class NullUpdate(collections.defaultdict):
     def __init__(self, values: Optional[Union[Iterable, Mapping]] = None):
         if values is None:
-            values = {"basesOccupied": [], "baseRunners": [], "weather": Weather.VOID}
+            values = {"basesOccupied": [], "baseRunners": [], "weather": Weather.VOID, "state": {}}
         super().__init__(int, values)
 
     def __bool__(self):
@@ -1119,7 +1137,7 @@ class GameData:
         return player_id in self.players
 
     def get_player(self, player_id) -> PlayerData:
-        return self.players[player_id] if player_id else PlayerData.null
+        return self.players.get(player_id, PlayerData.null) if player_id else PlayerData.null
 
     def get_team(self, team_id) -> TeamData:
         return self.teams[team_id] if team_id else TeamData.null
