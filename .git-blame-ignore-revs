@@ -1,3 +1,4 @@
+8cbc1a7cfef3399019a0ce54ce33d34953e31fd1  # black
 4a7c31d5f9ea27faa88e2688406f00bba524e594  # [lint] Ignore black rev, flake8 fixes
 a4b0245fa8c5d96717055a26eeb88508c3015021  # [lint] Run black
 421ed70f0fd6ef0861316af589ae3b90047e43bc  # [lint] black

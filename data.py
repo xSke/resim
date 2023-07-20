@@ -124,6 +124,7 @@ class Mod(Enum):
     HOTEL_MOTEL = auto()
     INHABITING = auto()
     LATE_TO_PARTY = auto()
+    LEGENDARY = auto()
     LOVE = auto()
     MARKED = auto()
     MAXIMALIST = auto()
@@ -334,8 +335,10 @@ class EventType(IntEnum):
     FAX_MACHINE_ACTIVATION = 191
     HOLIDAY_INNING = 192
     PRIZE_MATCH = 193
+    TEAM_RECEIVED_GIFT = 194
     SMITHY_ACTIVATION = 195
     A_BLOOD_TYPE = 198
+    PLAYER_SOUL_INCREASED = 199
     HYPE_BUILT = 206
     RUNS_SCORED = 209
     WIN_COLLECTED_REGULAR = 214
@@ -803,7 +806,7 @@ class PlayerData(TeamOrPlayerMods):
         # must use pre-item buoyancy
         # todo: does this apply to pressurization and cinnamon too?
         frequency = 6 + round(10 * self.data["buoyancy"])
-        
+
         # Pull from pre-computed sin values
         sin_phase = SIN_PHASES[frequency][day]
         # Original formula:
@@ -815,14 +818,13 @@ class PlayerData(TeamOrPlayerMods):
 
     def stats_with_items(self) -> Dict[str, float]:
         return self._get_stats_with_items(self.data, self.items)
-    
+
     def multiplied(self, stat: str, multiplier: float) -> float:
         # we can do this nicer i think but whatevs
         raw_stat = self.data[stat.replace("ground_friction", "groundFriction")]
         full_stat = getattr(self, stat)
         item_stat = full_stat - raw_stat
         return raw_stat * multiplier + item_stat
-
 
     def is_cache_equivalent(self, other: "PlayerData") -> bool:
         return (
