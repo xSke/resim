@@ -77,6 +77,7 @@ class Csv(Enum):
     INSTINCTS = "instincts"
     PSYCHIC = "psychic"
     BSYCHIC = "bsychic"
+    ITEM_CREATION = "item_creation"
 
 
 class Resim:
@@ -3204,7 +3205,7 @@ class Resim:
             expected = expected_item_name
 
         try:
-            item_name = roll_item(self.season, self.day, roll_type, self.roll, expected)
+            item_name = roll_item(self.season, self.day, roll_type, self.roll, expected, self.csvs.get(Csv.ITEM_CREATION, None))
         except KeyError as e:
             self.error(
                 f"Unknown element {e} for item created at {event['created']}. This probably means either the roll is in the wrong position or the item pool needs to be updated."

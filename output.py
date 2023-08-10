@@ -88,6 +88,25 @@ class SaveCsv:
 
         self.csv.writerow(row)
 
+    def writeItem(self, element: str, roll: float, season: int, day: int, roll_type: str, category: str, prefix_index: int = -1):
+        row = {
+            "season": season,
+            "day": day,
+            "roll_type": roll_type,
+            "category": category,
+            "element": element,
+            "roll": roll,
+            "prefix_index": prefix_index,
+        }
+
+        if self.csv is None:
+            self.file = open(self.partial_filename, "w", newline="", encoding="utf-8")
+            self.csv = DictWriter(self.file, fieldnames=list(row.keys()), extrasaction="ignore")
+            self.csv.writeheader()
+
+        self.csv.writerow(row)
+    
+
     def close(self):
         if not self.file:
             return
