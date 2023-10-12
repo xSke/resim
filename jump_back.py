@@ -148,7 +148,7 @@ def main():
                 offsets &= {int(n) for n in match[1].split(",")}
                 if not offsets:
                     print("Couldn't find guess offset. It might not be reachable or may have other errors.")
-                    with open("jump.txt", "w") as out:
+                    with open("jump.txt", "w", encoding="utf8") as out:
                         out.write(out_file.getvalue())
                     return
                 if len(offsets) == 1:
@@ -157,17 +157,17 @@ def main():
     else:
         if not found_incorrect:
             print(f'Looks correct to me! ({season}, ({s0}, {s1}), {offset}, 0, "{start_time}", "{fragment_end_time}"),')
-            with open("jump.txt", "w") as out:
+            with open("jump.txt", "w", encoding="utf8") as out:
                 out.write(out_file.getvalue())
         else:
             possible_rolls = [rolls - offset for offset in offsets]
             print(f"Multiple offsets possible. Try again with --rolls set to one of {possible_rolls}")
-            with open("jump.txt", "w") as out:
+            with open("jump.txt", "w", encoding="utf8") as out:
                 out.write(out_file.getvalue())
         return
 
     if args.no_retry:
-        with open("jump.txt", "w") as out:
+        with open("jump.txt", "w", encoding="utf8") as out:
             out.write(out_file.getvalue())
         return
 
@@ -189,12 +189,12 @@ def main():
     for line in out_file:
         if re.match(r"Error:\s*incorrect fielder!", line):
             print("That didn't work! It might not be reachable or may have other errors.")
-            with open("jump.txt", "w") as out:
+            with open("jump.txt", "w", encoding="utf8") as out:
                 out.write(out_file.getvalue())
             return
 
     print(f'Looks correct to me! ({season}, ({s0}, {s1}), {offset}, 0, "{start_time}", "{fragment_end_time}"),')
-    with open("jump.txt", "w") as out:
+    with open("jump.txt", "w", encoding="utf8") as out:
         out.write(out_file.getvalue())
 
 
