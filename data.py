@@ -114,6 +114,7 @@ class Mod(Enum):
     FIRE_EATER = auto()
     FIREPROOF = auto()
     FLINCH = auto()
+    FLOOD_BALLOONS = auto()
     FLOOD_PUMPS = auto()
     FRIEND_OF_CROWS = auto()
     FORCE = auto()
@@ -162,6 +163,7 @@ class Mod(Enum):
     SWIM_BLADDER = auto()
     TRAVELING = auto()
     TRIPLE_THREAT = auto()
+    UNDEFINED = auto()
     UNDERPERFORMING = auto()
     UNDERTAKER = auto()
     WILD = auto()
@@ -361,6 +363,8 @@ class EventType(IntEnum):
     TUNNEL_FLED_ELSEWHERE = 219
     TUNNEL_STOLE_ITEM = 220
     WEATHER_EVENT = 223
+    SUN_30 = 226
+    VOICEMAIL = 228
     STORM_WARNING = 263
     SNOWFLAKES = 264
 
@@ -843,6 +847,10 @@ class PlayerData(TeamOrPlayerMods):
         full_stat = getattr(self, stat)
         item_stat = full_stat - raw_stat
         return raw_stat * multiplier + item_stat
+    
+    def undefined(self) -> bool:
+        # todo: actually *do* the rolls...
+        return self.has_mod(Mod.SCATTERED) and self.has_mod(Mod.UNDEFINED)
 
     def is_cache_equivalent(self, other: "PlayerData") -> bool:
         return (

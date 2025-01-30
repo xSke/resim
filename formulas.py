@@ -167,6 +167,7 @@ def get_strike_threshold(
         17: (0.2,  0.285,   0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
         18: (0.25, 0.285,   0.2, 0.085, -0.085, -0.035,  0.86),  # todo: a solid starter guess
         19: (0.25, 0.28,   0.2, 0.085, -0.085, -0.035,  0.86),
+        20: (0.25, 0.28,   0.2, 0.085, -0.085, -0.035,  0.86), # todo: guessing
     }[meta.season]
     # fmt: on
 
@@ -325,6 +326,7 @@ def get_contact_strike_threshold(
         17: (0.78, 0.17, 0.925),  # todo: we don't know
         18: (0.78, 0.17, 0.925),  # todo: we don't know
         19: (0.78, 0.17, 0.925),  # todo: we don't know
+        20: (0.78, 0.17, 0.925),  # todo: we don't know
     }[meta.season]
 
     threshold = constant - 0.08 * ruth + 0.16 * ballpark_sum + batting_factor * (combined_batting**1.2)
@@ -369,6 +371,7 @@ def get_contact_ball_threshold(
         17: (0.4, 0.35, 1),  # todo: we don't know
         18: (0.4, 0.35, 1),  # todo: we don't know
         19: (0.4, 0.35, 1),  # todo: we don't know
+        20: (0.4, 0.35, 1),  # todo: we don't know
     }[meta.season]
 
     threshold = constant - 0.1 * ruth + path_factor * (invpath**1.5) + 0.14 * ballpark_sum

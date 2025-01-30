@@ -233,8 +233,13 @@ FRAGMENTS_WITH_SEASON = [
     # midgame restart between 2021-06-19T01:03:21.249Z and 2021-06-19T01:04:05.913Z
     # having trouble getting these few minutes to line up.
     (19, (14718838674862637822, 4960275232824896908), 0, 0, "2021-06-19T01:11:23.704Z", "2021-06-19T23:59:00.000Z"),
-    # deploy at 2021-06-20T17:35:00Z
-   
+    # deploy at 2021-06-20T17:35:00Z 
+
+    # really broken anchor during s21 season itself
+    # (20, (5924572011720238333, 2112905916076228672), 16, -11, "2021-06-22T17:19:19.297Z", "2021-06-22T17:25:01.267601Z"), # pretty damn broken
+
+    # season 21 postseason - kinda works except anywhere nandy fantastic shows up is broken in funny ways
+    # (20, (9721424144799211085,7405945169277683939), 47, -7, "2021-06-25T22:10:22.553Z", "2021-06-27T03:59:01.289138Z")
 ]
 
 # fmt: on

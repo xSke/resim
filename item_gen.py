@@ -496,7 +496,7 @@ ELEMENTS = {
 }
 
 
-BASE_STAT_PARAMS = {15: (0.1, 0.05), 16: (0.1, 0.1), 17: (0.1, 0.1), 18: (0.1, 0.1), 19: (0.1, 0.1)}
+BASE_STAT_PARAMS = {15: (0.1, 0.05), 16: (0.1, 0.1), 17: (0.1, 0.1), 18: (0.1, 0.1), 19: (0.1, 0.1), 20: (0.1, 0.1)} # guessing on 20
 
 
 BASE_TYPE_POOL = {
@@ -545,6 +545,18 @@ BASE_TYPE_POOL = {
         "Socks",
     ),
     19: (
+        "Bat",
+        "Cap",
+        "Necklace",
+        "Ring",
+        "Glove",
+        "Shoes",
+        "Jersey",
+        "Sunglasses",
+        "Helmet",
+        "Socks",
+    ),
+    20: ( # guessing
         "Bat",
         "Cap",
         "Necklace",
