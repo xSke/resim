@@ -264,17 +264,29 @@ class Resim:
             "2021-06-26T02:18:30.066Z": -3, # idk 
             "2021-06-26T03:06:40.286Z": 5, # this is a lot more rolls... idk
 
-            "2021-06-21T18:19:59.612Z": 5, # ???
             "2021-06-21T18:21:03.698Z": -1,
             "2021-06-21T18:21:55.544Z": -2,
             "2021-06-21T19:04:58.500Z": 3, # fifth base stuff?
-            "2021-06-21T19:08:37.741Z": 1, # fifht base stuff?
             "2021-06-21T19:15:05.023Z": -1, #idk?
             "2021-06-21T19:28:23.244Z": -1, # another mind trick thing?
 
             "2021-06-22T17:22:15.303Z": 6, # nandy scores
             "2021-06-22T17:28:46.303Z": -1, # after sun 30?
             "2021-06-22T17:28:48.950Z": 1,
+            "2021-06-21T21:21:54.412Z": 1, # sun 30? or something funky with the single after it...?
+            "2021-06-21T21:21:59.425Z": -1, # wat
+            "2021-06-21T21:24:18.953Z": -1, # A-dre- Solis hit a ground out to A--l-i-- Ju---ho-. (is this consistently -1?)
+            "2021-06-21T22:17:23.159Z": 2, # the flooding?
+            "2021-06-21T22:18:48.174Z": -2, # fielder's choice thing
+            "2021-06-21T22:29:13.800Z": -3,
+            "2021-06-21T22:37:13.329Z": -3, # big pile of mess around here, might be multiple things wrong just before
+            "2021-06-21T23:09:15.865Z": 5, # not -1?
+            "2021-06-21T23:16:11.736Z": -1, # mind tricks consistnetly -1 now?
+            "2021-06-21T23:23:06.016Z": 1, # sun 30?
+            "2021-06-21T23:23:13.523Z": -1, # why is this so weird...
+            "2021-06-21T23:24:02.223Z": -1, # mind trick again
+            "2021-06-22T00:08:49.796Z": -2,
+            "2021-06-22T00:20:08.731Z": 2,
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -900,6 +912,9 @@ class Resim:
                 "f95f63ac-a16e-4530-8661-27a8a0a35e13": 2,
                 "6f911d0d-485e-46b4-a84e-63d4fa945feb": 10,
                 "56e1fdc9-6783-4c17-9af1-f247f0465fa5": 2,
+                "e1fc776b-53b7-467e-a5ff-a16b5321ec65": 1,
+                "0963b86c-e41a-45fa-8c7c-833f8da656d2": 2,
+                "797d2159-8e7e-4a2c-b2af-77d59e471327": 11,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -1628,9 +1643,9 @@ class Resim:
             named_fielder = ground_fielder
 
         if named_fielder.undefined() and not is_fc_dp:
-            self.roll("undefined (unknown)")
-            self.roll("undefined (unknown)")
-            self.roll("undefined (unknown)")
+            self.roll("undefined (out to named fielder)")
+            self.roll("undefined (out to named fielder)")
+            self.roll("undefined (out to named fielder)")
             if self.event["created"] in ["2021-06-26T01:14:25.365Z"]:
                 # this might be one extra per fielder? advance related
                 self.roll("undefined (advance roll?)")
@@ -1670,10 +1685,10 @@ class Resim:
                 self.roll("how many popped?")
 
     def try_roll_batter_debt(self, fielder):
-        if self.batter.has_mod(Mod.DEBT_THREE) and fielder and not fielder.has_mod(Mod.COFFEE_PERIL):
+        if (self.batter.has_mod(Mod.DEBT_THREE) or self.batter.has_mod(Mod.DEBT_ZERO)) and fielder and not fielder.has_mod(Mod.COFFEE_PERIL):
             self.roll("batter debt")
 
-    def roll_fielder(self, check_name=True):
+    def roll_fielder(self, check_name=True, skip_elsewhere=True):
         eligible_fielders = []
         fielder_idx = None
         desc = ""
@@ -1685,7 +1700,7 @@ class Resim:
 
         for fielder_id in self.pitching_team.lineup:
             fielder = self.data.get_player(fielder_id)
-            if fielder.has_mod(Mod.ELSEWHERE):
+            if skip_elsewhere and fielder.has_mod(Mod.ELSEWHERE):
                 continue
 
             if check_name:
@@ -2147,6 +2162,9 @@ class Resim:
             "2021-06-21T19:07:43.405Z",
             "2021-06-21T17:24:40.494Z",
             "2021-06-21T20:19:22.784Z",
+            "2021-06-21T22:36:07.964Z",
+            "2021-06-21T23:22:37.547Z",
+            "2021-06-22T00:08:40.094Z",
         ]
 
         fakeout_opposite_overrides = [
@@ -2627,16 +2645,21 @@ class Resim:
             if self.ty == EventType.PEANUT_FLAVOR_TEXT:
                 self.roll("peanut message")
                 return True
-
+            
             has_allergic_players = False
+
+            # need to do this the annoying way because inhabiting players don't exist
+            batter_id = self.update["awayBatter"] if self.update["topOfInning"] else self.update["homeBatter"]
             for player_id in (
                 self.batting_team.lineup
                 + self.batting_team.rotation
                 + self.pitching_team.lineup
                 + self.pitching_team.rotation
+                + self.update["baseRunners"] + [batter_id]
             ):
                 player = self.data.get_player(player_id)
-                if player.peanut_allergy:
+                # in game da1fd5a4-45bb-4dd3-811a-ebfb34fddd07, Kaylee Boyea haunts, who's the only allergic player "in the game", and thus needs an extra roll
+                if player.peanut_allergy or player_id in ["cab95673-f31b-4fb1-9764-25ceb03dd761"]:
                     has_allergic_players = True
 
             if has_allergic_players:
@@ -3309,6 +3332,7 @@ class Resim:
             "2021-06-26T20:11:44.065Z",
             "2021-06-26T03:26:55.260Z",
             "2021-06-21T19:19:11.857Z",
+            "2021-06-21T21:06:09.786Z",
         ]:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod(Mod.PARTY_TIME):
@@ -3690,9 +3714,9 @@ class Resim:
                 if was_success:
                     if steal_fielder.undefined():
                         self.roll("undefined (steal success fielder)")
-                        # self.roll("undefined (steal success fielder)")
-                        # self.roll("undefined (steal success fielder)")
-                        # self.roll("undefined (steal success fielder)")
+                        self.roll("undefined (steal success fielder)")
+                        self.roll("undefined (steal success fielder)")
+                        self.roll("undefined (steal success fielder)")
                     if runner.undefined():
                         self.roll("undefined (steal success runner)")
                         self.roll("undefined (steal success runner)")

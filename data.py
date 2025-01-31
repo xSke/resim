@@ -101,6 +101,7 @@ class Mod(Enum):
     CHUNKY = auto()
     COFFEE_PERIL = auto()
     DEBT_THREE = auto()
+    DEBT_ZERO = auto()
     ECHO = auto()
     ECHO_CHAMBER = auto()
     EGO1 = auto()
