@@ -817,7 +817,7 @@ PREFIX_POOL_CHEST = {
         "Chaotic",
         "Lucky",
         "??????",
-        "???????",
+        "Underhanded", # ???
     ),
 }
 

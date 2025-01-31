@@ -257,12 +257,23 @@ class Resim:
             "2021-06-26T19:31:33.730Z": 1, # truly have no idea what this is.
             "2021-06-26T20:00:16.596Z": 1, # start?
 
+            "2021-06-26T01:14:26.683Z": -1, # Enid Marlow hit a ground out to Nandy Fantast-c.
             "2021-06-26T01:19:14.917Z": 3, # something is really wrong around here
             "2021-06-26T02:13:56.875Z": 3, # more adv rolls here, probably
             "2021-06-26T02:14:21.165Z": 3, # might be used in some of the dp rolls?
-            "2021-06-26T02:17:44.661Z": -3, # something even more funky here
-            "2021-06-26T03:03:22.735Z": 1, # maybe same as above
+            "2021-06-26T02:18:30.066Z": -3, # idk 
             "2021-06-26T03:06:40.286Z": 5, # this is a lot more rolls... idk
+
+            "2021-06-21T18:19:59.612Z": 5, # ???
+            "2021-06-21T18:21:03.698Z": -1,
+            "2021-06-21T18:21:55.544Z": -2,
+            "2021-06-21T19:04:58.500Z": 3, # fifth base stuff?
+            "2021-06-21T19:08:37.741Z": 1, # fifht base stuff?
+            "2021-06-21T19:15:05.023Z": -1, #idk?
+
+            "2021-06-22T17:22:15.303Z": 6, # nandy scores
+            "2021-06-22T17:28:46.303Z": -1, # after sun 30?
+            "2021-06-22T17:28:48.950Z": 1,
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -1056,6 +1067,13 @@ class Resim:
         if pitcher_charm_eligible:
             charm_roll = self.roll("charm")
 
+            if self.batter.undefined():
+                pass
+                # self.roll("undefined (charm)")
+                # self.roll("undefined (charm)")
+                # self.roll("undefined (charm)")
+
+
             if " charmed " in self.desc:
                 self.log_roll(
                     Csv.MODPROC,
@@ -1063,6 +1081,11 @@ class Resim:
                     charm_roll,
                     True,
                 )
+
+                if self.batter.undefined():
+                    self.roll("undefined (charm)")
+                    self.roll("undefined (charm)")
+                    self.roll("undefined (charm)")
 
                 if not self.batter.has_mod(Mod.CAREFUL):
                     self.damage(self.batter, "batter")
@@ -1243,8 +1266,6 @@ class Resim:
         return roll
 
     def roll_contact(self, did_contact: bool):
-        roll = self.roll("contact")
-
         if self.is_strike:
             threshold = get_contact_strike_threshold(
                 self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
@@ -1265,6 +1286,8 @@ class Resim:
             if self.batter.undefined():
                 # only path?
                 self.roll("undefined (contact on ball)")            
+
+        roll = self.roll("contact")
 
         if not (self.batting_team.has_mod(Mod.O_NO) and self.strikes == self.max_strikes - 1):
             if did_contact and roll > threshold:
@@ -1481,13 +1504,12 @@ class Resim:
     def is_flinching(self):
         return self.batter.has_mod(Mod.FLINCH) and self.strikes == 0
 
-    def get_fielder_for_roll(self, fielder_roll: float):
+    def get_fielder_for_roll(self, fielder_roll: float, ignore_elsewhere: bool = True):
         candidates = [self.data.get_player(player) for player in self.pitching_team.lineup]
-        candidates = [c for c in candidates if not c.has_mod(Mod.ELSEWHERE)]
+        if ignore_elsewhere:
+            candidates = [c for c in candidates if not c.has_mod(Mod.ELSEWHERE)]
 
         player = candidates[math.floor(fielder_roll * len(candidates))]
-        if player.undefined():
-            self.print("--- warn: fielder is undefined")
         return player
 
     def roll_out(self, was_out):
@@ -1581,11 +1603,12 @@ class Resim:
         elif self.ty == EventType.GROUND_OUT:  # ground out
             self.roll_out(True)
             fly_fielder_roll, fly_fielder = self.roll_fielder(check_name=False)
+            self.print(f"(fly fielder is {fly_fielder.name})")
             
             if self.batter.undefined():
                 # buoy/supp
-                self.roll("undefined (fly?)")
-                self.roll("undefined (fly?)")
+                self.roll("undefined (ground?)")
+                self.roll("undefined (ground?)")
 
             fly_roll = self.roll("fly", threshold=fly_threshold, passed=False)
 
@@ -1600,7 +1623,7 @@ class Resim:
             )
             named_fielder = ground_fielder
 
-        if named_fielder.undefined():
+        if named_fielder.undefined() and not is_fc_dp:
             self.roll("undefined (unknown)")
             self.roll("undefined (unknown)")
             self.roll("undefined (unknown)")
@@ -1766,6 +1789,9 @@ class Resim:
                 if self.batter.undefined():
                     # tragicness?
                     self.roll("undefined (dp)")
+                if fielder.undefined():
+                    self.roll("undefined (dp)")
+                    pass
 
                 if Base.FIRST in self.update["basesOccupied"]:
                     is_dp = "into a double play!" in self.desc
@@ -1845,8 +1871,15 @@ class Resim:
 
                 adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})")
                 if self.batter.undefined():
+                    self.roll("undefined (idk)")
+                    self.roll("undefined (idk)")
+                    self.roll("undefined (idk)")
                     self.print("--- ADV ROLL UNDEFINED BATTER")
                 if runner.undefined():
+                    self.roll("undefined (idk)")
+                    self.roll("undefined (idk)")
+                    self.roll("undefined (idk)")
+                    self.roll("undefined (idk)")
                     self.print("--- ADV ROLL UNDEFINED RUNNER")
 
                 if roll_outcome and base == base_before_home and not was_forced:
@@ -1899,6 +1932,9 @@ class Resim:
                 pass
 
             fielder = self.get_fielder_for_roll(defender_roll)
+            if fielder.undefined():
+                self.roll("undefined (runner adv? from fielder)")
+
             if base == Base.SECOND:
                 self.log_roll(
                     Csv.HITADVANCE,
@@ -1982,7 +2018,24 @@ class Resim:
         for runner_id in self.update["baseRunners"]:
             runner = self.data.get_player(runner_id)
             self.damage(runner, "batter")
+
+            if runner.undefined():
+                self.roll("undefined hr score?")
+                self.roll("undefined hr score?")
+                self.roll("undefined hr score?")
+                # self.roll("undefined hr score?")
+                # self.roll("undefined hr score?")
+                # self.roll("undefined hr score?")
+
+
         self.damage(self.batter, "batter")
+        if self.batter.undefined():
+            self.roll("undefined hr score?")
+            self.roll("undefined hr score?")
+            self.roll("undefined hr score?")
+            self.roll("undefined hr score?")
+            self.roll("undefined hr score?")
+            self.roll("undefined hr score?")
 
         if self.stadium.has_mod(Mod.BIG_BUCKET):
             buckets_roll = self.roll("big buckets")
@@ -2083,7 +2136,10 @@ class Resim:
             "2021-06-26T17:08:22.349Z",
             "2021-06-25T23:07:27.894Z",
             "2021-06-25T23:20:26.239Z", # nandy messes with this one
-            # "2021-06-26T01:19:03.329Z", # and this one
+            "2021-06-21T18:15:43.297Z",
+            "2021-06-21T18:31:21.376Z",
+            "2021-06-21T19:07:43.405Z",
+            "2021-06-21T17:24:40.494Z",
         ]
 
         if self.season >= 20 and out_roll > out_threshold and self.event["created"] not in fakeout_override:
@@ -2144,7 +2200,9 @@ class Resim:
         if fielder.undefined():
             # chasiness
             self.roll("undefined (double?)")
+            # self.roll("undefined (double?)")
             self.roll("undefined (triple?)")
+            # self.roll("undefined (triple?)")
 
         double_passed = {1: False, 2: True, 3: None, 4: None}[hit_bases]
         double_roll = self.roll(f"double (to {fielder.name})", threshold=double_threshold, passed=double_passed)
@@ -2206,6 +2264,14 @@ class Resim:
             if is_force_score and self.event["created"] != "2021-04-23T13:30:43.331Z":
                 self.damage(runner, "batter")
 
+                if runner.undefined():
+                    self.roll("undefined something")
+                    self.roll("undefined something")
+                    self.roll("undefined something")
+                    self.roll("undefined something")
+                    self.roll("undefined something")
+                    self.roll("undefined something")
+
     def get_stat_meta(self):
         is_maximum_blaseball = (
             self.strikes == self.max_strikes - 1
@@ -2239,9 +2305,9 @@ class Resim:
 
         if self.batter.undefined():
             # musc/thwack/div
-            self.roll("undefined (foul)")            
-            self.roll("undefined (foul)")            
-            self.roll("undefined (foul)")            
+            self.roll("undefined (foul)")
+            self.roll("undefined (foul)")
+            self.roll("undefined (foul)")
 
         foul_roll = self.roll("foul", threshold=threshold, passed=known_outcome)
         if known_outcome is not None:
@@ -2253,10 +2319,22 @@ class Resim:
             elif not known_outcome and foul_roll < threshold:
                 self.print(f"!!! too low foul roll ({foul_roll} < {threshold})")
         outcomestr = "Foul" if known_outcome else "Fair"
+
+        if self.batter.undefined():
+            pass
+            # self.roll("undefined (foul)")            
+            # self.roll("undefined (foul)")            
+            # self.roll("undefined (foul)")            
+            # self.roll("undefined (foul)")            
+            # self.roll("undefined (foul)")            
+
         self.log_roll(Csv.FOULS, outcomestr, foul_roll, known_outcome)
 
     def handle_foul(self):
         self.throw_pitch()
+
+        if self.batter.undefined():
+            self.print("!UNDEFINED FOUL")
 
         if not self.is_flinching():
             swing_roll = self.roll_swing(True)
@@ -2273,15 +2351,49 @@ class Resim:
 
         self.roll_foul(True)
 
+        if self.batter.undefined():
+            self.roll("undefined (foul?)")
+            self.roll("undefined (filth tenac)")
+            self.roll("undefined (foul?)")
+            self.roll("undefined (foul?)")
+            self.roll("undefined (foul?)")
+            # self.data.fetch_stadiums(self.event["created"])
+            # filth_before = self.data.get_stadium(self.stadium.id).filthiness
+            # self.data.fetch_stadiums(self.event["created"], 10)
+            # filth_after = self.data.get_stadium(self.stadium.id).filthiness
+
+            # tenac_mul = get_multiplier(self.batter, self.batting_team, "batter", "tenaciousness", self.get_stat_meta(), self.stadium)
+            # tenac = self.batter.multiplied("tenaciousness", tenac_mul)
+            # indul_mul = get_multiplier(self.batter, self.batting_team, "batter", "indulgence", self.get_stat_meta(), self.stadium)
+            # indul = self.batter.indulgence
+            # calc_delta = (6 - 4*(tenac - indul)) * 0.00001 * 5
+            # real_delta = filth_after-filth_before
+            
+            # self.print(f"filth: {filth_before} -> {filth_after}, delta {filth_after-filth_before}, expected delta {calc_delta}")
+            # self.print(f"tenac: {tenac}, mul: {tenac_mul}, indul: {indul}, mul: {indul_mul}")
+            # self.print(self.batter.items)
+
+            # if self.batter.undefined():
+            #     possible_stat_rolls = [self.roll('undefined (foul)') for _ in range(5)]
+
+            #     for i, tenac_roll in enumerate(possible_stat_rolls):
+            #         # for j, indul_roll in enumerate(possible_stat_rolls):
+            #         mod_tenac = tenac * (1.5 + 0.5*tenac_roll) #self.batter.multiplied("tenaciousness", tenac_mul + 0.5 + 0.5*tenac_roll)
+            #         mod_indul = indul# * (1.5 + 0.5*indul_roll)
+            #         modified_delta = (6 - 4*(mod_tenac - mod_indul)) * 0.00001 * 5
+            #         self.print(f"delta using rolls {i}/{tenac_roll} = {modified_delta}, matches? {abs(modified_delta-real_delta)<0.000001}")
+
         self.damage(self.pitcher, "pitcher")
         self.damage(self.batter, "batter")
 
-        if self.batter.undefined():
-            self.roll("undefined (???)")
-            self.roll("undefined (???)")
-            self.roll("undefined (???)")
-            self.roll("undefined (???)")
-            self.roll("undefined (???)")
+    def check_filth_delta(self):
+        self.data.fetch_stadiums(self.event["created"])
+        filth_before = self.data.get_stadium(self.stadium.id).filthiness
+        self.data.fetch_stadiums(self.event["created"], 10)
+        filth_after = self.data.get_stadium(self.stadium.id).filthiness
+        if filth_before != filth_after:
+            self.print(f"!!!FILTH CHANGED: {filth_before} -> {filth_after}")
+
 
     def handle_batter_up(self):
         batter = self.batter
@@ -3183,6 +3295,7 @@ class Resim:
             "2021-06-26T16:18:59.850Z",
             "2021-06-26T20:11:44.065Z",
             "2021-06-26T03:26:55.260Z",
+            "2021-06-21T19:19:11.857Z",
         ]:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod(Mod.PARTY_TIME):
@@ -3194,9 +3307,9 @@ class Resim:
         league_mods = self.data.sim["attr"]
         if "SECRET_TUNNELS" in league_mods:
             if self.update["awayScore"] >= 1 and self.event["created"]:
-                extra_rolls = 3
-                for _ in range(extra_rolls):
-                    self.roll("tunnels?")
+                self.roll("tunnels?")
+                self.roll("tunnels?")
+                self.roll("tunnels?") # actual success roll
 
             if self.ty == EventType.TUNNELS_USED:
                 self.roll("tunnels?")
@@ -3360,6 +3473,16 @@ class Resim:
 
         if secret_base_enter_eligible:
             enter_roll = self.roll("secret base enter")
+
+            runner_idx = self.update["basesOccupied"].index(1)
+            runner_id = self.update["baseRunners"][runner_idx]
+            runner = self.data.get_player(runner_id)
+
+            if runner.undefined():
+                # this *might* be secret base?
+                self.roll(f"undefined (secret base enter)")
+                self.roll(f"undefined (secret base enter)")
+
             if "enters the Secret Base..." in self.desc:
                 self.log_roll(
                     Csv.ENTER,
@@ -3381,9 +3504,6 @@ class Resim:
             # if the player got redacted it doesn't interrupt the pitch and keeps going
             # so the event type won't be 65 but the message will be there
             if "enters the Secret Base..." in self.desc:
-                runner_idx = self.update["basesOccupied"].index(1)
-                runner_id = self.update["baseRunners"][runner_idx]
-                runner = self.data.get_player(runner_id)
                 self.print(f"!!! redacted baserunner: {runner.name}")
 
                 # remove baserunner from roster so fielder math works.
@@ -3401,9 +3521,10 @@ class Resim:
         if Base.FIRST in self.update["basesOccupied"] and Base.THIRD not in self.update["basesOccupied"]:
             # i have no idea why this rolls twice but it definitely *does*
             grindfielder_roll = self.roll("grindfielder")
-            grindfielder = self.get_fielder_for_roll(grindfielder_roll)
+            grindfielder = self.get_fielder_for_roll(grindfielder_roll, ignore_elsewhere=False)
+
             if grindfielder.undefined():
-                self.roll("undefined (grindfielder)")
+                self.roll(f"undefined (grindfielder) ({grindfielder.name})")
 
             grinder = self.data.get_player(self.update["baseRunners"][-1])
             if grinder.undefined():
@@ -3537,11 +3658,6 @@ class Resim:
                     self.roll(f"undefined (runner steal {base})")
                     self.roll(f"undefined (runner steal {base})")
 
-                    if base == 1:
-                        # this *might* be secret base?
-                        self.roll(f"undefined (runner steal {base})")
-                        self.roll(f"undefined (runner steal {base})")
-
                 was_success = self.ty == EventType.STOLEN_BASE and (
                     base + 1 == base_stolen
                     or base_stolen == Base.FIFTH
@@ -3560,7 +3676,15 @@ class Resim:
 
                 if was_success:
                     if steal_fielder.undefined():
-                        self.roll("undefined (steal success)")
+                        self.roll("undefined (steal success fielder)")
+                        # self.roll("undefined (steal success fielder)")
+                        # self.roll("undefined (steal success fielder)")
+                        # self.roll("undefined (steal success fielder)")
+                    if runner.undefined():
+                        self.roll("undefined (steal success runner)")
+                        self.roll("undefined (steal success runner)")
+                        self.roll("undefined (steal success runner)")
+                        self.roll("undefined (steal success runner)")
 
                     success_roll = self.roll("steal success")
                     was_caught = "caught stealing" in self.desc
