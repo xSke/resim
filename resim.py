@@ -267,8 +267,6 @@ class Resim:
             "2021-06-21T18:21:03.698Z": -1,
             "2021-06-21T18:21:55.544Z": -2,
             "2021-06-21T19:04:58.500Z": 3, # fifth base stuff?
-            "2021-06-21T19:15:05.023Z": -1, #idk?
-            "2021-06-21T19:28:23.244Z": -1, # another mind trick thing?
 
             "2021-06-22T17:22:15.303Z": 6, # nandy scores
             "2021-06-22T17:28:46.303Z": -1, # after sun 30?
@@ -281,10 +279,8 @@ class Resim:
             "2021-06-21T22:29:13.800Z": -3,
             "2021-06-21T22:37:13.329Z": -3, # big pile of mess around here, might be multiple things wrong just before
             "2021-06-21T23:09:15.865Z": 5, # not -1?
-            "2021-06-21T23:16:11.736Z": -1, # mind tricks consistnetly -1 now?
             "2021-06-21T23:23:06.016Z": 1, # sun 30?
             "2021-06-21T23:23:13.523Z": -1, # why is this so weird...
-            "2021-06-21T23:24:02.223Z": -1, # mind trick again
             "2021-06-22T00:08:49.796Z": -2,
             "2021-06-22T00:20:08.731Z": 2,
         }
@@ -1365,18 +1361,16 @@ class Resim:
                 if "draws a walk." in self.desc:
                     # a walk converted to a strikeout, that still registers as a walk type
                     # this shouldn't even be possible but occurs exactly 8 times ever...?
-                    self.roll("i don't even know anymore")
-
+                    self.roll("i don't even know anymore")                
+            # pitchers: convert walk to strikeout (failed)
+            elif self.pitching_team.has_mod("PSYCHIC"):
+                psychic_roll = self.roll("walk-strikeout")
+                self.log_roll(Csv.PSYCHIC, "Fail", psychic_roll, False)
 
             if self.batter.undefined():
                 self.roll("undefined (walk)")
                 self.roll("undefined (walk)")
                 self.roll("undefined (walk)")
-                
-            # pitchers: convert walk to strikeout (failed)
-            elif self.pitching_team.has_mod("PSYCHIC"):
-                psychic_roll = self.roll("walk-strikeout")
-                self.log_roll(Csv.PSYCHIC, "Fail", psychic_roll, False)
 
         if self.ty == EventType.WALK:
             if self.batting_team.has_mod(Mod.BASE_INSTINCTS):
