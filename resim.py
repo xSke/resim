@@ -270,6 +270,7 @@ class Resim:
             "2021-06-21T19:04:58.500Z": 3, # fifth base stuff?
             "2021-06-21T19:08:37.741Z": 1, # fifht base stuff?
             "2021-06-21T19:15:05.023Z": -1, #idk?
+            "2021-06-21T19:28:23.244Z": -1, # another mind trick thing?
 
             "2021-06-22T17:22:15.303Z": 6, # nandy scores
             "2021-06-22T17:28:46.303Z": -1, # after sun 30?
@@ -898,6 +899,7 @@ class Resim:
                 "a95681ab-d4fd-4bf7-b94d-3b23622405ee": 10,
                 "f95f63ac-a16e-4530-8661-27a8a0a35e13": 2,
                 "6f911d0d-485e-46b4-a84e-63d4fa945feb": 10,
+                "56e1fdc9-6783-4c17-9af1-f247f0465fa5": 2,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -1582,11 +1584,13 @@ class Resim:
 
             if self.batter.undefined():
                 # buoy/supp
-                self.roll("undefined (fly?)")
+                # self.roll("undefined (fly?)")
+                pass
 
             fly_fielder_roll, fly_fielder = self.roll_fielder(check_name=not is_fc_dp)
 
             if self.batter.undefined():
+                self.roll("undefined (fly?)")
                 self.roll("undefined (fly?)")
 
             fly_roll = self.roll("fly", threshold=fly_threshold, passed=True)
@@ -1992,6 +1996,8 @@ class Resim:
             # (will only be applicable when formula guesses wrong)
             fakeout_overrides = [
                 "2021-06-26T16:26:38.648Z",
+                "2021-06-21T19:25:24.958Z",
+                "2021-06-21T18:05:12.440Z",
             ]
 
             out_roll, out_threshold = self.roll_out(False)
@@ -2004,7 +2010,7 @@ class Resim:
                 self.roll("out/fielder")
                 self.roll("out/fly", threshold=fly_threshold, passed=True)
                 upgrade_roll = self.roll("upgrade out? (to hr)") # this roll is definitely the one that handles upgrades
-                if upgrade_roll > 0.02: # real threshold probably 0.015ish
+                if upgrade_roll > 0.025: # real threshold probably 0.015ish
                     self.error("something is misaligned, this is definitely a real home run")
 
                 self.roll("???") # ...so then, what is this?
@@ -2140,9 +2146,16 @@ class Resim:
             "2021-06-21T18:31:21.376Z",
             "2021-06-21T19:07:43.405Z",
             "2021-06-21T17:24:40.494Z",
+            "2021-06-21T20:19:22.784Z",
         ]
 
-        if self.season >= 20 and out_roll > out_threshold and self.event["created"] not in fakeout_override:
+        fakeout_opposite_overrides = [
+            # this one is ACTUALLY fake
+            "2021-06-21T20:06:14.133Z"
+        ]
+
+
+        if self.season >= 20 and (out_roll > out_threshold and self.event["created"] not in fakeout_override) or (self.event["created"] in fakeout_opposite_overrides):
             fly_threshold = get_fly_or_ground_threshold(
                 self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
             )
@@ -3784,6 +3797,7 @@ class Resim:
             # musc and mox
             self.roll("undefined (strike formula)")
             self.roll("undefined (strike formula)")
+            self.print(f"--- threshold is {threshold}")
 
         passed_check = None
         if known_result == "ball":
@@ -3807,6 +3821,12 @@ class Resim:
         elif known_result == "ball" and roll < threshold:
             self.print(f"!!! warn: too low strike roll (threshold {threshold})")
             self.is_strike = False
+
+        known_result_overrides = {
+            "2021-06-21T20:17:23.768Z": True
+        }
+        if self.event["created"] in known_result_overrides:
+            self.is_strike = known_result_overrides[self.event["created"]]
 
         if self.pitching_team.has_mod("FIERY") and self.strikes < self.max_strikes - 1:
             # event where our formula registers a ball but we know it's a strike by roll count

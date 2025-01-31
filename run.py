@@ -236,7 +236,7 @@ FRAGMENTS_WITH_SEASON = [
     # deploy at 2021-06-20T17:35:00Z 
 
     # really broken anchor during s21 season itself
-    (20, (3543917926215320879,10832816862896119080), 1, -1, "2021-06-21T17:17:54.870Z", "2021-06-21T19:21:02.766578Z"),
+    (20, (3543917926215320879,10832816862896119080), 1, -1, "2021-06-21T17:17:54.870Z", "2021-06-21T20:21:02.766578Z"),
 
     # season 21 postseason - kinda works except anywhere nandy fantastic shows up is broken in funny ways
     (20, (9721424144799211085,7405945169277683939), 47, -7, "2021-06-25T22:10:22.553Z", "2021-06-27T03:59:01.289138Z")
