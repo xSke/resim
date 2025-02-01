@@ -254,15 +254,14 @@ class Resim:
             "2021-06-18T17:01:00.415Z": -1,
             "2021-06-18T19:18:22.631Z": -1,
 
-            "2021-06-21T21:24:18.953Z": -1, # this is wrong
             "2021-06-21T22:17:23.159Z": 2, # the flooding?
             "2021-06-24T04:21:11.177Z": 1, # Huber Frumple hit into a double play! Jaxon Buckley scores! The Oven inflates 1 Balloons! ?
             "2021-06-25T22:10:22.558Z": 2, # extra roll for consumers, maybe a defense?
             "2021-06-26T20:00:16.596Z": 1, # start?
             "2021-06-24T10:13:01.619Z": 4, # sac or something?
 
-            # "2021-06-29T04:00:18.096Z": 11, # game start roll but ordering weird (the prize roll before seems fine?)
             "2021-06-29T05:04:54.101Z": 1, # funky? might be item damage related (two careful players)
+            "2021-07-22T06:12:30.592Z": -1, # why no batter debt?
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -312,13 +311,10 @@ class Resim:
 
         if self.handle_consumers():
             return
-        
+                
         if self.handle_ballpark():
             return
 
-        if self.handle_trader():
-            return
-        
         if self.ty == EventType.HIGH_PRESSURE_ON_OFF:
             # s14 high pressure proc, not sure when this should interrupt
             return
@@ -644,8 +640,9 @@ class Resim:
             return True
         
         if self.ty in [EventType.HALF_INNING]:
-            if self.season >= 21 and self.next_update["topOfInning"] and self.next_update["inning"] == 0:
-                self.roll("game start roll")
+            # really don't know what this is supposed to be
+            if self.season in [20, 21] and self.next_update["topOfInning"] and self.next_update["inning"] == 0 and self.next_update["day"] <= 27:
+                self.roll("other game start roll")
 
             # skipping top-of/bottom-of
             is_holiday = self.next_update.get("state", {}).get("holidayInning")
@@ -771,6 +768,12 @@ class Resim:
                     if player.has_mod(Mod.COFFEE_PERIL) and not player.has_mod(Mod.FORCE):
                         self.roll(f"redaction ({player.name})")
 
+            return True
+        if self.ty == EventType.THIEVES_GUILD_PLAYER:
+            self.roll("thieves guild?")
+            return True
+        if self.ty == EventType.THIEVES_GUILD_ITEM:
+            self.roll("thieves guild?")
             return True
         if self.ty in [EventType.LETS_GO]:
             # game start - probably like, postseason weather gen
@@ -926,6 +929,9 @@ class Resim:
                 "dc2a32f0-e3d8-4d13-9a7b-203b71d90a8f": 2,
                 "5dfcc523-e33e-4181-b66a-9e8b49675d52": 2,
                 "fab94991-b041-4aee-af8d-9684fc70c56d": 3,
+                "baa09895-3de2-44ff-9ac3-ead7cf5da695": 1,
+                "f5490532-6ceb-45e7-8a4e-8642120eb826": 3, # MIGHT be messed up by ptg previously
+                "b8675de2-0def-46b2-a4e4-c274174ec8be": 3,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -1010,6 +1016,29 @@ class Resim:
             return True
         if self.ty == EventType.WEATHER_CHANGE:
             return True
+        if self.ty == EventType.JAZZ:
+            lengths = {
+                "2021-07-22T03:00:21.248Z": 7,
+                "2021-07-22T03:00:26.550Z": 14,
+
+                "2021-07-22T04:00:22.478Z": 20, # grouped
+                "2021-07-22T04:00:22.508Z": 0,
+
+                "2021-07-22T05:00:20.897Z": 11,
+
+                "2021-07-22T06:00:22.330Z": 26, # grouped
+                "2021-07-22T06:00:22.361Z": 0,
+
+                "2021-07-22T07:00:21.646Z": 11,
+            }
+            length = lengths.get(self.event["created"])
+            if length:
+                for _ in range(length):
+                    self.roll("skibidi jazz")
+            else:
+                self.print("--- unknown jazz length")
+            
+            return True
         if self.ty == EventType.COMMUNITY_CHEST_GAME_EVENT:
             # It looks like before season 18 there are 12 rolls after all of the items are created
             # regardless of the number of COMMUNITY_CHEST_GAME_EVENTs,
@@ -1045,12 +1074,19 @@ class Resim:
     def handle_trader(self):
         # idk where to put this
         if self.batter.has_mod(Mod.TRADER):
-            self.roll("trader")
+            self.roll("trader (batter)")
+        if self.batter.has_mod(Mod.TRAITOR):
+            self.roll("traitor (batter)")
+        if self.pitcher.has_mod(Mod.TRADER):
+            self.roll("trader (pitcher)")
+        if self.pitcher.has_mod(Mod.TRAITOR):
+            self.roll("traitor (pitcher)")
 
-            if self.ty == EventType.TRADER_TRAITOR:
-                # success maybe?
+        if self.ty == EventType.TRADER_TRAITOR:
+            # success maybe? need to find out when this procs more specifically
+            if self.season == 21:
                 self.roll("trader?")
-                return True
+            return True
 
     def handle_polarity(self):
         if self.weather.is_polarity():
@@ -2032,6 +2068,12 @@ class Resim:
                 "2021-06-21T18:05:12.440Z",
                 "2021-06-24T01:00:44.658Z",
                 "2021-06-24T11:01:45.168Z",
+                "2021-07-22T04:30:17.323Z",
+                "2021-07-22T04:30:58.532Z",
+                "2021-07-22T05:13:12.739Z",
+                "2021-07-22T05:14:53.149Z",
+                "2021-07-22T05:22:34.266Z",
+                "2021-07-22T07:22:09.275Z",
             ]
 
             out_roll, out_threshold = self.roll_out(False)
@@ -2209,6 +2251,18 @@ class Resim:
             "2021-06-29T07:13:11.048Z",
             "2021-06-29T08:09:20.717Z",
             "2021-06-29T08:14:11.799Z",
+            "2021-07-22T03:16:12.216Z",
+            "2021-07-22T03:17:37.595Z",
+            "2021-07-22T04:05:28.163Z",
+            "2021-07-22T05:04:25.970Z",
+            "2021-07-22T05:08:31.085Z",
+            "2021-07-22T06:07:32.321Z",
+            "2021-07-22T06:13:08.081Z",
+            "2021-07-22T06:16:15.006Z",
+            "2021-07-22T07:19:01.756Z",
+            "2021-07-22T07:19:08.939Z",
+            "2021-07-22T07:22:54.380Z",
+            "2021-07-22T07:23:08.516Z",
         ]
 
         fakeout_opposite_overrides = [
@@ -2498,7 +2552,14 @@ class Resim:
 
                 self.roll("haunter selection")
 
+            if self.ty == EventType.BATTER_UP:
+                # no proc on elsewhere
+                if batter.has_mod(Mod.SKIPPING):
+                    self.roll("skipping")
+                    self.roll("skipping")
+
             return True
+        
 
     def handle_weather(self):
         if self.weather == Weather.SUN_2:
@@ -2516,7 +2577,7 @@ class Resim:
                 self.roll(f"unstable {self.pitcher.name}")
                 rolled_unstable = True
 
-            if self.ty == EventType.INCINERATION:
+            if self.ty == EventType.INCINERATION and " is Unstable!" not in self.desc:
                 if "A Debt was collected" not in self.desc:
                     self.log_roll(Csv.WEATHERPROC, "Burn", eclipse_roll, True)
 
@@ -2567,6 +2628,15 @@ class Resim:
                 if player.has_mod(Mod.MARKED) and player_id != self.batter.id and not rolled_unstable and not player.has_mod(Mod.ELSEWHERE):
                     self.roll(f"unstable {player.name}")
                     rolled_unstable = True
+
+                    if self.ty == EventType.INCINERATION:
+                        # todo: merge this block with the above one once we understand how flow works
+                        self.roll("instability target?")
+                        self.roll("instability target?")
+                        self.generate_player()
+                        self.roll("extra instability stuff??")
+                        self.roll("extra instability stuff??")
+                        return True
                 if player.has_mod(Mod.FIRE_EATER) and not player.has_mod(Mod.ELSEWHERE):
                     self.roll(f"fire eater ({player.name})")
 
@@ -3250,6 +3320,7 @@ class Resim:
                     19: 0.00042,  # 0.00041647177941306346 < t < 0.00042578004132232117
                     20: 0.000485,  # we have a positive at 0.00046131203268795495 and 0.00048491029900765703
                     21: 0.000485,  # guessing
+                    22: 0.000485,  # guessing
                 }[self.season]
 
                 # Seems to not get rolled when Wyatt Mason IV echoes scattered.
@@ -3390,6 +3461,9 @@ class Resim:
             "2021-06-29T03:16:35.357Z",
             "2021-06-29T04:12:51.123Z",
             "2021-06-29T05:23:28.625Z",
+            "2021-07-22T02:20:22.499Z",
+            "2021-07-22T02:28:47.325Z",
+            "2021-07-22T07:11:25.278Z",
         ]:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod(Mod.PARTY_TIME):
@@ -3441,6 +3515,10 @@ class Resim:
 
         if self.ty == EventType.FAX_MACHINE_ACTIVATION:
             # this is definitely before secret base and after smithy
+            return True
+
+        # why does THIS roll here? it does. but why
+        if self.handle_trader():
             return True
 
         # WHY DOES GLITTER ROLL HERE

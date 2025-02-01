@@ -157,12 +157,14 @@ class Mod(Enum):
     SHELLED = auto()
     SINKING_SHIP = auto()
     SIPHON = auto()
+    SKIPPING = auto()
     SLOW_BUILD = auto()
     SMITHY = auto()
     SMOOTH = auto()
     SWEETENER = auto()
     SWIM_BLADDER = auto()
     TRADER = auto()
+    TRAITOR = auto()
     TRAVELING = auto()
     TRIPLE_THREAT = auto()
     UNDEFINED = auto()
@@ -367,9 +369,12 @@ class EventType(IntEnum):
     WEATHER_EVENT = 223
     SUN_30 = 226
     VOICEMAIL = 228
+    THIEVES_GUILD_ITEM = 230
+    THIEVES_GUILD_PLAYER = 231
     TRADER_TRAITOR = 233
     TRADE_FAILED = 234
     TRADE_SUCCESS = 236
+    JAZZ = 251
     STORM_WARNING = 263
     SNOWFLAKES = 264
 
