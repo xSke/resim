@@ -254,16 +254,15 @@ class Resim:
             "2021-06-18T17:01:00.415Z": -1,
             "2021-06-18T19:18:22.631Z": -1,
 
-            "2021-06-21T21:21:54.412Z": 1, # sun 30? or something funky with the single after it...?
-            "2021-06-21T21:21:59.425Z": -1, # wat
             "2021-06-21T21:24:18.953Z": -1, # this is wrong
             "2021-06-21T22:17:23.159Z": 2, # the flooding?
-            "2021-06-21T23:23:06.016Z": 1, # sun 30?
-            "2021-06-21T23:23:13.523Z": -1, # why is this so weird...
             "2021-06-24T04:21:11.177Z": 1, # Huber Frumple hit into a double play! Jaxon Buckley scores! The Oven inflates 1 Balloons! ?
             "2021-06-25T22:10:22.558Z": 2, # extra roll for consumers, maybe a defense?
             "2021-06-26T20:00:16.596Z": 1, # start?
             "2021-06-24T10:13:01.619Z": 4, # sac or something?
+
+            # "2021-06-29T04:00:18.096Z": 11, # game start roll but ordering weird (the prize roll before seems fine?)
+            "2021-06-29T05:04:54.101Z": 1, # funky? might be item damage related (two careful players)
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -313,10 +312,13 @@ class Resim:
 
         if self.handle_consumers():
             return
-
+        
         if self.handle_ballpark():
             return
 
+        if self.handle_trader():
+            return
+        
         if self.ty == EventType.HIGH_PRESSURE_ON_OFF:
             # s14 high pressure proc, not sure when this should interrupt
             return
@@ -326,13 +328,13 @@ class Resim:
 
         if self.handle_electric():
             return
-        
+                
         # # todo: also don't know where this is
         # if self.batter.has_mod(Mod.SCATTERED) and self.batter.has_mod(Mod.UNDEFINED):
             # self.roll("undefined?") # 50-100% better...
 
         # todo: don't know where this actually is - seems to be before mild at least
-        if self.pitcher.has_mod(Mod.DEBT_THREE) and not self.batter.has_mod(Mod.COFFEE_PERIL):
+        if (self.pitcher.has_mod(Mod.DEBT_THREE) or self.pitcher.has_mod(Mod.DEBT_ZERO)) and not self.batter.has_mod(Mod.COFFEE_PERIL):
             debt_roll = self.roll("debt")
             if self.ty == EventType.HIT_BY_PITCH:
                 self.log_roll(
@@ -583,6 +585,8 @@ class Resim:
             EventType.RUNS_SCORED,
             EventType.TUNNEL_FLED_ELSEWHERE,
             EventType.TUNNEL_FOUND_NOTHING,
+            EventType.TRADE_FAILED,
+            EventType.TRADE_SUCCESS,
         ]:
             return True
 
@@ -638,7 +642,11 @@ class Resim:
                     self.roll("remove away pitcher triple threat")
             # todo: salmon
             return True
+        
         if self.ty in [EventType.HALF_INNING]:
+            if self.season >= 21 and self.next_update["topOfInning"] and self.next_update["inning"] == 0:
+                self.roll("game start roll")
+
             # skipping top-of/bottom-of
             is_holiday = self.next_update.get("state", {}).get("holidayInning")
             # if this was a holiday inning then we already rolled in the block below
@@ -648,15 +656,25 @@ class Resim:
             if self.weather == Weather.SALMON:
                 self.try_roll_salmon()
 
-            if self.next_update["topOfInning"]:
-                # if this was a holiday inning then we already rolled in the block below
-
+            triggered_sun_30 = self.season >= 20 and self.next_update["inning"] == 9
+            if self.next_update["topOfInning"] and self.next_update["inning"]:
                 # hm was ratified in the season 18 election
                 has_hotel_motel = self.stadium.has_mod(Mod.HOTEL_MOTEL) or self.season >= 18
-                if has_hotel_motel and self.day < 27:
+
+                # ordering weird, see below, we doing this elsewhere
+                if has_hotel_motel and self.day < 27 and (not triggered_sun_30):
                     hotel_roll = self.roll("hotel motel")
                     self.log_roll(Csv.MODPROC, "Notel", hotel_roll, False)
-
+            return True
+        # todo: need to do some flow control crimes to make this neater
+        # we have a "newInningPhase" field in the game object now, and when sun 30 triggers this is 3
+        # so if any more happens, refactor this somehow...
+        if self.ty == EventType.SUN_30:
+            is_holiday = self.next_update.get("state", {}).get("holidayInning")
+            has_hotel_motel = self.stadium.has_mod(Mod.HOTEL_MOTEL) or self.season >= 18
+            if has_hotel_motel and self.day < 27 and not is_holiday:
+                hotel_roll = self.roll("hotel motel")
+                self.log_roll(Csv.MODPROC, "Notel", hotel_roll, False)
             return True
 
         if self.ty == EventType.SALMON_SWIM:
@@ -739,7 +757,6 @@ class Resim:
             EventType.WIN_COLLECTED_POSTSEASON,
             EventType.GAME_OVER,
             EventType.BALLOONS_INFLATED,
-            EventType.SUN_30,
             EventType.VOICEMAIL,
         ]:
             # skipping game end
@@ -905,6 +922,10 @@ class Resim:
                 "fbabc311-4197-47fc-b571-075538abea76": 1,
                 "cc20b7c4-991d-450d-93ed-48e1fdd3a3e9": 1,
                 "76fca743-30e6-4602-882d-3bafa39ab3f1": 1,
+                "ccde07ed-a645-4748-80f8-d20ba5f6b79e": 1,
+                "dc2a32f0-e3d8-4d13-9a7b-203b71d90a8f": 2,
+                "5dfcc523-e33e-4181-b66a-9e8b49675d52": 2,
+                "fab94991-b041-4aee-af8d-9684fc70c56d": 3,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -1020,6 +1041,16 @@ class Resim:
             return True
         if self.ty == EventType.BALLPARK_MOD_RATIFIED:
             return True
+        
+    def handle_trader(self):
+        # idk where to put this
+        if self.batter.has_mod(Mod.TRADER):
+            self.roll("trader")
+
+            if self.ty == EventType.TRADER_TRAITOR:
+                # success maybe?
+                self.roll("trader?")
+                return True
 
     def handle_polarity(self):
         if self.weather.is_polarity():
@@ -2172,6 +2203,12 @@ class Resim:
             "2021-06-24T04:29:20.787Z",
             "2021-06-24T05:05:50.921Z",
             "2021-06-24T12:10:52.501Z",
+            "2021-06-29T05:11:15.911Z",
+            "2021-06-29T05:17:16.187Z",
+            "2021-06-29T06:20:31.478Z",
+            "2021-06-29T07:13:11.048Z",
+            "2021-06-29T08:09:20.717Z",
+            "2021-06-29T08:14:11.799Z",
         ]
 
         fakeout_opposite_overrides = [
@@ -3212,6 +3249,7 @@ class Resim:
                     18: 0.00042,  # we have a 0.00041710056345256596
                     19: 0.00042,  # 0.00041647177941306346 < t < 0.00042578004132232117
                     20: 0.000485,  # we have a positive at 0.00046131203268795495 and 0.00048491029900765703
+                    21: 0.000485,  # guessing
                 }[self.season]
 
                 # Seems to not get rolled when Wyatt Mason IV echoes scattered.
@@ -3349,6 +3387,9 @@ class Resim:
             "2021-06-24T06:09:46.048Z",
             "2021-06-24T06:14:41.289Z",
             "2021-06-24T07:05:35.942Z",
+            "2021-06-29T03:16:35.357Z",
+            "2021-06-29T04:12:51.123Z",
+            "2021-06-29T05:23:28.625Z",
         ]:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod(Mod.PARTY_TIME):
@@ -4199,6 +4240,13 @@ class Resim:
             EventType.REMOVED_MOD,
             EventType.REMOVED_MODIFICATION,
         ]:
+            # super roamin' fifth base baybee
+            if meta["mod"] == "EXTRA_BASE":
+                self.stadium.remove_mod(Mod.EXTRA_BASE)
+                # might be "what to drop instead", maybe?
+                self.roll("stealing fifth base")
+                return
+
             if event["playerTags"]:
                 player = self.data.get_player(event["playerTags"][0])
 

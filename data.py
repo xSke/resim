@@ -162,6 +162,7 @@ class Mod(Enum):
     SMOOTH = auto()
     SWEETENER = auto()
     SWIM_BLADDER = auto()
+    TRADER = auto()
     TRAVELING = auto()
     TRIPLE_THREAT = auto()
     UNDEFINED = auto()
@@ -366,6 +367,9 @@ class EventType(IntEnum):
     WEATHER_EVENT = 223
     SUN_30 = 226
     VOICEMAIL = 228
+    TRADER_TRAITOR = 233
+    TRADE_FAILED = 234
+    TRADE_SUCCESS = 236
     STORM_WARNING = 263
     SNOWFLAKES = 264
 
@@ -608,6 +612,10 @@ class StadiumData(DataClassJsonMixin):
 
     def has_mod(self, mod: Mod) -> bool:
         return mod.value in self.mods
+    
+    def remove_mod(self, mod: Union[Mod, str]):
+        mod = str(mod)
+        self.mods.remove(mod)
 
     def print_mods(self) -> str:
         return list(set(self.mods))
