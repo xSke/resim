@@ -254,18 +254,16 @@ class Resim:
             "2021-06-18T17:01:00.415Z": -1,
             "2021-06-18T19:18:22.631Z": -1,
 
-            "2021-06-21T19:04:58.500Z": 3, # fifth base stuff?
             "2021-06-21T21:21:54.412Z": 1, # sun 30? or something funky with the single after it...?
             "2021-06-21T21:21:59.425Z": -1, # wat
             "2021-06-21T21:24:18.953Z": -1, # this is wrong
             "2021-06-21T22:17:23.159Z": 2, # the flooding?
             "2021-06-21T23:23:06.016Z": 1, # sun 30?
             "2021-06-21T23:23:13.523Z": -1, # why is this so weird...
-            "2021-06-22T00:20:08.731Z": 2,
             "2021-06-24T04:21:11.177Z": 1, # Huber Frumple hit into a double play! Jaxon Buckley scores! The Oven inflates 1 Balloons! ?
             "2021-06-25T22:10:22.558Z": 2, # extra roll for consumers, maybe a defense?
             "2021-06-26T20:00:16.596Z": 1, # start?
-            "2021-06-21T18:21:02.799Z": -1, # fifth base nonsense
+            "2021-06-24T10:13:01.619Z": 4, # sac or something?
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -901,6 +899,12 @@ class Resim:
                 "49df1a13-d770-42c6-b91c-57dd5f90ffe8": 1,
                 "4bfa5f12-3e9c-47f1-ab7f-e89b973dfac2": 1,
                 "aababc2b-23f5-42bd-8fe4-540b6b2f052e": 1,
+                "7a90ffd3-1883-4f95-8636-c41f5776dc80": 3,
+                "0765690d-0747-42ca-ad37-5087e5768128": 8,
+                "0fb2d2a8-1eeb-4944-a544-54df0a13146c": 1,
+                "fbabc311-4197-47fc-b571-075538abea76": 1,
+                "cc20b7c4-991d-450d-93ed-48e1fdd3a3e9": 1,
+                "76fca743-30e6-4602-882d-3bafa39ab3f1": 1,
             }
 
             for _ in range(extra_start_rolls.get(self.game_id, 0)):
@@ -1579,7 +1583,6 @@ class Resim:
             if self.batter.undefined():
                 self.roll("undefined (fly?)")
                 self.roll("undefined (fly?)")
-
             fly_roll = self.roll("fly", threshold=fly_threshold, passed=True)
 
             self.log_roll(
@@ -1598,9 +1601,8 @@ class Resim:
             
             if self.batter.undefined():
                 # buoy/supp
-                self.roll("undefined (ground?)")
-                self.roll("undefined (ground?)")
-
+                self.roll("undefined (fly?)")
+                self.roll("undefined (fly?)")
             fly_roll = self.roll("fly", threshold=fly_threshold, passed=False)
 
             ground_fielder_roll, ground_fielder = self.roll_fielder(check_name=not is_fc_dp)
@@ -1615,18 +1617,12 @@ class Resim:
             )
             named_fielder = ground_fielder
 
-        if named_fielder.undefined() and not is_fc_dp:
-            # this could also be part of the upgrade roll
-            if self.event["created"] in ["2021-06-26T01:14:25.365Z"]:
-                # this might be one extra per fielder? advance related
-                self.roll("undefined (advance roll?)")
-
         if self.season >= 20:
-            upgrade_roll = self.roll("upgrade out?")
             if self.batter.undefined():
-                # maybe need to add something here
                 self.roll("undefined (upgrade out)")
-                pass
+                self.roll("undefined (upgrade out)")
+            upgrade_roll = self.roll("upgrade out?")
+
             self.log_roll(Csv.UPGRADE_OUT, "ToHit" if self.ty == EventType.GROUND_OUT else "ToHomeRun", upgrade_roll, False)
             if upgrade_roll < 0.01:
                 self.error("something is misaligned, this should have been upgraded to a hit/hr")
@@ -1656,7 +1652,7 @@ class Resim:
 
             if not is_fc_dp:
                 pass
-                self.roll("undefined (idk yet)")
+                # self.roll("undefined (idk yet)")
                 # for _ in self.update["baseRunners"]:
                     # self.roll("undefined (idk yet)")
                     # self.roll("undefined (idk yet)")
@@ -1750,6 +1746,7 @@ class Resim:
             self.try_roll_batter_debt(fielder)
             base_before_home = Base.FOURTH if self.stadium.has_mod(Mod.EXTRA_BASE) else Base.THIRD
 
+            # this might be bugged for fifth base? see: 2021-06-24T10:13:01.604Z
             is_third_free = 2 not in self.update["basesOccupied"]
             for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
                 runner = self.data.get_player(runner_id)
@@ -1784,19 +1781,14 @@ class Resim:
 
         elif self.ty == EventType.GROUND_OUT:
             if len(self.update["basesOccupied"]) > 0:
+                # roll needs batter tragicness, fielder tenaciousness, pitcher shakespearianism
                 dp_roll = self.roll("dp?")
                 if self.batter.undefined():
                     # tragicness?
-                    # todo:is this just an item damage roll?
-                    self.roll("undefined (dp)")
-
-                    if "double play" in self.desc:
-                        self.roll("undefined (dp)")
-                    if "fielder's choice" in self.desc:
-                        self.roll("undefined (dp/fc?)")
-                if fielder.undefined():
-                    # self.roll("undefined (dp fielder)")
-                    pass
+                    # the control flow is really weird here
+                    # if there's no player on first, why would it roll for batter but not for fielder...?
+                    # unless it's something else, i guess
+                    self.roll("undefined (dp batter)")
 
                 if Base.FIRST in self.update["basesOccupied"]:
                     if fielder.undefined():
@@ -1804,10 +1796,12 @@ class Resim:
                         pass
 
                     is_dp = "into a double play!" in self.desc
+                    is_fc = "on fielder's choice" in self.desc
                     self.log_roll(Csv.GROUNDOUT_FORMULAS, "DP", dp_roll, is_dp, fielder=fielder)
 
                     if is_dp:
-                        r = self.roll("dp where")  # (index into basesOccupied)
+                        # ...wait, is this just the martyr? roll?
+                        self.roll("dp where")  # (index into basesOccupied)
 
                         # todo:this interacts weirdly with undefined
                         self.damage(self.pitcher, "pitcher")
@@ -1829,8 +1823,8 @@ class Resim:
                     if self.batter.undefined():
                         self.roll("undefined (martyr?)")
 
+                    # needs batter martyrdom, runner indulgence
                     fc_roll = self.roll("martyr?")  # high = fc
-                    is_fc = "on fielder's choice" in self.desc
                     self.log_roll(Csv.GROUNDOUT_FORMULAS, "Sac", fc_roll, not is_fc, fielder=fielder)
 
                     if is_fc:
@@ -1842,11 +1836,15 @@ class Resim:
                         elif self.update["basesOccupied"] == [1, 0]:
                             damage_runners = [0]  # unsure
                         elif self.update["basesOccupied"] == [2, 0]:
-                            damage_runners = [2, 2]  # this one is correct
+                            damage_runners = [2, 2]  # this one is correct... or maybe not?
+                            if self.stadium.has_mod(Mod.EXTRA_BASE):
+                                damage_runners = [2]
                         elif self.update["basesOccupied"] == [0]:
                             damage_runners = []
                         elif self.update["basesOccupied"] == [3, 0]:
                             damage_runners = [3, 3]  # unsure
+                        elif self.update["basesOccupied"] == [3, 1, 0]:
+                            damage_runners = [3, 3, 1]  # unsure but there's 3
 
                         self.damage(self.pitcher, "pitcher")
 
@@ -1881,12 +1879,15 @@ class Resim:
                 else:
                     roll_outcome = did_advance(base, runner_id) if not was_forced else None
 
+                # needs... fielder tenaciousness and runner indulgence?
                 adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})")
                 if self.batter.undefined() and base == base_before_home: # sac?
                     # self.roll("undefined (advance batter)")
                     pass
                 if runner.undefined():
                     self.roll("undefined (advance runner)")
+                if fielder.undefined():
+                    self.roll("undefined (runner adv fielder)")
 
                 if roll_outcome and base == base_before_home and not was_forced:
                     # when a runner scores from third, it "ignores" forcing logic
@@ -1999,6 +2000,7 @@ class Resim:
                 "2021-06-21T19:25:24.958Z",
                 "2021-06-21T18:05:12.440Z",
                 "2021-06-24T01:00:44.658Z",
+                "2021-06-24T11:01:45.168Z",
             ]
 
             out_roll, out_threshold = self.roll_out(False)
@@ -2009,7 +2011,13 @@ class Resim:
 
                 self.print("--- fake home run")
                 self.roll("out/fielder")
+                if self.batter.undefined():
+                    self.roll("undefined (fly?)")
+                    self.roll("undefined (fly?)")
                 self.roll("out/fly", threshold=fly_threshold, passed=True)
+                if self.batter.undefined():
+                    self.roll("undefined (upgrade out)")
+                    self.roll("undefined (upgrade out)")
                 upgrade_roll = self.roll("upgrade out? (to hr)") # this roll is definitely the one that handles upgrades
                 self.log_roll(Csv.UPGRADE_OUT, "ToHomeRun", upgrade_roll, True)
 
@@ -2019,8 +2027,8 @@ class Resim:
                 self.roll("???") # ...so then, what is this?
             else:
                 if self.batter.undefined():
-                    # this is probably 2? need more data
-                    self.print("UNDEFINED HOME RUN?")
+                    # just divinity?
+                    self.roll("undefined (home run)")
                 hr_roll = self.roll_hr(True)
                 self.log_roll(Csv.HR, "HomeRun", hr_roll, True)
         else:
@@ -2032,12 +2040,11 @@ class Resim:
             self.damage(runner, "batter")
 
         self.damage(self.batter, "batter")
-        if self.batter.undefined():
-            self.roll("undefined hr score?")
-            self.roll("undefined hr score?")
-            self.roll("undefined hr score?")
 
         if self.stadium.has_mod(Mod.BIG_BUCKET):
+            if self.batter.undefined():
+                self.roll("undefined (big bucket)")
+
             buckets_roll = self.roll("big buckets")
             if "lands in a Big Bucket." in self.desc:
                 self.log_roll(
@@ -2056,6 +2063,10 @@ class Resim:
                 )
 
         if self.stadium.has_mod(Mod.HOOPS):
+            if self.batter.undefined():
+                self.roll("undefined (hoops)")
+                self.roll("undefined (hoops)")
+
             hoops_roll = self.roll("hoops")
 
             if "went up for the alley oop" in self.desc:
@@ -2067,6 +2078,10 @@ class Resim:
                 )
 
                 hoops_success_roll = self.roll("hoop success")
+
+                if self.batter.undefined():
+                    self.roll("undefined (hoop success)")
+
                 if "slammed it down for an extra Run" in self.desc:
                     self.log_roll(
                         Csv.MODPROC,
@@ -2156,6 +2171,7 @@ class Resim:
             "2021-06-24T04:23:15.438Z",
             "2021-06-24T04:29:20.787Z",
             "2021-06-24T05:05:50.921Z",
+            "2021-06-24T12:10:52.501Z",
         ]
 
         fakeout_opposite_overrides = [
@@ -2176,14 +2192,16 @@ class Resim:
 
             self.print("--- fake single")
             self.roll("out/fielder")
-            self.roll("out/fly", threshold=fly_threshold, passed=False)
-            # ...nandy go here too?
+
             if self.batter.undefined():
-                self.roll("undefined (fake hit?)")
-                self.roll("undefined (fake hit?)")
-                self.roll("undefined (fake hit?)")
-                self.roll("undefined (fake hit?)")
+                self.roll("undefined (fly?)")
+                self.roll("undefined (fly?)")
+            self.roll("out/fly", threshold=fly_threshold, passed=False)
             self.roll("out/fielder")
+            if self.batter.undefined():
+                self.roll("undefined (upgrade out)")
+                self.roll("undefined (upgrade out)")
+
             upgrade_roll = self.roll("upgrade out? (to hit)")
             self.log_roll(Csv.UPGRADE_OUT, "ToHit", upgrade_roll, True)
             if upgrade_roll > 0.02: # real threshold probably 0.015ish
@@ -3328,6 +3346,9 @@ class Resim:
             "2021-06-21T21:06:09.786Z",
             "2021-06-23T23:15:32.729Z",
             "2021-06-24T02:20:11.278Z",
+            "2021-06-24T06:09:46.048Z",
+            "2021-06-24T06:14:41.289Z",
+            "2021-06-24T07:05:35.942Z",
         ]:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod(Mod.PARTY_TIME):
@@ -3841,6 +3862,10 @@ class Resim:
             "2021-06-24T04:12:06.096Z": True,
             "2021-06-21T23:09:15.837Z": True,
             "2021-06-26T03:06:40.110Z": True,
+            "2021-06-24T05:15:00.980Z": True,
+            "2021-06-24T08:12:41.052Z": True,
+            "2021-06-24T09:20:42.736Z": True,
+            "2021-06-24T11:10:24.784Z": True,
         }
         if self.event["created"] in known_result_overrides:
             self.is_strike = known_result_overrides[self.event["created"]]
