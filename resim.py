@@ -261,7 +261,21 @@ class Resim:
             "2021-06-24T10:13:01.619Z": 4, # sac or something?
 
             "2021-06-29T05:04:54.101Z": 1, # funky? might be item damage related (two careful players)
-            "2021-07-22T06:12:30.592Z": -1, # why no batter debt?
+
+            "2021-07-26T16:00:22.047Z": 103, # jazz
+            "2021-07-26T16:08:28.076Z": 1, # consumer roll suspiciously low, might actually be party
+            "2021-07-26T16:21:19.276Z": -1, # dp logic broken
+            "2021-07-26T17:00:21.831Z": 105-15-4-14-26+44+37, # jazz!
+            "2021-07-26T17:00:31.831Z": 23,
+            "2021-07-26T17:24:27.995Z": 1, # might be a low peanut mister roll?
+            "2021-07-26T17:36:38.281Z": 1, # maxi socks item gem broken
+            "2021-07-26T18:09:17.129Z": 2, # observed?
+            "2021-07-26T18:20:09.033Z": 1, # consumer attack item defend push?
+            "2021-07-28T09:15:40.519Z": 1, # can't consistently figure out dp logic
+            "2021-07-28T09:22:11.719Z": 3,
+            "2021-07-28T10:00:26.158Z": 96, # jazz
+            "2021-07-28T11:00:21.933Z": 74,
+            "2021-07-28T11:03:52.137Z": 1, # this might be secret base attract - the threshold would've had to be duobled, but who knows...
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -293,6 +307,9 @@ class Resim:
             )
         self.print(f"- stadium mods: {self.stadium.print_mods()} ({self.stadium.nickname})")
 
+        if self.ty == EventType.STUCK:
+            return
+
         if self.handle_batter_up():
             return
 
@@ -301,14 +318,14 @@ class Resim:
 
         if self.handle_party():
             return
-
+        
         # has to be rolled after party
         if self.handle_flooding():
             return
 
         if self.handle_polarity():
             return
-
+        
         if self.handle_consumers():
             return
                 
@@ -482,11 +499,13 @@ class Resim:
             EventType.CHANGED_MODIFIER,
             EventType.REMOVED_MULTIPLE_MODIFICATIONS_ECHO,
             EventType.ADDED_MULTIPLE_MODIFICATIONS_ECHO,
+            EventType.LEAGUE_MODIFICATION_REMOVED,
         ]:
             # skipping mod added/removed
             return True
         if self.ty in [
             EventType.BLACK_HOLE,
+            EventType.BLACK_HOLE_BLACK_HOLE,
             EventType.SUN2,
             EventType.SUN_2_OUTCOME,
             EventType.BLACK_HOLE_OUTCOME,
@@ -498,6 +517,11 @@ class Resim:
             if self.ty == EventType.BLACK_HOLE:
                 if "is compressed by gamma" in self.desc:
                     self.roll("unholey target")
+
+            if self.ty == EventType.BLACK_HOLE_BLACK_HOLE:
+                # uhhhh what etc
+                self.roll("bhbh target?")
+                self.roll("bhbh target?")
             # skipping sun 2 / black hole proc
             return True
         if self.ty in [
@@ -547,6 +571,9 @@ class Resim:
                 # Base Thirst, Laserlikeness, Ground Friction, Continuation, Indulgence,
                 # Omniscience, Tenaciousness, Watchfulness, Anticapitalism, Chasiness, Cinnamon
 
+                for _ in range(25):
+                    self.roll("stat")
+            if "clocked in" in self.desc:
                 for _ in range(25):
                     self.roll("stat")
 
@@ -771,8 +798,10 @@ class Resim:
             return True
         if self.ty == EventType.THIEVES_GUILD_PLAYER:
             self.roll("thieves guild?")
+            self.roll("thieves guild?")
             return True
         if self.ty == EventType.THIEVES_GUILD_ITEM:
+            self.roll("thieves guild?")
             self.roll("thieves guild?")
             return True
         if self.ty in [EventType.LETS_GO]:
@@ -930,7 +959,7 @@ class Resim:
                 "5dfcc523-e33e-4181-b66a-9e8b49675d52": 2,
                 "fab94991-b041-4aee-af8d-9684fc70c56d": 3,
                 "baa09895-3de2-44ff-9ac3-ead7cf5da695": 1,
-                "f5490532-6ceb-45e7-8a4e-8642120eb826": 3, # MIGHT be messed up by ptg previously
+                "f5490532-6ceb-45e7-8a4e-8642120eb826": 2,
                 "b8675de2-0def-46b2-a4e4-c274174ec8be": 3,
             }
 
@@ -994,6 +1023,10 @@ class Resim:
             return True
         if self.ty == EventType.TEAM_JOINED_LEAGUE:
             return True
+        if self.ty == EventType.TEAM_INCINERATION_REPLACEMENT:
+            return True
+        if self.ty == EventType.TEAM_FORMED:
+            return True
         if self.ty in [
             EventType.ITEM_BREAKS,
             EventType.ITEM_DAMAGE,
@@ -1030,6 +1063,13 @@ class Resim:
                 "2021-07-22T06:00:22.361Z": 0,
 
                 "2021-07-22T07:00:21.646Z": 11,
+
+                "2021-07-28T10:00:26.324Z": 10,
+                "2021-07-28T11:00:26.900Z": 9,
+                "2021-07-28T11:00:26.947Z": 11,
+                "2021-07-26T16:00:22.325Z": 13,
+
+                "2021-07-26T16:00:32.373Z": 14,
             }
             length = lengths.get(self.event["created"])
             if length:
@@ -1166,6 +1206,10 @@ class Resim:
                     self.handle_batter_reverb()
 
                 if self.batting_team.has_mod(Mod.PSYCHIC):
+                    if self.batter.undefined():
+                        self.roll("undefined (strikeout-walk)")
+                        self.roll("undefined (strikeout-walk)")
+
                     bpsychic_roll = self.roll("strikeout-walk")
                     bpsychic_success = "uses a Mind Trick" in self.desc
 
@@ -1524,6 +1568,10 @@ class Resim:
 
             # batters: convert strikeout to walk (failed)
             if self.batting_team.has_mod(Mod.PSYCHIC):
+                if self.batter.undefined():
+                    self.roll("undefined (strikeout-walk)")
+                    self.roll("undefined (strikeout-walk)")
+
                 bpsychic_roll = self.roll("strikeout-walk")
                 self.log_roll(
                     Csv.BSYCHIC,
@@ -1731,7 +1779,7 @@ class Resim:
                 self.roll("how many popped?")
 
     def try_roll_batter_debt(self, fielder):
-        if (self.batter.has_mod(Mod.DEBT_THREE) or self.batter.has_mod(Mod.DEBT_ZERO)) and fielder and not fielder.has_mod(Mod.COFFEE_PERIL):
+        if (self.batter.has_mod(Mod.DEBT_THREE) or self.batter.has_mod(Mod.DEBT_ZERO)) and fielder and not (fielder.has_mod(Mod.COFFEE_PERIL) or fielder.has_mod(Mod.MARKED)):
             self.roll("batter debt")
 
     def roll_fielder(self, check_name=True, skip_elsewhere=True):
@@ -1880,8 +1928,9 @@ class Resim:
                                     self.damage(runner, "runner")
 
                         if "scores!" in self.desc:
-                            # todo: is this also a runner?
-                            self.damage(self.batter, "batter")
+                            # assuming this is always first?
+                            scoring_runner = self.data.get_player(self.update["baseRunners"][-1])
+                            self.damage(scoring_runner, "runner")
 
                         self.damage(self.pitcher, "pitcher")
 
@@ -1923,13 +1972,16 @@ class Resim:
 
                         return
 
+            # as of s24, this is before item rolls for sure
+            # see: 2021-07-28T10:08:43.892Z
+            self.try_roll_batter_debt(fielder)
+
             self.damage(self.pitcher, "pitcher")
             # there's some weird stuff with damage rolls in the first fragment of s16
             # this seems to work for groundouts but something similar might be up for flyouts
             if (self.season, self.day) >= (15, 3):
                 self.damage(self.batter, "fielder")
                 self.damage(fielder, "fielder")
-            self.try_roll_batter_debt(fielder)
 
             forced_bases = 0
             while forced_bases in self.update["basesOccupied"]:
@@ -2041,6 +2093,21 @@ class Resim:
             # damage scores on extra advances
             if base == base_before_home and roll_outcome:
                 self.damage(runner, "runner")
+    
+    # run this after the out roll. maybe this should just be in there...?
+    def get_predicted_upgrade_roll(self):
+        if self.ty == EventType.HIT:
+            step_count = 3
+        elif self.ty == EventType.HOME_RUN:
+            step_count = 2
+            
+        if self.batter.undefined():
+            step_count += 4
+
+        self.rng.step(step_count)
+        predicted_upgrade_roll = self.rng.next()
+        self.rng.step(-step_count-1)
+        return predicted_upgrade_roll
 
     def handle_hr(self):
         if " is Magmatic!" not in self.desc:
@@ -2074,10 +2141,15 @@ class Resim:
                 "2021-07-22T05:14:53.149Z",
                 "2021-07-22T05:22:34.266Z",
                 "2021-07-22T07:22:09.275Z",
+                "2021-07-28T10:09:47.050Z",
             ]
 
             out_roll, out_threshold = self.roll_out(False)
-            if self.season >= 20 and out_roll > out_threshold and self.event["created"] not in fakeout_overrides:
+
+            # assuming this can never be >0.04
+            predicted_upgrade_roll = self.get_predicted_upgrade_roll()
+
+            if self.season >= 20 and out_roll > out_threshold and self.event["created"] not in fakeout_overrides and predicted_upgrade_roll < 0.04:
                 fly_threshold = get_fly_or_ground_threshold(
                     self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
                 )
@@ -2093,10 +2165,6 @@ class Resim:
                     self.roll("undefined (upgrade out)")
                 upgrade_roll = self.roll("upgrade out? (to hr)") # this roll is definitely the one that handles upgrades
                 self.log_roll(Csv.UPGRADE_OUT, "ToHomeRun", upgrade_roll, True)
-
-                if upgrade_roll > 0.025: # real threshold probably 0.015ish
-                    self.error("something is misaligned, this is definitely a real home run")
-
                 self.roll("???") # ...so then, what is this?
             else:
                 if self.batter.undefined():
@@ -2263,6 +2331,13 @@ class Resim:
             "2021-07-22T07:19:08.939Z",
             "2021-07-22T07:22:54.380Z",
             "2021-07-22T07:23:08.516Z",
+            "2021-07-30T12:19:39.626Z",
+            "2021-07-28T10:00:51.442Z",
+            "2021-07-28T10:03:16.709Z",
+            "2021-07-28T10:04:32.487Z",
+            "2021-07-28T10:20:46.023Z",
+            "2021-07-28T10:21:55.166Z",
+            "2021-07-28T10:25:05.937Z",
         ]
 
         fakeout_opposite_overrides = [
@@ -2271,10 +2346,15 @@ class Resim:
             "2021-06-23T22:13:01.358Z",
             "2021-06-24T03:05:50.319Z",
             "2021-06-24T05:09:20.868Z",
+            "2021-07-28T09:24:31.243Z",
         ]
 
+        # cheating a little to predict the future etc
+        # we're assuming this can never roll >0.04 and still pass, as a heuristic to avoid too many manual overrides
+        predicted_upgrade_roll = self.get_predicted_upgrade_roll()
+
         is_fake_single = False
-        if self.season >= 20 and "a Single" in self.desc and (out_roll > out_threshold and self.event["created"] not in fakeout_override) or (self.event["created"] in fakeout_opposite_overrides):
+        if self.season >= 20 and "a Single" in self.desc and predicted_upgrade_roll < 0.04 and (out_roll > out_threshold and self.event["created"] not in fakeout_override) or (self.event["created"] in fakeout_opposite_overrides):
             is_fake_single = True
             
             fly_threshold = get_fly_or_ground_threshold(
@@ -2295,8 +2375,6 @@ class Resim:
 
             upgrade_roll = self.roll("upgrade out? (to hit)")
             self.log_roll(Csv.UPGRADE_OUT, "ToHit", upgrade_roll, True)
-            if upgrade_roll > 0.02: # real threshold probably 0.015ish
-                self.error("something is misaligned, this is definitely a real hit")
         else:
             if self.batter.undefined():
                 # div?
@@ -2515,6 +2593,10 @@ class Resim:
             #         modified_delta = (6 - 4*(mod_tenac - mod_indul)) * 0.00001 * 5
             #         self.print(f"delta using rolls {i}/{tenac_roll} = {modified_delta}, matches? {abs(modified_delta-real_delta)<0.000001}")
 
+        if self.batter.has_mod(Mod.OFFWORLD):
+            self.roll("offworld")
+            self.roll("offworld")
+
         self.damage(self.pitcher, "pitcher")
         self.damage(self.batter, "batter")
 
@@ -2561,11 +2643,48 @@ class Resim:
             return True
         
 
+    # fire eater and unstable players on roster?
+    def handle_fire_eater(self, rolled_unstable=False):
+        # unstable fire eaters take priority over stable fire eaters.
+        fire_eater_eligible = itertools.chain(
+            filter(lambda p: self.data.get_player(p).has_mod(Mod.MARKED), self.pitching_team.lineup),
+            filter(lambda p: not self.data.get_player(p).has_mod(Mod.MARKED), self.pitching_team.lineup),
+            [
+                self.batter.id,
+                self.pitcher.id,
+            ],
+        )
+
+        for player_id in fire_eater_eligible:
+            player = self.data.get_player(player_id)
+
+            if player.has_mod(Mod.MARKED) and player_id != self.batter.id and not rolled_unstable and not player.has_mod(Mod.ELSEWHERE):
+                self.roll(f"unstable {player.name}")
+                rolled_unstable = True
+
+                if self.ty == EventType.INCINERATION:
+                    # todo: merge this block with the one in the incineration block one once we understand how flow works
+                    self.roll("instability target?")
+                    self.roll("instability target?")
+                    self.generate_player()
+                    self.roll("extra instability stuff??")
+                    self.roll("extra instability stuff??")
+                    return True
+            if player.has_mod(Mod.FIRE_EATER) and not player.has_mod(Mod.ELSEWHERE):
+                self.roll(f"fire eater ({player.name})")
+
+                if self.ty == EventType.INCINERATION_BLOCKED:
+                    # fire eater proc - target roll maybe?
+                    self.roll("target")
+                    return True
+                break
+
     def handle_weather(self):
         if self.weather == Weather.SUN_2:
             pass
 
-        elif self.weather == Weather.ECLIPSE:
+        elif self.weather in [Weather.ECLIPSE, Weather.SUPERNOVA_ECLIPSE]:
+            # this block needs a big refactor, we can probably make the unstable checks generic
             threshold = self.get_eclipse_threshold()
             rolled_unstable = False
             eclipse_roll = self.roll("eclipse")
@@ -2577,7 +2696,7 @@ class Resim:
                 self.roll(f"unstable {self.pitcher.name}")
                 rolled_unstable = True
 
-            if self.ty == EventType.INCINERATION and " is Unstable!" not in self.desc:
+            if self.ty == EventType.INCINERATION and " is Unstable!" not in self.desc and "Kansas City Breath Mints" not in self.desc:
                 if "A Debt was collected" not in self.desc:
                     self.log_roll(Csv.WEATHERPROC, "Burn", eclipse_roll, True)
 
@@ -2611,40 +2730,23 @@ class Resim:
                 if self.pitching_team.has_mod(Mod.FIREPROOF) and self.ty == EventType.INCINERATION_BLOCKED:
                     self.roll("target")
                     return True
+                
+            if self.handle_fire_eater(rolled_unstable):
+                return True
+            
+            if self.weather == Weather.SUPERNOVA_ECLIPSE:
+                self.roll("supernova eclipse (team incin)")
+                if self.ty == EventType.INCINERATION:
+                    # riv
+                    if "Kansas City Breath Mints" in self.desc:
+                        for _ in range(8):
+                            self.roll("where are the paws, joel?")
 
-            # unstable fire eaters take priority over stable fire eaters.
-            fire_eater_eligible = itertools.chain(
-                filter(lambda p: self.data.get_player(p).has_mod(Mod.MARKED), self.pitching_team.lineup),
-                filter(lambda p: not self.data.get_player(p).has_mod(Mod.MARKED), self.pitching_team.lineup),
-                [
-                    self.batter.id,
-                    self.pitcher.id,
-                ],
-            )
+                        self.data.fetch_league_data(self.event["created"], 10)
+                        # correction for fetch league data
+                        self.data.fetch_player_after("df4da81a-917b-434f-b309-f00423ee4967", self.event["created"])
+                    return True
 
-            for player_id in fire_eater_eligible:
-                player = self.data.get_player(player_id)
-
-                if player.has_mod(Mod.MARKED) and player_id != self.batter.id and not rolled_unstable and not player.has_mod(Mod.ELSEWHERE):
-                    self.roll(f"unstable {player.name}")
-                    rolled_unstable = True
-
-                    if self.ty == EventType.INCINERATION:
-                        # todo: merge this block with the above one once we understand how flow works
-                        self.roll("instability target?")
-                        self.roll("instability target?")
-                        self.generate_player()
-                        self.roll("extra instability stuff??")
-                        self.roll("extra instability stuff??")
-                        return True
-                if player.has_mod(Mod.FIRE_EATER) and not player.has_mod(Mod.ELSEWHERE):
-                    self.roll(f"fire eater ({player.name})")
-
-                    if self.ty == EventType.INCINERATION_BLOCKED:
-                        # fire eater proc - target roll maybe?
-                        self.roll("target")
-                        return True
-                    break
 
         elif self.weather == Weather.GLITTER:
             # this is handled inside the ballpark proc block(?????)
@@ -3137,6 +3239,11 @@ class Resim:
             # this is handled after party roll...?
             pass
 
+        elif self.weather == Weather.NIGHT:
+            # rolled at least after party time?
+            pass
+        elif self.weather == Weather.BLACK_HOLE_BLACK_HOLE:
+            pass
         else:
             self.print(f"error: {self.weather.name} weather not implemented")
 
@@ -3304,8 +3411,7 @@ class Resim:
 
         for player_id in players:
             player = self.data.get_player(player_id)
-
-            if player.has_mod(Mod.SCATTERED):
+            if player.has_mod(Mod.SCATTERED) and not team.has_mod(Mod.SCATTERED):
                 unscatter_roll = self.roll(f"unscatter ({player.raw_name})")
 
                 # todo: find actual threshold
@@ -3321,6 +3427,7 @@ class Resim:
                     20: 0.000485,  # we have a positive at 0.00046131203268795495 and 0.00048491029900765703
                     21: 0.000485,  # guessing
                     22: 0.000485,  # guessing
+                    23: 0.000485,  # guessing
                 }[self.season]
 
                 # Seems to not get rolled when Wyatt Mason IV echoes scattered.
@@ -3335,7 +3442,7 @@ class Resim:
             if elsewhere_time > 18:
                 should_scatter = True
         if "season" in self.desc:
-            if self.event["created"] not in ["2021-04-05T16:24:45.346Z", "2021-04-05T20:08:23.286Z"]:
+            if self.event["created"] not in ["2021-04-05T16:24:45.346Z", "2021-04-05T20:08:23.286Z", "2021-07-26T17:13:07.143Z"]:
                 should_scatter = True
 
         if should_scatter:
@@ -3349,6 +3456,10 @@ class Resim:
         # day 25 and day 30 (1-indexed)
         if (self.season, self.day) <= (13, 24):
             return
+        
+        # s24 earlsiesta removed this
+        if (self.season, self.day) >= (23, 27):
+            return
 
         order_roll = self.roll("consumer team order")
         if order_roll < 0.5:
@@ -3357,7 +3468,7 @@ class Resim:
             teams = [self.home_team, self.away_team]
 
         for team in teams:
-            if team.level >= 5:
+            if (self.season < 23 and team.level >= 5) or (self.season == 23 and team.level < 5):
                 attack_roll = self.roll(f"consumers ({team.nickname})")
 
                 if self.ty == EventType.CONSUMERS_ATTACK:
@@ -3394,6 +3505,11 @@ class Resim:
                         if "DEFENDS" in self.desc:
                             self.roll("defend item?")
                             return True
+                        
+                        if "COUNTERED WITH" in self.desc:
+                            self.roll("defend item?")
+                            self.roll("defend item?")
+                            return True
 
                         # todo: kapow etc
                         if "SLAM!" not in self.desc:
@@ -3420,6 +3536,8 @@ class Resim:
                     self.log_roll(Csv.CONSUMERS, "Miss", attack_roll, False, attacked_team=team)
 
     def handle_party(self):
+        if "SIM_PARTY_TIME" not in self.data.sim["attr"]:
+            return        
         if self.season != 16 or self.day >= 85:
             # lol. turns out it just rolls party all the time and throws out the roll if the team isn't partying
             party_roll = self.roll("party time")
@@ -3464,6 +3582,10 @@ class Resim:
             "2021-07-22T02:20:22.499Z",
             "2021-07-22T02:28:47.325Z",
             "2021-07-22T07:11:25.278Z",
+            "2021-07-28T10:17:53.606Z",
+            "2021-07-28T10:26:05.631Z",
+            "2021-07-28T11:08:29.582Z",
+            "2021-07-26T18:11:34.607Z",
         ]:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod(Mod.PARTY_TIME):
@@ -3520,6 +3642,15 @@ class Resim:
         # why does THIS roll here? it does. but why
         if self.handle_trader():
             return True
+        
+        # has to be rolled after party, too
+        if self.weather == Weather.NIGHT:
+            self.roll("night")
+            
+            if self.ty == EventType.NIGHT_SHIFT:
+                self.roll("night shift")
+                self.roll("night shift")
+                return True
 
         # WHY DOES GLITTER ROLL HERE
         if self.weather == Weather.GLITTER:
@@ -3594,16 +3725,17 @@ class Resim:
         ):
             secret_base_exit_eligible = False
         if (
+            # kurt crueller ruins this again??
             self.season >= 18
             and secret_runner_id == "114100a4-1bf7-4433-b304-6aad75904055"
-            and secret_runner_id not in self.batting_team.shadows
+            and (secret_runner_id not in self.batting_team.shadows and secret_runner_id not in self.batting_team.lineup)
         ):
             secret_base_exit_eligible = False
 
         if (
             (17, 27) <= (self.season, self.day)
             and secret_runner_id == "114100a4-1bf7-4433-b304-6aad75904055"
-            and secret_runner_id not in self.batting_team.shadows
+            and (secret_runner_id not in self.batting_team.shadows and secret_runner_id not in self.batting_team.lineup)
         ):
             secret_base_exit_eligible = False
 
@@ -3738,6 +3870,9 @@ class Resim:
                 score_1 = int((hi1 - lo1) * score_1_roll + lo1) * pro_factor
                 self.print(f"(score: {score_1})")
 
+                if grinder.undefined():
+                    self.roll("undefined (grinder)")
+
                 firsttrick_roll = self.roll("trick 1 success")
                 if "but lose their balance and bail!" in self.desc:
                     self.log_roll(
@@ -3772,6 +3907,9 @@ class Resim:
                     self.print(f"(score: {score_2})")
 
                     trick2_roll = self.roll("trick 2 success")
+
+                    if grinder.undefined():
+                        self.roll("undefined (grinder)")
 
                     if "tagged out doing a" not in self.desc:
                         self.log_roll(
@@ -4324,6 +4462,10 @@ class Resim:
                 # might be "what to drop instead", maybe?
                 self.roll("stealing fifth base")
                 return
+            
+            # bhbh nullifying mods
+            if meta["mod"] in self.stadium.mods:
+                self.stadium.remove_mod(meta["mod"])
 
             if event["playerTags"]:
                 player = self.data.get_player(event["playerTags"][0])
@@ -4399,6 +4541,7 @@ class Resim:
             EventType.PLAYER_HATCHED,
             EventType.PLAYER_GAINED_ITEM,
             EventType.PLAYER_LOST_ITEM,
+            EventType.TRADE_SUCCESS,
         ]:
             for player_id in event["playerTags"]:
                 self.data.fetch_player_after(player_id, event["created"])
@@ -4468,8 +4611,10 @@ class Resim:
             # For some reason, this swap doesn't actually happen. Possibly a bug with a player getting swapped multiple times?
             if event["created"] in ["2021-04-20T15:01:43.671Z", "2021-06-18T03:11:33.191Z"]:
                 return
+            if event["created"] == "2021-07-26T18:16:26.686Z":
+                # by the time we get this event it's already happened in our data??
+                return
             team = self.data.get_team(meta["teamId"])
-
             a_player = meta["aPlayerId"]
             b_player = meta["bPlayerId"]
             a_location = (
