@@ -3866,12 +3866,17 @@ class Resim:
 
             if self.ty == EventType.GRIND_RAIL:
                 runner = self.data.get_player(self.update["baseRunners"][-1])
-
+                # finding new and funny ways to detect if this is a ghost
+                if runner.pressurization == 0.5 and runner.cinnamon == 0.5:
+                    self.data.fetch_player_after(self.update["baseRunners"][-1], self.event["created"])
+                    runner = self.data.get_player(self.update["baseRunners"][-1])
+                    
                 self.roll("trick 1 name")
 
                 m = re.search("They do a .*? \(([0-9]+)\)", self.desc)
                 expected_score_1 = int(m.group(1))
                 pro_factor = 2 if "Pro Skater" in self.desc else 1
+                self.print(f"(press: {runner.pressurization}, cinn: {runner.cinnamon})")
                 lo1 = runner.pressurization * 200
                 hi1 = runner.cinnamon * 1500 + 500
                 expected_roll_lo_1 = (expected_score_1 // pro_factor - lo1) / (hi1 - lo1)
@@ -3880,7 +3885,7 @@ class Resim:
                 score_1 = int((hi1 - lo1) * score_1_roll + lo1) * pro_factor
                 self.print(f"(score: {score_1})")
 
-                if grinder.undefined():
+                if runner.undefined():
                     self.roll("undefined (grinder)")
 
                 firsttrick_roll = self.roll("trick 1 success")
@@ -3918,7 +3923,7 @@ class Resim:
 
                     trick2_roll = self.roll("trick 2 success")
 
-                    if grinder.undefined():
+                    if runner.undefined():
                         self.roll("undefined (grinder)")
 
                     if "tagged out doing a" not in self.desc:
