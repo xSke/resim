@@ -258,6 +258,8 @@ class Resim:
             "2021-07-23T10:19:55.173Z": 1, 
 
             "2021-07-23T14:22:51.364Z": -1, # what
+
+            "2021-07-19T18:11:34.836Z": 1, # ??
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -1003,6 +1005,9 @@ class Resim:
                 "61e3e705-e99f-4998-be88-9607fd5a4c82": 1,
                 "1e95df5b-2633-407b-a51d-5237ef1905aa": 2,
                 "3f2de647-069c-42d4-a0f2-0ba7b4f245c9": 2,
+                "d2616569-7fea-46cb-9bbf-9efc663afb11": 1,
+                "2f6de2a7-1328-49df-84e4-48e9aee9bad1": 2,
+                "106247aa-9d2d-4133-bf34-f6055b5160ae": 1,
             }
             game_id = self.event["gameTags"][0] # state not setup yet
             for _ in range(extra_start_rolls.get(game_id, 0)):
@@ -1131,8 +1136,10 @@ class Resim:
 
             if found_offset:
                 self.print(f"(found jazz riff at offset {found_offset})")
-                for _ in range(check_offset):
-                    self.roll("jazz weather?")
+                for _ in range(check_offset-1):
+                    self.roll("jazz extra?")
+                weather_roll = self.roll("jazz weather")
+                self.print(f"(weather index: {int(weather_roll*38)})")
                 self.roll("riff length", (len(riff_words)-3)/3, (len(riff_words)-3+1)/3)
                 
                 for word in riff_words:
@@ -1201,6 +1208,10 @@ class Resim:
 
             if self.ty == EventType.POLARITY_SHIFT:
                 self.log_roll(Csv.WEATHERPROC, "Switch", polarity_roll, True)
+
+                if "The Band began to play" in self.desc:
+                    self.roll("polarity jazz")
+
                 return True
             else:
                 self.log_roll(Csv.WEATHERPROC, "NoSwitch", polarity_roll, False)
@@ -3540,7 +3551,7 @@ class Resim:
             if elsewhere_time > 18:
                 should_scatter = True
         if "season" in self.desc:
-            if self.event["created"] not in ["2021-04-05T16:24:45.346Z", "2021-04-05T20:08:23.286Z", "2021-07-26T17:13:07.143Z"]:
+            if self.event["created"] not in ["2021-04-05T16:24:45.346Z", "2021-04-05T20:08:23.286Z", "2021-07-26T17:13:07.143Z", "2021-07-19T21:10:44.664Z"]:
                 should_scatter = True
 
         if should_scatter:
@@ -3706,6 +3717,10 @@ class Resim:
             "2021-07-23T04:10:12.574Z",
             "2021-07-23T06:14:53.974Z",
             "2021-07-23T06:16:53.478Z",
+            "2021-07-19T18:23:15.686Z",
+            "2021-07-19T19:28:44.885Z",
+            "2021-07-19T20:07:28.994Z",
+            "2021-07-19T21:25:33.259Z",
         ]:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod(Mod.PARTY_TIME):
@@ -3833,7 +3848,7 @@ class Resim:
         if (
             (17, 0) <= (self.season, self.day)
             and secret_runner_id == "070758a0-092a-4a2c-8a16-253c835887cb"
-            # all firefighters games, where alx is in the ffs shadows
+            # all firefighters games, where alx is in the ffs shadows (or magic!)
             and self.game_id
             not in [
                 "377f87df-36aa-4fac-bc97-59c24efb684b",
@@ -3842,6 +3857,7 @@ class Resim:
                 "4bd6671d-4b6f-4e1f-bff2-34cc1ab96c5e",
                 "d12e21ba-5779-44f1-aa83-b788e5da8655",
                 "7b7cc1fb-d730-4bca-8b03-e5658be61136",
+                "7bdc5ef4-49aa-4052-961e-b2ea724d9ffb",
             ]
         ):
             secret_base_exit_eligible = False
