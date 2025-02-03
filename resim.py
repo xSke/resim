@@ -231,7 +231,6 @@ class Resim:
             "2021-05-14T11:21:37.843Z": 1,  # instability?
             "2021-05-14T13:07:02.411Z": 1,
             "2021-06-16T06:22:08.507Z": 1, # elsewhere return related?
-            "2021-06-16T20:00:20.027Z": -1,
             "2021-06-17T02:00:04.148Z": -1,
 
             "2021-06-21T22:17:23.159Z": 2, # the flooding?
@@ -468,8 +467,6 @@ class Resim:
         ]:
             if self.ty == EventType.PSYCHO_ACOUSTICS:
                 self.roll("which mod?")
-            if self.ty == EventType.A_BLOOD_TYPE:
-                self.roll("a blood type")
 
             if self.ty == EventType.PRIZE_MATCH:
                 self.create_item(self.event, ItemRollType.PRIZE, self.prev_event)
@@ -503,6 +500,15 @@ class Resim:
             EventType.LEAGUE_MODIFICATION_REMOVED,
         ]:
             # skipping mod added/removed
+            
+            # a blood type is here so we can query subevent
+            if self.ty == EventType.ADDED_MOD_FROM_OTHER_MOD and self.event["metadata"]["source"] == "A":
+                added_mod = Mod(self.event["metadata"]["mod"])
+                blood_mods = [Mod.AAA, Mod.AA, Mod.ACIDIC, Mod.BASE_INSTINCTS, Mod.ZERO, Mod.O_NO, Mod.H20, Mod.ELECTRIC, Mod.LOVE, Mod.FIERY, Mod.PSYCHIC, Mod.GROWTH]
+                
+                expected_index = blood_mods.index(added_mod)
+                self.roll("a blood type", expected_index/len(blood_mods), (expected_index+1)/len(blood_mods))
+
             return True
         if self.ty in [
             EventType.BLACK_HOLE,
@@ -873,7 +879,7 @@ class Resim:
                 "e1c383ab-efc0-49ad-91e2-3d29cca47a90": 1,
                 "b62e2bd0-333e-4462-a84d-5aecabd0c1bc": 1,
                 "45f65a7f-ed58-4482-8139-92d2e2ef7bfa": 1,
-                "9291e5ce-a49f-44dc-9bb4-747bc783c351": 1,
+                "9291e5ce-a49f-44dc-9bb4-747bc783c351": 0,
                 "33415dda-9822-4bfd-b943-b8f7c4fb3af4": 1,
                 "0b82745a-e797-4256-9ce7-9868253a9e4b": 1,
                 "4f8ce860-fb5e-4cff-8111-d687fa438876": 2,
@@ -916,7 +922,6 @@ class Resim:
                 "16c44f72-f840-46e3-820f-36047dc1634c": 1,
                 "42c2f144-11d6-4bb0-90a2-50f299eca0d2": 1,
                 "c6251d2b-7afe-459b-86cb-a7a19b5393af": 1,
-                "a12b9078-e542-4a8f-9945-f6277df5aa07": 1,
                 "4ef2e44d-eeb9-409b-9045-642fe7c0ee59": 1,
                 "4bf61772-c2df-4686-9faa-f2a63eab3315": 1,
                 "468165ed-e121-4b74-b3a0-1296c2be96df": 1,
@@ -951,7 +956,7 @@ class Resim:
                 "4bfa5f12-3e9c-47f1-ab7f-e89b973dfac2": 1,
                 "aababc2b-23f5-42bd-8fe4-540b6b2f052e": 1,
                 "7a90ffd3-1883-4f95-8636-c41f5776dc80": 3,
-                "0765690d-0747-42ca-ad37-5087e5768128": 8,
+                "0765690d-0747-42ca-ad37-5087e5768128": 11,
                 "0fb2d2a8-1eeb-4944-a544-54df0a13146c": 1,
                 "fbabc311-4197-47fc-b571-075538abea76": 1,
                 "cc20b7c4-991d-450d-93ed-48e1fdd3a3e9": 1,
@@ -980,6 +985,14 @@ class Resim:
                 "5313e6f8-cb14-4b57-b160-49dde13827d2": 1,
                 "eb302a4a-a37f-41dc-bbe1-52ec7579f626": 15,
                 "04cc7bba-ff08-42f6-a4bb-b7438f8fa8c8": 1,
+                "651e2cba-a6e7-4792-a1ed-da1939ed4c28": 1,
+                "8f9c6b10-db6a-4f3b-bb13-c12c5bc8dcae": 1,
+                "0d082734-1305-4d71-b852-59f96097ca92": 2,
+                "25095a7e-0676-43b4-95cd-6c33d72c2e0d": 1,
+                "d1daa9db-b7c2-4352-b993-da1505684bda": 1,
+                "5007d0ef-2404-490f-97d7-69b98b08979a": 1,
+                "61e3e705-e99f-4998-be88-9607fd5a4c82": 1,
+                "1e95df5b-2633-407b-a51d-5237ef1905aa": 2,
             }
             game_id = self.event["gameTags"][0] # state not setup yet
             for _ in range(extra_start_rolls.get(game_id, 0)):
