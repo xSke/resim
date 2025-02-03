@@ -486,6 +486,7 @@ class TeamOrPlayerMods(DataClassJsonMixin):
     mods: Set[str]
     # Used internally only
     _mods_by_type: Dict[ModType, Set[str]] = field(metadata=config(decoder=mods_by_type_decoder))
+    _raw_mods: tuple[list, list, list, list, list] # needed for psychoacoustics mod ordering
 
     @classmethod
     def mods_init_args(cls, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -499,13 +500,15 @@ class TeamOrPlayerMods(DataClassJsonMixin):
         mods_by_type = {}
         for mod_type, key in MOD_KEYS.items():
             mods_by_type[mod_type] = set(data.get(key, []))
-        return dict(_mods_by_type=mods_by_type, mods=cls._concatenate_mods(mods_by_type))
+        raw_mods = (data.get("permAttr", []), data.get("seasAttr", []), data.get("weekAttr", []), data.get("gameAttr", []), data.get("itemAttr", []))
+        return dict(_mods_by_type=mods_by_type, _raw_mods=raw_mods, mods=cls._concatenate_mods(mods_by_type))
 
     def add_mod(self, mod: Union[Mod, str], mod_type: ModType):
         mod = str(mod)
         if mod in self._mods_by_type[mod_type]:
             return
         self._mods_by_type[mod_type].add(mod)
+        self._raw_mods[int(mod_type)].append(str(mod))
         self._update_mods()
 
     def remove_mod(self, mod: Union[Mod, str], mod_type: ModType):
@@ -513,6 +516,7 @@ class TeamOrPlayerMods(DataClassJsonMixin):
         if mod not in self._mods_by_type[mod_type]:
             return
         self._mods_by_type[mod_type].remove(mod)
+        self._raw_mods[int(mod_type)].remove(str(mod))
         self._update_mods()
 
     def has_mod(self, mod: Union[Mod, str], mod_type: Optional[ModType] = None) -> bool:
@@ -525,7 +529,7 @@ class TeamOrPlayerMods(DataClassJsonMixin):
         return any(self.has_mod(mod) for mod in mods)
 
     def print_mods(self, mod_type: Optional[ModType] = None) -> str:
-        return str(list(self._mods_by_type.get(mod_type) or self.mods))
+        return str(list(self._mods_by_type.get(mod_type) if mod_type is not None else self.mods))
 
     def _update_mods(self):
         self.mods = self._concatenate_mods(self._mods_by_type)

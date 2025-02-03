@@ -425,6 +425,11 @@ class Resim:
             16: 11,
             17: 13,
             18: 13,
+            19: 13,
+            20: 13,
+            21: 14,
+            22: 14,
+            23: 14
         }
         psycho_acoustics_phase = PSYCHO_ACOUSTICS_PHASE_BY_SEASON.get(self.season, 13)
         if (
@@ -438,7 +443,7 @@ class Resim:
             ]
             and self.stadium.has_mod(Mod.PSYCHOACOUSTICS)
         ):
-            self.print("away team mods:", self.away_team.print_mods(ModType.PERMANENT))
+            self.print("away team mods:", self.away_team._raw_mods)
             self.roll("echo team mod")
         if self.ty in [
             EventType.HOME_FIELD_ADVANTAGE,
@@ -465,9 +470,6 @@ class Resim:
             EventType.BLESSING_OR_GIFT_WON,
             EventType.PLAYER_SOUL_INCREASED,
         ]:
-            if self.ty == EventType.PSYCHO_ACOUSTICS:
-                self.roll("which mod?")
-
             if self.ty == EventType.PRIZE_MATCH:
                 self.create_item(self.event, ItemRollType.PRIZE, self.prev_event)
 
@@ -502,13 +504,20 @@ class Resim:
             # skipping mod added/removed
             
             # a blood type is here so we can query subevent
-            if self.ty == EventType.ADDED_MOD_FROM_OTHER_MOD and self.event["metadata"]["source"] == "A":
-                added_mod = Mod(self.event["metadata"]["mod"])
-                blood_mods = [Mod.AAA, Mod.AA, Mod.ACIDIC, Mod.BASE_INSTINCTS, Mod.ZERO, Mod.O_NO, Mod.H20, Mod.ELECTRIC, Mod.LOVE, Mod.FIERY, Mod.PSYCHIC, Mod.GROWTH]
-                
-                expected_index = blood_mods.index(added_mod)
-                self.roll("a blood type", expected_index/len(blood_mods), (expected_index+1)/len(blood_mods))
+            if self.ty == EventType.ADDED_MOD_FROM_OTHER_MOD:
+                if self.event["metadata"]["source"] == "A":
+                    added_mod = Mod(self.event["metadata"]["mod"])
+                    blood_mods = [Mod.AAA, Mod.AA, Mod.ACIDIC, Mod.BASE_INSTINCTS, Mod.ZERO, Mod.O_NO, Mod.H20, Mod.ELECTRIC, Mod.LOVE, Mod.FIERY, Mod.PSYCHIC, Mod.GROWTH]
+                    
+                    expected_index = blood_mods.index(added_mod)
+                    self.roll("a blood type", expected_index/len(blood_mods), (expected_index+1)/len(blood_mods))
 
+                if self.event["metadata"]["source"] == "PSYCHOACOUSTICS":
+                    added_mod = self.event["metadata"]["mod"]
+                    mod_pool = [str(m) for group in self.away_team._raw_mods for m in group]
+                    
+                    expected_index = mod_pool.index(added_mod)
+                    self.roll("which mod?", expected_index/len(mod_pool), (expected_index+1)/len(mod_pool))
             return True
         if self.ty in [
             EventType.BLACK_HOLE,
@@ -993,6 +1002,7 @@ class Resim:
                 "5007d0ef-2404-490f-97d7-69b98b08979a": 1,
                 "61e3e705-e99f-4998-be88-9607fd5a4c82": 1,
                 "1e95df5b-2633-407b-a51d-5237ef1905aa": 2,
+                "3f2de647-069c-42d4-a0f2-0ba7b4f245c9": 2,
             }
             game_id = self.event["gameTags"][0] # state not setup yet
             for _ in range(extra_start_rolls.get(game_id, 0)):
