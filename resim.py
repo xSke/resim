@@ -241,18 +241,16 @@ class Resim:
 
             "2021-06-29T05:04:54.101Z": 1, # funky? might be item damage related (two careful players)
 
-            "2021-07-26T16:00:22.047Z": 103-12, # jazz
             "2021-07-26T16:08:28.076Z": 1, # consumer roll suspiciously low, might actually be party
-            "2021-07-26T17:00:21.831Z": 105-15-4-14-26+44+37-12+2, # jazz!
-            "2021-07-26T17:00:31.831Z": 23,
-            "2021-07-26T17:24:27.995Z": 1, # might be a low peanut mister roll?
             "2021-07-26T17:36:38.281Z": 1, # maxi socks item gem broken
             "2021-07-26T18:09:17.129Z": 2, # observed?
             "2021-07-26T18:20:09.033Z": 1, # consumer attack item defend push?
             "2021-07-28T09:22:11.719Z": 3,
-            "2021-07-28T10:00:26.158Z": 96, # jazz
-            "2021-07-28T11:00:21.933Z": 74,
             "2021-07-28T11:03:52.137Z": 1, # this might be secret base attract - the threshold would've had to be duobled, but who knows...
+
+            # the roll in 2021-07-26T17:09:56.933Z really happens earlier, this event being delayed breaks some stuff
+            "2021-07-26T17:09:54.480Z": 1,
+            "2021-07-26T17:09:57.341Z": -1,
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -1025,34 +1023,48 @@ class Resim:
         if self.ty == EventType.WEATHER_CHANGE:
             return True
         if self.ty == EventType.JAZZ:
-            lengths = {
-                "2021-07-22T03:00:21.248Z": 7,
-                "2021-07-22T03:00:26.550Z": 14,
+            riff = self.desc.split("\U0001f3b5")[1]
 
-                "2021-07-22T04:00:22.478Z": 20, # grouped
-                "2021-07-22T04:00:22.508Z": 0,
-
-                "2021-07-22T05:00:20.897Z": 11,
-
-                "2021-07-22T06:00:22.330Z": 26, # grouped
-                "2021-07-22T06:00:22.361Z": 0,
-
-                "2021-07-22T07:00:21.646Z": 11,
-
-                "2021-07-28T10:00:26.324Z": 10,
-                "2021-07-28T11:00:26.900Z": 9,
-                "2021-07-28T11:00:26.947Z": 11,
-                "2021-07-26T16:00:22.325Z": 13,
-
-                "2021-07-26T16:00:32.373Z": 14,
-            }
-            length = lengths.get(self.event["created"])
-            if length:
-                for _ in range(length):
-                    self.roll("skibidi jazz")
+            if self.season == 23:
+                riff_pool = "bah boo bee bip ska ski sha shoo skoo da doo dah dee la bow bah bop wah do doh boh louie ooie ooo ah".split()
             else:
-                self.print("--- unknown jazz length")
-            
+                riff_pool = "bah boo bee bip ska ski sha shoo da doo dah dee la bow bah bop wah do doh boh louie ooie ooo ah".split()
+            riff_words = [r for r in riff.split() if r in riff_pool]
+
+            # todo: extract some kind of "scan for this roll pattern"
+            found_offset = None
+            for check_offset in range(25):
+                r2 = Rng(self.rng.state, self.rng.offset)
+                r2.step(check_offset)
+                
+                # i love flow control
+                count = 3 + int(r2.next() * 3)
+                if count != len(riff_words):
+                    continue
+                for word in riff_words:
+                    word_roll = r2.next()
+                    rolled_word = riff_pool[int(word_roll*len(riff_pool))]
+                    if word != rolled_word:
+                        break
+                else:
+                    found_offset = check_offset
+                    break
+
+            if found_offset:
+                self.print(f"(found jazz riff at offset {found_offset})")
+                for _ in range(check_offset):
+                    self.roll("jazz weather?")
+                self.roll("riff length", (len(riff_words)-3)/3, (len(riff_words)-3+1)/3)
+                
+                for word in riff_words:
+                    lo, hi = 0, 1
+                    if riff_pool.count(word) == 1:
+                        expected_idx = riff_pool.index(word)
+                        lo, hi = expected_idx/len(riff_pool), (expected_idx+1)/len(riff_pool)
+                    self.roll(F"riff word ({word})", lo, hi)
+            else:
+                self.error(f"could not find jazz riff")
+
             return True
         if self.ty == EventType.COMMUNITY_CHEST_GAME_EVENT:
             # It looks like before season 18 there are 12 rolls after all of the items are created
