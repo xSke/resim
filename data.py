@@ -163,6 +163,7 @@ class Mod(Enum):
     SLOW_BUILD = auto()
     SMITHY = auto()
     SMOOTH = auto()
+    SOLAR_PANELS = auto()
     SWEETENER = auto()
     SWIM_BLADDER = auto()
     TRADER = auto()
@@ -372,6 +373,7 @@ class EventType(IntEnum):
     TUNNEL_FLED_ELSEWHERE = 219
     TUNNEL_STOLE_ITEM = 220
     WEATHER_EVENT = 223
+    ELEMENT_ADDED_TO_ITEM = 224
     SUN_30 = 226
     VOICEMAIL = 228
     THIEVES_GUILD_ITEM = 230
@@ -723,6 +725,7 @@ class ItemData:
     pitching_rating: Optional[float]
     baserunning_rating: Optional[float]
     stats: dict
+    elements: List[str]
 
     @staticmethod
     def from_dict(data):
@@ -737,7 +740,7 @@ class ItemData:
                     stat_name = stat_indices[adjustment["stat"]]
                     value = adjustment["value"]
                     stats[stat_name] = stats.get(stat_name, 0) + value
-
+        elements = [e["name"] for e in (data["prefixes"] or [])]
         return ItemData(
             id=data["id"],
             name=data["name"],
@@ -748,6 +751,7 @@ class ItemData:
             pitching_rating=data["pitchingRating"],
             baserunning_rating=data["baserunningRating"],
             stats=stats,
+            elements=elements,
         )
 
     @staticmethod
@@ -762,6 +766,7 @@ class ItemData:
             pitching_rating=0,
             baserunning_rating=0,
             stats={},
+            elements=[],
         )
 
 

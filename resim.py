@@ -252,6 +252,13 @@ class Resim:
             "2021-07-26T17:09:54.480Z": 1,
             "2021-07-26T17:09:57.341Z": -1,
             "2021-07-22T09:18:04.585Z": 3, # no idea
+            "2021-07-22T19:23:23.344Z": 1, # sun 30?
+            "2021-07-22T20:13:49.263Z": -1, # seeker roll ordering weird
+            "2021-07-23T08:27:00.305Z": 1, # grand slam weird
+            "2021-07-23T09:11:48.567Z": 1, # grand slam weird?
+            "2021-07-23T10:19:55.173Z": 1, 
+
+            "2021-07-23T14:22:51.364Z": -1, # what
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -395,6 +402,9 @@ class Resim:
             self.pending_attractor = None
 
     def handle_misc(self):
+        if self.update["gameStartPhase"] != self.next_update["gameStartPhase"]:
+            self.print(f"GAME START PHASE: {self.update["gameStartPhase"]} -> {self.next_update["gameStartPhase"]} phase")
+
         if (
             self.season >= 17
             and self.update["gameStartPhase"] < 0
@@ -463,6 +473,21 @@ class Resim:
 
             if self.ty == EventType.PRIZE_MATCH:
                 self.create_item(self.event, ItemRollType.PRIZE, self.prev_event)
+
+            if self.ty == EventType.BLESSING_OR_GIFT_WON:
+                if "aDense" in self.desc or "eDense" in self.desc:
+                    team_id = self.event["teamTags"][0]
+                    team = self.data.get_team(team_id)
+
+                    eligible_items = []
+                    for player_id in team.lineup + team.rotation + team.shadows:
+                        player = self.data.get_player(player_id)
+                        for item in player.items:
+                            if "aDense" in self.desc and "aDense" not in item.elements:
+                                eligible_items.append(item)
+                            if "eDense" in self.desc and "eDense" not in item.elements:
+                                eligible_items.append(item)
+                    self.print(f"eligible items: {len(eligible_items)}, 20% is {len(eligible_items)*0.2}, children: {len(self.event["metadata"]["children"])}")
 
             # skipping pregame messages
             return True
@@ -773,7 +798,7 @@ class Resim:
             self.roll("thieves guild?")
             self.roll("thieves guild?")
 
-            if self.event["created"] == "2021-07-22T12:24:29.719Z":
+            if self.event["created"] in ["2021-07-22T12:24:29.719Z", "2021-07-22T21:24:03.118Z", "2021-07-23T03:26:25.413Z"]:
                 self.roll("thieves guild?")
 
             return True
@@ -931,7 +956,7 @@ class Resim:
                 "fbabc311-4197-47fc-b571-075538abea76": 1,
                 "cc20b7c4-991d-450d-93ed-48e1fdd3a3e9": 1,
                 "76fca743-30e6-4602-882d-3bafa39ab3f1": 1,
-                "ccde07ed-a645-4748-80f8-d20ba5f6b79e": 1,
+                "ccde07ed-a645-4748-80f8-d20ba5f6b79e": 1, # sp?
                 "dc2a32f0-e3d8-4d13-9a7b-203b71d90a8f": 2,
                 "5dfcc523-e33e-4181-b66a-9e8b49675d52": 2,
                 "fab94991-b041-4aee-af8d-9684fc70c56d": 3,
@@ -940,8 +965,21 @@ class Resim:
                 "b8675de2-0def-46b2-a4e4-c274174ec8be": 15,
                 "2eea7aa2-7a55-4e33-86f6-2b130eb5ae58": 1,
                 "91393823-24f4-43b5-9b87-73ad9b77b536": 1,
-                "4a555903-4e8c-41e6-8882-83f9368b65fe": 1,
+                "4a555903-4e8c-41e6-8882-83f9368b65fe": 1, # sp?
                 "47c2bf25-061a-4a73-86e4-3d514bfa2dad": 2,
+                "b30d232d-b916-4e17-b9e5-819514b00d16": 17571, # s23 latesiesta. what the heck.
+                "6bee63c5-38f3-4012-8806-f5fd0072cdf6": 1, # sp?
+                "2a516374-3dc4-4354-abe9-1955372662c7": 1, # sp?
+                "eb712491-7622-4760-b619-aba71a5e8f20": 1, # sp?
+                "97b24c46-14c0-40fa-8001-668727eb3f3e": 1,
+                "206386fc-c41b-40e5-b3d1-0db70492bae5": 1, # sp?
+                "0f514224-0a7f-4588-9481-fd5843cce956": 1,
+                "991d2dc1-0d6b-4189-b80b-f53748908a57": 2,
+                "4d909be6-7a72-4ed5-b26f-fcc8ea447463": 1,
+                "a89fe0c2-9cef-4406-a392-8876a54413aa": 17, # week-end
+                "5313e6f8-cb14-4b57-b160-49dde13827d2": 1,
+                "eb302a4a-a37f-41dc-bbe1-52ec7579f626": 15,
+                "04cc7bba-ff08-42f6-a4bb-b7438f8fa8c8": 1,
             }
             game_id = self.event["gameTags"][0] # state not setup yet
             for _ in range(extra_start_rolls.get(game_id, 0)):
@@ -955,6 +993,7 @@ class Resim:
 
                 timestamp = self.event["created"]
                 self.data.fetch_league_data(timestamp, 20)
+
             self.print(self.stadium.mods)
 
             for team_id in [self.next_update["homeTeam"], self.next_update["awayTeam"]]:
@@ -974,6 +1013,11 @@ class Resim:
         if self.ty in [EventType.RENOVATION_BUILT]:
             if "% more " in self.desc or "% less " in self.desc:
                 self.roll("stat change")
+            return True
+        if self.ty in [EventType.LIGHT_SWITCH_TOGGLED]:
+            return True
+        if self.ty == EventType.ELEMENT_ADDED_TO_ITEM:
+            # self.print()
             return True
         if self.ty == EventType.TAROT_READING:
             return True
@@ -2151,6 +2195,9 @@ class Resim:
                 "2021-07-22T05:22:34.266Z",
                 "2021-07-22T07:22:09.275Z",
                 "2021-07-28T10:09:47.050Z",
+                "2021-07-22T23:15:19.145Z",
+                "2021-07-23T02:01:52.146Z",
+                "2021-07-23T04:14:53.537Z",
             ]
 
             out_roll, out_threshold = self.roll_out(False)
@@ -2356,6 +2403,7 @@ class Resim:
             "2021-06-24T03:05:50.319Z",
             "2021-06-24T05:09:20.868Z",
             "2021-07-28T09:24:31.243Z",
+            "2021-07-23T04:09:42.750Z",
         ]
 
         # cheating a little to predict the future etc
@@ -2710,7 +2758,7 @@ class Resim:
                 target = self.data.get_player(self.event["playerTags"][0])
 
             # this really needs a refactor, helga and jon's instability incins need to proc in the sub function (and they do)
-            if self.ty == EventType.INCINERATION and "Kansas City Breath Mints" not in self.desc and self.event["created"] not in ["2021-07-22T06:03:17.918Z", "2021-07-22T06:06:08.970Z"]:
+            if self.ty == EventType.INCINERATION and "Kansas City Breath Mints" not in self.desc and self.event["created"] not in ["2021-07-22T06:03:17.918Z", "2021-07-22T06:06:08.970Z", "2021-07-23T10:04:54.389Z"]:
                 if "A Debt was collected" not in self.desc:
                     self.log_roll(Csv.WEATHERPROC, "Burn", eclipse_roll, True)
 
@@ -3453,8 +3501,8 @@ class Resim:
                     19: 0.00042,  # 0.00041647177941306346 < t < 0.00042578004132232117
                     20: 0.000485,  # we have a positive at 0.00046131203268795495 and 0.00048491029900765703
                     21: 0.000485,  # guessing
-                    22: 0.000485,  # guessing
-                    23: 0.000485,  # guessing
+                    22: 0.000495,  # have a 0.0004946038449742396
+                    23: 0.000495,  # guessing
                 }[self.season]
 
                 # Seems to not get rolled when Wyatt Mason IV echoes scattered.
@@ -3624,6 +3672,17 @@ class Resim:
             "2021-07-22T08:14:13.237Z",
             "2021-07-22T12:02:42.230Z",
             "2021-07-22T11:21:27.905Z",
+            "2021-07-22T18:17:24.202Z",
+            "2021-07-22T22:11:48.547Z",
+            "2021-07-22T23:07:48.452Z",
+            "2021-07-22T23:20:19.925Z",
+            "2021-07-23T01:27:50.207Z",
+            "2021-07-23T03:13:23.250Z",
+            "2021-07-23T03:23:55.236Z",
+            "2021-07-23T04:06:42.325Z",
+            "2021-07-23T04:10:12.574Z",
+            "2021-07-23T06:14:53.974Z",
+            "2021-07-23T06:16:53.478Z",
         ]:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod(Mod.PARTY_TIME):
@@ -3759,6 +3818,7 @@ class Resim:
                 "1ad48feb-eb1e-43eb-b28f-aff79d7a3473",
                 "4bd6671d-4b6f-4e1f-bff2-34cc1ab96c5e",
                 "d12e21ba-5779-44f1-aa83-b788e5da8655",
+                "7b7cc1fb-d730-4bca-8b03-e5658be61136",
             ]
         ):
             secret_base_exit_eligible = False
