@@ -587,6 +587,7 @@ class Resim:
             EventType.TUNNEL_FOUND_NOTHING,
             EventType.TRADE_FAILED,
             EventType.TRADE_SUCCESS,
+            EventType.PLAYER_MOVE_FAILED_FORCE,
         ]:
             return True
 
@@ -933,7 +934,7 @@ class Resim:
                 "fab94991-b041-4aee-af8d-9684fc70c56d": 3,
                 "baa09895-3de2-44ff-9ac3-ead7cf5da695": 1,
                 "f5490532-6ceb-45e7-8a4e-8642120eb826": 2,
-                "b8675de2-0def-46b2-a4e4-c274174ec8be": 3,
+                "b8675de2-0def-46b2-a4e4-c274174ec8be": 15,
             }
             game_id = self.event["gameTags"][0] # state not setup yet
             for _ in range(extra_start_rolls.get(game_id, 0)):
