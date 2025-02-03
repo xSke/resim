@@ -622,6 +622,7 @@ class StadiumData(DataClassJsonMixin):
     fortification: float
     inconvenience: float
     hype: float
+    weather: Dict[Weather, int]
 
     def has_mod(self, mod: Mod) -> bool:
         return mod.value in self.mods
@@ -652,6 +653,7 @@ class StadiumData(DataClassJsonMixin):
             fortification=data["fortification"],
             inconvenience=data["inconvenience"],
             hype=data["hype"],
+            weather={Weather(int(k)): v for k, v in data["weather"].items()}
         )
 
         if prev_stadium_data is not None:
@@ -666,6 +668,7 @@ class StadiumData(DataClassJsonMixin):
             and
             # Excluding last update time
             self.mods == other.mods
+            and self.weather == other.weather
             and self.name == other.name
             and self.nickname == other.nickname
             and self.mysticism == other.mysticism
@@ -701,6 +704,7 @@ class StadiumData(DataClassJsonMixin):
             fortification=0.5,
             inconvenience=0.5,
             hype=0,
+            weather={}
         )
 
 

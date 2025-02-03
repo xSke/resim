@@ -242,7 +242,7 @@ class Resim:
             "2021-06-29T05:04:54.101Z": 1, # funky? might be item damage related (two careful players)
 
             "2021-07-26T16:08:28.076Z": 1, # consumer roll suspiciously low, might actually be party
-            "2021-07-26T17:36:38.281Z": 1, # maxi socks item gem broken
+            "2021-07-26T17:36:38.281Z": 4, # maxi socks item gem broken
             "2021-07-26T18:09:17.129Z": 2, # observed?
             "2021-07-26T18:20:09.033Z": 1, # consumer attack item defend push?
             "2021-07-28T09:22:11.719Z": 3,
@@ -251,6 +251,7 @@ class Resim:
             # the roll in 2021-07-26T17:09:56.933Z really happens earlier, this event being delayed breaks some stuff
             "2021-07-26T17:09:54.480Z": 1,
             "2021-07-26T17:09:57.341Z": -1,
+            "2021-07-22T09:18:04.585Z": 3, # no idea
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -771,6 +772,10 @@ class Resim:
         if self.ty == EventType.THIEVES_GUILD_PLAYER:
             self.roll("thieves guild?")
             self.roll("thieves guild?")
+
+            if self.event["created"] == "2021-07-22T12:24:29.719Z":
+                self.roll("thieves guild?")
+
             return True
         if self.ty == EventType.THIEVES_GUILD_ITEM:
             self.roll("thieves guild?")
@@ -933,6 +938,10 @@ class Resim:
                 "baa09895-3de2-44ff-9ac3-ead7cf5da695": 1,
                 "f5490532-6ceb-45e7-8a4e-8642120eb826": 2,
                 "b8675de2-0def-46b2-a4e4-c274174ec8be": 15,
+                "2eea7aa2-7a55-4e33-86f6-2b130eb5ae58": 1,
+                "91393823-24f4-43b5-9b87-73ad9b77b536": 1,
+                "4a555903-4e8c-41e6-8882-83f9368b65fe": 1,
+                "47c2bf25-061a-4a73-86e4-3d514bfa2dad": 2,
             }
             game_id = self.event["gameTags"][0] # state not setup yet
             for _ in range(extra_start_rolls.get(game_id, 0)):
@@ -1023,12 +1032,15 @@ class Resim:
         if self.ty == EventType.WEATHER_CHANGE:
             return True
         if self.ty == EventType.JAZZ:
-            riff = self.desc.split("\U0001f3b5")[1]
+            self.print(f"(season {self.season+1} day {self.day+1}, game {self.game_id}, {self.away_team.nickname}@{self.home_team.nickname}, at {self.stadium.nickname})")
+            self.print(f"(ballpark weather: {self.stadium.weather})")
 
             if self.season == 23:
                 riff_pool = "bah boo bee bip ska ski sha shoo skoo da doo dah dee la bow bah bop wah do doh boh louie ooie ooo ah".split()
             else:
                 riff_pool = "bah boo bee bip ska ski sha shoo da doo dah dee la bow bah bop wah do doh boh louie ooie ooo ah".split()
+
+            riff = self.desc.split("\U0001f3b5")[1]
             riff_words = [r for r in riff.split() if r in riff_pool]
 
             # todo: extract some kind of "scan for this roll pattern"
@@ -3533,24 +3545,25 @@ class Resim:
                             self.roll("defend item?")
                             return True
 
-                        # todo: kapow etc
-                        if "SLAM!" not in self.desc:
-                            for _ in range(25):
-                                self.roll("stat change")
-
-                                if attacked_player.soul == 1:
-                                    # lost their last soul, redact :<
-                                    self.print(f"!!! {attacked_player.name} lost last soul, " f"redacting")
-                                    if attacked_player_id in team.lineup:
-                                        team.lineup.remove(attacked_player_id)
-                                    if attacked_player_id in team.rotation:
-                                        team.rotation.remove(attacked_player_id)
-                                    team.last_update_time = self.event["created"]
-                        else:
+                        if "A CONSUMER!" in self.desc:
+                            # this is liquid/plasma kapowing consumers
                             # one of these might be a roll for the text?
-                            self.roll("uh, what, etc")
-                            self.roll("uh, what, etc")
-                            
+                            self.roll("kapow")
+                            self.roll("kapow")
+                            return True
+                        
+                        for _ in range(25):
+                            self.roll("stat change")
+
+                            if attacked_player.soul == 1:
+                                # lost their last soul, redact :<
+                                self.print(f"!!! {attacked_player.name} lost last soul, " f"redacting")
+                                if attacked_player_id in team.lineup:
+                                    team.lineup.remove(attacked_player_id)
+                                if attacked_player_id in team.rotation:
+                                    team.rotation.remove(attacked_player_id)
+                                team.last_update_time = self.event["created"] 
+
                         return True
                     else:
                         self.log_roll(Csv.CONSUMERS, "Miss", attack_roll, False)
@@ -3608,6 +3621,9 @@ class Resim:
             "2021-07-28T10:26:05.631Z",
             "2021-07-28T11:08:29.582Z",
             "2021-07-26T18:11:34.607Z",
+            "2021-07-22T08:14:13.237Z",
+            "2021-07-22T12:02:42.230Z",
+            "2021-07-22T11:21:27.905Z",
         ]:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod(Mod.PARTY_TIME):
