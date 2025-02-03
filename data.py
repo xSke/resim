@@ -150,6 +150,7 @@ class Mod(Enum):
     PSYCHIC = auto()
     PSYCHOACOUSTICS = auto()
     REDACTED = auto()
+    REPLICA = auto()
     REVERBERATING = auto()
     SALMON_CANNONS = auto()
     SCATTERED = auto()
