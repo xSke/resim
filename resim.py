@@ -221,18 +221,13 @@ class Resim:
             "2021-04-14T17:06:28.047Z": -2,  # i don't know
             "2021-04-14T19:07:51.129Z": -2,  # may be attractor-related?
             "2021-05-10T18:05:08.668Z": 1,
-            "2021-05-10T20:21:59.360Z": 1,
-            "2021-05-12T06:00:17.186Z": 1,
-            "2021-05-12T12:24:31.667Z": 1,
             "2021-05-13T15:00:17.580Z": -1,
             "2021-05-13T16:38:59.820Z": 387,  # skipping latesiesta
             "2021-05-14T11:21:37.843Z": 1,  # instability?
-            "2021-05-14T13:07:02.411Z": 1,
             "2021-06-16T06:22:08.507Z": 1, # elsewhere return related?
 
             "2021-06-21T22:17:23.159Z": 2, # the flooding?
             "2021-06-25T22:10:22.558Z": 2, # extra roll for consumers, maybe a defense?
-            "2021-06-26T20:00:16.596Z": 1, # start?
             "2021-06-24T10:13:01.619Z": 4, # sac or something?
 
             "2021-06-29T05:04:54.101Z": 1, # funky? might be item damage related (two careful players)
@@ -248,8 +243,6 @@ class Resim:
             "2021-07-26T17:09:54.480Z": 1,
             "2021-07-26T17:09:57.341Z": -1,
             "2021-07-22T09:18:04.585Z": 3, # no idea
-            # "2021-07-22T19:23:23.344Z": 1, # sun 30?
-            # "2021-07-22T19:23:28.269Z": -1,
             "2021-07-23T08:27:00.305Z": 1, # grand slam weird
             "2021-07-23T09:11:48.567Z": 1, # grand slam weird?
             "2021-07-23T10:19:55.173Z": 1, 
@@ -485,6 +478,7 @@ class Resim:
                             # undertakers can't undertake themselves
                             if (player.raw_name + " is caught") not in self.desc and player.has_mod(Mod.UNDERTAKER) and not player.has_mod(Mod.ELSEWHERE):
                                 has_undertaker = True
+                                self.print(f"(have undertaker: {player.name})")
                                 break
                         if has_undertaker:
                             self.roll("undertaker")
@@ -876,6 +870,7 @@ class Resim:
                 (20, 9): 10,
                 (20, 63): 10,
                 (20, 108): 10,
+                (20, 112): 1,
                 (22, 63): 14,
                 (22, 72): 17569, # latesiesta (what the heck)
                 (22, 81): 14,
@@ -2931,7 +2926,13 @@ class Resim:
                 return True
 
         elif self.weather == Weather.BIRDS:
-            bird_roll = self.roll("birds")
+            # threshold is at 0.0125 at 0.5 fort
+            bird_threshold = 0.0125 - 0.02 * (self.stadium.fortification - 0.5)
+            if self.season == 17:
+                # in season 18 *specifically*, threshold changed a little (then changed back)
+                bird_threshold = 0.015 - 0.02 * (self.stadium.fortification - 0.5)
+
+            bird_roll = self.roll("birds", threshold=bird_threshold)
 
             has_shelled_player = False
             for player_id in (
@@ -2955,12 +2956,6 @@ class Resim:
                 return True
             elif not has_shelled_player:
                 self.log_roll(Csv.BIRD_MESSAGE, "NoCircle", bird_roll, False)
-
-            # threshold is at 0.0125 at 0.5 fort
-            bird_threshold = 0.0125 - 0.02 * (self.stadium.fortification - 0.5)
-            if self.event["created"] in ["2021-05-11T09:09:08.543Z", "2021-05-14T10:00:16.382Z"]:
-                # might have changed in s18?
-                bird_threshold = 1
 
             if has_shelled_player and bird_roll < bird_threshold:
                 self.roll("extra bird roll")
@@ -3332,11 +3327,15 @@ class Resim:
                             and not player.has_any(Mod.ELSEWHERE)
                             and player_id not in swept_players
                         ):
+                            self.print(f"(have undertaker: {player.name})")
                             has_undertaker = True
 
                     if has_undertaker:
                         self.roll("undertaker")
                         self.roll("undertaker")
+
+                        if len(swept_players) > 1:
+                            self.print(f"warn: undertaker with multiple swept players (what do?)")
 
                 return True
 

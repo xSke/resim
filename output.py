@@ -87,6 +87,10 @@ class SaveCsv:
             row[save_key + "_file"] = file_path
 
         if self.csv is None:
+            # for the first row we need this defined, otherwise areas where only some stadiums exist (~s13) will break
+            if "stadium_file" not in row:
+                row["stadium_file"] = None
+
             self.file = open(self.partial_filename, "w", newline="", encoding="utf-8")
             self.csv = DictWriter(self.file, fieldnames=list(row.keys()), extrasaction="ignore")
             self.csv.writeheader()

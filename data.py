@@ -484,6 +484,8 @@ class ModType(IntEnum):
 def mods_by_type_decoder(raw: Dict[str, List[str]]):
     return {ModType(int(k)): v for k, v in raw.items()}
 
+def weather_dict_decoder(raw: Dict[str, int]):
+    return {Weather(int(k)): v for k, v in raw.items()}
 
 @dataclass
 class TeamOrPlayerMods(DataClassJsonMixin):
@@ -632,7 +634,7 @@ class StadiumData(DataClassJsonMixin):
     fortification: float
     inconvenience: float
     hype: float
-    weather: Dict[Weather, int]
+    weather: Dict[Weather, int] = field(metadata=config(decoder=weather_dict_decoder))
 
     def has_mod(self, mod: Mod) -> bool:
         return mod.value in self.mods
