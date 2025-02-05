@@ -217,7 +217,7 @@ class Resim:
             "2021-04-05T15:23:26.102Z": 1,
             "2021-04-12T15:19:56.073Z": -2,
             "2021-04-12T15:22:50.866Z": 1,
-            "2021-04-14T15:08:13.155Z": -1,  # fix for missing data
+            # "2021-04-14T15:08:13.155Z": -1,  # fix for missing data
             "2021-04-14T17:06:28.047Z": -2,  # i don't know
             "2021-04-14T19:07:51.129Z": -2,  # may be attractor-related?
             "2021-05-10T18:05:08.668Z": 1,
@@ -248,7 +248,8 @@ class Resim:
             "2021-07-26T17:09:54.480Z": 1,
             "2021-07-26T17:09:57.341Z": -1,
             "2021-07-22T09:18:04.585Z": 3, # no idea
-            "2021-07-22T19:23:23.344Z": 1, # sun 30?
+            # "2021-07-22T19:23:23.344Z": 1, # sun 30?
+            # "2021-07-22T19:23:28.269Z": -1,
             "2021-07-23T08:27:00.305Z": 1, # grand slam weird
             "2021-07-23T09:11:48.567Z": 1, # grand slam weird?
             "2021-07-23T10:19:55.173Z": 1, 
@@ -398,9 +399,105 @@ class Resim:
                 self.roll("attractor defense stars")
             self.pending_attractor = None
 
+    def handle_inning_start(self):
+        last_phase = self.update["newInningPhase"]
+        next_phase = self.next_update["newInningPhase"]
+        if self.ty == EventType.HALF_INNING and self.next_update["topOfInning"]:
+            next_phase = 10 # making up a high number, the game sets this back to -1 before starting tick otherwise
+
+        # fix for missing update data
+        if self.event["created"] == "2021-04-07T08:02:52.530Z":
+            last_phase = 0
+
+        for cur_phase in range(last_phase+1, next_phase+1):
+            if cur_phase == 0 and self.weather == Weather.SALMON:
+                self.handle_salmon()
+
+            if cur_phase == 2:
+                has_hotel_motel = self.stadium.has_mod(Mod.HOTEL_MOTEL) or self.season >= 18
+                if has_hotel_motel and self.day < 27:
+                    hotel_roll = self.roll("hotel motel")
+
+                    if self.ty == EventType.HOLIDAY_INNING:
+                        self.log_roll(Csv.MODPROC, "Hotel", hotel_roll, True)
+                    else:
+                        self.log_roll(Csv.MODPROC, "Notel", hotel_roll, False)
+                    return True
+                
+            if cur_phase == 3:
+                # sun 30 message doesn't do anything
+                pass
+
+    def handle_salmon(self):
+        last_inning = self.update["inning"]
+        if last_inning < 0:
+            # don't roll at start of game
+            return
+
+        last_inning_away_score, last_inning_home_score = self.find_start_of_inning_score(self.game_id, last_inning)
+        current_away_score, current_home_score = (
+            self.update["awayScore"],
+            self.update["homeScore"],
+        )
+        self.print(f"(last away: {last_inning_away_score}, last home: {last_inning_home_score}, cur away: {current_away_score}, cur home: {current_home_score})")
+
+        if current_away_score != last_inning_away_score or current_home_score != last_inning_home_score:
+            salmon_roll = self.roll("salmon")
+
+            if self.ty == EventType.SALMON_SWIM:
+                self.log_roll(Csv.WEATHERPROC, "Salmon", salmon_roll, True)
+
+                if current_away_score != last_inning_away_score:
+                    self.roll("reset runs (away)")
+                if current_home_score != last_inning_home_score:
+                    self.roll("reset runs (home)")
+
+                if self.season >= 15:
+                    self.roll("reset items? idk?")
+
+                if self.event["created"] in [
+                    # these two are probably not the same reason
+                    "2021-04-13T01:06:52.165Z",
+                    "2021-04-13T01:28:04.005Z",
+                ]:
+                    self.roll("extra for some reason")
+
+                if (
+                    "was restored!" in self.desc
+                    or "were restored!" in self.desc
+                    or "were restored!" in self.desc
+                    or "was repaired." in self.desc
+                    or "were repaired." in self.desc
+                ):
+                    self.roll("restore item??")
+                    self.roll("restore item??")
+                    self.roll("restore item??")
+
+                if self.stadium.has_mod(Mod.SALMON_CANNONS):
+                    self.roll("salmon cannons")
+
+                    if "caught in the bind!" in self.desc:
+                        self.roll("salmon cannons player")
+
+                        has_undertaker = False
+                        for player_id in self.away_team.lineup + self.away_team.rotation:
+                            player = self.data.get_player(player_id)
+                            # undertakers can't undertake themselves
+                            if (player.raw_name + " is caught") not in self.desc and player.has_mod(Mod.UNDERTAKER) and not player.has_mod(Mod.ELSEWHERE):
+                                has_undertaker = True
+                                break
+                        if has_undertaker:
+                            self.roll("undertaker")
+                            self.roll("undertaker")
+
+            else:
+                self.log_roll(Csv.WEATHERPROC, "Salmon", salmon_roll, False)
+    
     def handle_misc(self):
         if self.update["gameStartPhase"] != self.next_update["gameStartPhase"]:
             self.print(f"GAME START PHASE: {self.update["gameStartPhase"]} -> {self.next_update["gameStartPhase"]} phase")
+        if self.update["newInningPhase"] != self.next_update["newInningPhase"]:
+            self.print(f"NEW INNING PHASE: {self.update["newInningPhase"]} -> {self.next_update["newInningPhase"]} inphase")
 
         if (
             self.season >= 17
@@ -443,6 +540,16 @@ class Resim:
         ):
             self.print("away team mods:", self.away_team._raw_mods)
             self.roll("echo team mod")
+
+        if self.ty in [
+            EventType.HALF_INNING,
+            EventType.SUN_30,
+            EventType.HOLIDAY_INNING,
+            EventType.SALMON_SWIM,
+        ]:
+            self.handle_inning_start()
+            return True
+
         if self.ty in [
             EventType.HOME_FIELD_ADVANTAGE,
             EventType.BECOME_TRIPLE_THREAT,
@@ -679,101 +786,6 @@ class Resim:
                 if self.away_pitcher.has_mod(Mod.TRIPLE_THREAT, ModType.PERMANENT) or self.weather == Weather.COFFEE_3S:
                     self.roll("remove away pitcher triple threat")
             # todo: salmon
-            return True
-        
-        if self.ty in [EventType.HALF_INNING]:
-            # skipping top-of/bottom-of
-            is_holiday = self.next_update.get("state", {}).get("holidayInning")
-            # if this was a holiday inning then we already rolled in the block below
-            if is_holiday:
-                return True
-
-            if self.weather == Weather.SALMON:
-                self.try_roll_salmon()
-
-            triggered_sun_30 = self.season >= 20 and self.next_update["inning"] == 9
-            if self.next_update["topOfInning"]:
-                # hm was ratified in the season 18 election
-                has_hotel_motel = self.stadium.has_mod(Mod.HOTEL_MOTEL) or self.season >= 18
-
-                # ordering weird, see below, we doing this elsewhere
-                if has_hotel_motel and self.day < 27 and (not triggered_sun_30):
-                    hotel_roll = self.roll("hotel motel")
-                    self.log_roll(Csv.MODPROC, "Notel", hotel_roll, False)
-            return True
-        # todo: need to do some flow control crimes to make this neater
-        # we have a "newInningPhase" field in the game object now, and when sun 30 triggers this is 3
-        # so if any more happens, refactor this somehow...
-        if self.ty == EventType.SUN_30:
-            is_holiday = self.next_update.get("state", {}).get("holidayInning")
-            has_hotel_motel = self.stadium.has_mod(Mod.HOTEL_MOTEL) or self.season >= 18
-            if has_hotel_motel and self.day < 27 and not is_holiday:
-                hotel_roll = self.roll("hotel motel")
-                self.log_roll(Csv.MODPROC, "Notel", hotel_roll, False)
-            return True
-
-        if self.ty == EventType.SALMON_SWIM:
-            salmon_roll = self.roll("salmon")
-            self.log_roll(Csv.WEATHERPROC, "Salmon", salmon_roll, True)
-
-            # special case for a weird starting point with missing data
-            last_inning = self.update["inning"]
-            last_inning_away_score, last_inning_home_score = self.find_start_of_inning_score(self.game_id, last_inning)
-            current_away_score, current_home_score = (
-                self.update["awayScore"],
-                self.update["homeScore"],
-            )
-
-            # todo: figure out order here
-            if current_away_score != last_inning_away_score:
-                self.roll("reset runs (away)")
-            if current_home_score != last_inning_home_score:
-                self.roll("reset runs (home)")
-
-            if self.season >= 15:
-                self.roll("reset items? idk?")
-
-            if self.event["created"] in [
-                # these two are probably not the same reason
-                "2021-04-13T01:06:52.165Z",
-                "2021-04-13T01:28:04.005Z",
-            ]:
-                self.roll("extra for some reason")
-
-            if (
-                "was restored!" in self.desc
-                or "were restored!" in self.desc
-                or "were restored!" in self.desc
-                or "was repaired." in self.desc
-                or "were repaired." in self.desc
-            ):
-                self.roll("restore item??")
-                self.roll("restore item??")
-                self.roll("restore item??")
-
-            if self.stadium.has_mod(Mod.SALMON_CANNONS):
-                self.roll("salmon cannons")
-
-                if "caught in the bind!" in self.desc:
-                    self.roll("salmon cannons player")
-
-                    has_undertaker = False
-                    for player_id in self.away_team.lineup + self.away_team.rotation:
-                        player = self.data.get_player(player_id)
-                        # undertakers can't undertake themselves
-                        if (player.raw_name + " is caught") not in self.desc and player.has_mod(Mod.UNDERTAKER) and not player.has_mod(Mod.ELSEWHERE):
-                            has_undertaker = True
-                            break
-                    if has_undertaker:
-                        self.roll("undertaker")
-                        self.roll("undertaker")
-            return True
-
-        if self.ty == EventType.HOLIDAY_INNING:
-            if self.weather == Weather.SALMON:
-                self.try_roll_salmon(holiday_inning=True)
-            hotel_roll = self.roll("hotel motel")  # success
-            self.log_roll(Csv.MODPROC, "Hotel", hotel_roll, True)
             return True
 
         if self.ty in [
