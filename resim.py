@@ -220,11 +220,8 @@ class Resim:
             "2021-04-14T15:08:13.155Z": -1,  # fix for missing data
             "2021-04-14T17:06:28.047Z": -2,  # i don't know
             "2021-04-14T19:07:51.129Z": -2,  # may be attractor-related?
-            "2021-04-20T12:00:00.931Z": -1,  # item damage at end of game??
             "2021-05-10T18:05:08.668Z": 1,
             "2021-05-10T20:21:59.360Z": 1,
-            "2021-05-11T00:00:17.142Z": 1,
-            "2021-05-11T01:00:16.921Z": 2,
             "2021-05-12T06:00:17.186Z": 1,
             "2021-05-12T12:24:31.667Z": 1,
             "2021-05-13T15:00:17.580Z": -1,
@@ -232,7 +229,6 @@ class Resim:
             "2021-05-14T11:21:37.843Z": 1,  # instability?
             "2021-05-14T13:07:02.411Z": 1,
             "2021-06-16T06:22:08.507Z": 1, # elsewhere return related?
-            "2021-06-17T02:00:04.148Z": -1,
 
             "2021-06-21T22:17:23.159Z": 2, # the flooding?
             "2021-06-25T22:10:22.558Z": 2, # extra roll for consumers, maybe a defense?
@@ -253,7 +249,6 @@ class Resim:
             "2021-07-26T17:09:57.341Z": -1,
             "2021-07-22T09:18:04.585Z": 3, # no idea
             "2021-07-22T19:23:23.344Z": 1, # sun 30?
-            "2021-07-22T20:13:49.263Z": -1, # seeker roll ordering weird
             "2021-07-23T08:27:00.305Z": 1, # grand slam weird
             "2021-07-23T09:11:48.567Z": 1, # grand slam weird?
             "2021-07-23T10:19:55.173Z": 1, 
@@ -816,7 +811,7 @@ class Resim:
             self.roll("thieves guild?")
             self.roll("thieves guild?")
 
-            if self.event["created"] in ["2021-07-22T12:24:29.719Z", "2021-07-22T21:24:03.118Z", "2021-07-23T03:26:25.413Z"]:
+            if self.event["created"] in ["2021-07-19T18:38:17.282Z", "2021-07-22T12:24:29.719Z", "2021-07-22T21:24:03.118Z", "2021-07-23T03:26:25.413Z"]:
                 self.roll("thieves guild?")
 
             return True
@@ -838,184 +833,46 @@ class Resim:
                 self.roll("game start")
 
             # todo: figure out the real logic here, i'm sure there's some
+            # a lot of these seem to be end-of-week rolls, eg. super roamin procs
             extra_start_rolls = {
-                (11, 84): 1,
                 (12, 27): 9,
-                (12, 28): 1,
-                (12, 64): 1,
                 (12, 99): 2,
                 (12, 113): 1,
-                (13, 12): 1,
-                (13, 78): 1,
-                (13, 86): 1,
                 (13, 99): 2,
                 (14, 3): 2,
                 (14, 27): 216, # earlsiesta reading
                 (15, 27): 220, # earlsiesta reading
-                (15, 34): 1,
-                (15, 54): 1,
-                (15, 57): 1,
+                (15, 57): 2,
                 (15, 99): 2,
-                (16, 3): 1,
-                (16, 15): 1,
-                (16, 26): 1,
-                (16, 27): 221, # earlsiesta reading
-                (16, 28): 1,
-                (16, 33): 2,
-                (16, 34): 1,
-                (16, 35): 1,
-                (16, 36): 2,
-                (16, 38): 1,
-                (16, 40): 1,
-                (16, 41): 1,
-                (16, 42): 1,
-                (16, 43): 1,
-                (16, 47): 1,
-                (16, 48): 2,
-                (16, 53): 1,
-                (16, 54): 1,
-                (16, 58): 1,
-                (16, 61): 1,
-                (16, 63): 1,
-                (16, 68): 2,
-                (16, 73): 1,
-                (16, 77): 1,
-                (16, 88): 1,
-                (16, 92): 1,
-                (16, 93): 1,
-                (16, 94): 1,
+                (16, 27): 220, # earlsiesta reading
                 (16, 99): 2,
                 (16, 106): 1,
-                (17, 13): 1,
-                (17, 14): 1,
-                (17, 16): 1,
-                (17, 18): 1,
-                (17, 19): 1,
-                (17, 22): 2,
                 (17, 27): 218, # earlsiesta reading
-                (17, 28): 1,
-                (17, 31): 1,
-                (17, 34): 1,
-                (17, 37): 1,
-                (17, 40): 1,
-                (17, 58): 1,
-                (17, 88): 1,
+                # (17, 88): 1,
                 (17, 99): 2,
                 (18, 0): 1,
-                (18, 2): 1,
-                (18, 5): 1,
-                (18, 8): 1,
-                (18, 16): 1,
-                (18, 17): 1,
-                (18, 19): 1,
-                (18, 20): 1,
-                (18, 23): 1,
-                (18, 42): 0,
-                (18, 68): 1,
-                (18, 69): 1,
-                (18, 73): 0,
-                (18, 74): 1,
-                (18, 78): 1,
                 (18, 99): 2,
-                (19, 4): 1,
-                (19, 5): 1,
-                (19, 13): 1,
                 (19, 18): 13,
-                (19, 20): 1,
-                (19, 23): 1,
-                (19, 27): 230, # earlsiesta reading
-                (19, 32): 2,
+                (19, 27): 229, # earlsiesta reading
                 (19, 36): 13,
-                (19, 38): 1,
-                (19, 41): 1,
-                (19, 42): 1,
-                (19, 45): 11,
-                (19, 47): 1,
-                (19, 49): 1,
-                (19, 50): 1,
-                (19, 51): 1,
-                (19, 53): 1,
+                (19, 45): 10,
                 (19, 54): 10,
-                (19, 55): 1,
-                (19, 57): 1,
-                (19, 58): 1,
-                (19, 60): 1,
-                (19, 61): 1,
                 (19, 63): 10,
-                (19, 65): 2,
-                (19, 69): 1,
-                (19, 75): 1,
-                (19, 79): 1,
                 (19, 81): 10,
-                (19, 82): 1,
-                (19, 83): 1,
-                (19, 85): 2,
-                (19, 86): 3,
-                (19, 87): 1,
-                (19, 89): 1,
-                (19, 90): 1,
-                (19, 92): 2,
-                (19, 94): 1,
-                (19, 95): 1,
-                (19, 98): 2,
                 (19, 108): 10,
                 (19, 113): 2,
-                (20, 5): 2,
-                (20, 6): 1,
-                (20, 8): 2,
-                (20, 9): 11,
-                (20, 56): 2,
-                (20, 57): 1,
-                (20, 58): 1,
-                (20, 59): 1,
-                (20, 60): 1,
-                (20, 61): 1,
-                (20, 62): 3,
-                (20, 63): 11,
-                (20, 64): 1,
-                (20, 65): 1,
-                (20, 66): 1,
-                (20, 67): 1,
-                (20, 68): 2,
+                (20, 9): 10,
+                (20, 63): 10,
                 (20, 108): 10,
-                (21, 13): 1,
-                (21, 14): 2,
-                (21, 15): 2,
-                (21, 17): 3,
-                (22, 2): 1,
-                (22, 4): 2,
-                (22, 5): 1,
-                (22, 60): 1,
-                (22, 61): 1,
-                (22, 62): 2,
-                (22, 63): 15,
-                (22, 64): 1,
-                (22, 66): 1,
-                (22, 67): 1,
-                (22, 69): 2,
-                (22, 71): 2,
-                (22, 72): 17571, # latesiesta (what the heck)
-                (22, 73): 1,
-                (22, 75): 1,
-                (22, 76): 1,
-                (22, 78): 1,
-                (22, 79): 1,
-                (22, 80): 1,
-                (22, 81): 17,
-                (22, 82): 1,
-                (22, 84): 2,
-                (22, 85): 1,
-                (22, 89): 1,
-                (22, 90): 15,
-                (22, 91): 1,
-                (23, 42): 1,
+                (22, 63): 14,
+                (22, 72): 17569, # latesiesta (what the heck)
+                (22, 81): 14,
+                (22, 90): 14,
             }
 
             game_id = self.event["gameTags"][0] # state not setup yet
-            game = self.data.get_update(game_id, 2)
-            sd = (game['season'], game['day'])
-
-            self.print(f"game start: season {game['season']}, day {game['day']}")
+            sd = (self.event['season'], self.event['day'])
+            self.print(f"game start: {sd} (zero-indexed)")
             if sd not in self.started_days:
                 self.started_days.add(sd)
                 for _ in range(extra_start_rolls.get(sd, 0)):
@@ -1032,15 +889,19 @@ class Resim:
 
             self.print(self.stadium.mods)
 
-            for team_id in [self.next_update["homeTeam"], self.next_update["awayTeam"]]:
-                team = self.data.get_team(team_id)
-                prev_pitcher_id = team.rotation[(team.rotation_slot - 2) % len(team.rotation)]
-                prev_pitcher = self.data.get_player(prev_pitcher_id)
-                if prev_pitcher.has_mod(Mod.SHELLED):
-                    # don't roll immediately after sixpack receives shelled, for some reason that doesn't trigger it
-                    # and not in postseason either
-                    if self.game_id != "31ae7c75-b30a-49b1-bddd-b40e3ebd518e" and self.day < 99:
-                        self.roll("extra roll for shelled pitcher")
+            raw_updates = self.data.get_raw_game_updates(self.game_id)
+            predicted_home_pitcher = [u["data"]["homePitcher"] for u in raw_updates if u["data"]["homePitcher"]][0]
+            real_home_pitcher = [u["data"]["homePitcher"] for u in raw_updates if u["data"]["homePitcher"] and u["data"]["gameStart"]][0]
+            predicted_away_pitcher = [u["data"]["awayPitcher"] for u in raw_updates if u["data"]["awayPitcher"]][0]
+            real_away_pitcher = [u["data"]["awayPitcher"] for u in raw_updates if u["data"]["awayPitcher"] and u["data"]["gameStart"]][0]
+            
+            self.print(f"predicted home pitcher: {predicted_home_pitcher}, predicted away pitcher: {predicted_away_pitcher}")
+            self.print(f"real home pitcher: {real_home_pitcher}, real away pitcher: {real_away_pitcher}")
+            mismatch = predicted_home_pitcher != real_home_pitcher or predicted_away_pitcher != real_away_pitcher
+
+            if mismatch:
+                self.print(f"!!! warn: mispredicted pitchers on {self.event['season'], self.event['day']}")
+                self.roll("mispredicted pitcher")
             return True
         if self.ty in [EventType.FLAG_PLANTED]:
             for _ in range(11):
@@ -3085,7 +2946,7 @@ class Resim:
 
             # threshold is at 0.0125 at 0.5 fort
             bird_threshold = 0.0125 - 0.02 * (self.stadium.fortification - 0.5)
-            if self.event["created"] in ["2021-05-11T09:09:08.543Z"]:
+            if self.event["created"] in ["2021-05-11T09:09:08.543Z", "2021-05-14T10:00:16.382Z"]:
                 # might have changed in s18?
                 bird_threshold = 1
 
@@ -3511,11 +3372,21 @@ class Resim:
                     self.ty == EventType.RETURN_FROM_ELSEWHERE and not pulled_back and player.raw_name in self.desc
                 )
 
+                if pulled_back and len(seekers) > 1:
+                    self.print(f"!!! multiple seekers in play")
+
+                # it seems to roll seeker for all eligible elsewhere players
+                # but if it finds one, it does *not* roll seeker for the next seeker (if there are multiple)
+                # see: 2021-07-22T20:13:49.263Z
+                # it's possible there's a cleaner way to implement this, but the ordering is tricky...
                 for seeker in seekers:
-                    self.roll(f"seeker ({seeker.raw_name} {player.raw_name})")
-                    if pulled_back and seeker.raw_name in self.desc:
+                    was_seek_successful = pulled_back and seeker.raw_name in self.desc
+                    # guessing at threshold here, it seems to have changed at least once, but this lets us search warns
+                    self.roll(f"seeker ({seeker.raw_name} {player.raw_name})", passed=was_seek_successful, threshold=0.005)
+                    if was_seek_successful:
                         self.do_elsewhere_return(player)
                         did_elsewhere_return = True
+                        break # <-- load-bearing
 
                 if not pulled_back:
                     self.roll(f"elsewhere ({player.raw_name})")

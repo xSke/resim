@@ -110,6 +110,7 @@ class Mod(Enum):
     EGO4 = auto()
     ELECTRIC = auto()
     ELSEWHERE = auto()
+    EVENT_HORIZON = auto()
     EXTRA_BASE = auto()
     FIERY = auto()
     FIRE_EATER = auto()
@@ -1153,15 +1154,16 @@ class GameData:
         return resp["items"][0]["data"] or {}
 
     def fetch_game(self, game_id):
-        key = f"game_updates_{game_id}"
+        key = f"game_updates_{game_id}_" # _ here to cachebust ?started from old resim
         resp = get_cached(
             key,
-            f"{CHRONICLER_URI}/v1/games/updates?count=2000&game={game_id}&started=true",
+            f"{CHRONICLER_URI}/v1/games/updates?count=2000&game={game_id}",
         )
         self.games[game_id] = resp["data"]
         for update in resp["data"]:
-            play = update["data"]["playCount"]
-            self.plays[(game_id, play)] = update["data"]
+            if update["data"]["gameStart"]:
+                play = update["data"]["playCount"]
+                self.plays[(game_id, play)] = update["data"]
 
     def fetch_league_data(self, timestamp, delta_secs: float = 0):
         self.fetch_sim(timestamp, delta_secs)
@@ -1169,6 +1171,11 @@ class GameData:
         self.fetch_players(timestamp, delta_secs)
         self.fetch_stadiums(timestamp, delta_secs)
 
+    def get_raw_game_updates(self, game_id):
+        if game_id not in self.games:
+            self.fetch_game(game_id)
+        return self.games[game_id]
+    
     def get_update(self, game_id, play):
         if game_id not in self.games:
             self.fetch_game(game_id)
