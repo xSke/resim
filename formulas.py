@@ -55,8 +55,8 @@ def get_multiplier(
                 if attr not in [
                     "patheticism",
                     "thwackability",
-                    "ruthlessness",
-                    "coldness",
+                    #"ruthlessness", don't believe this is true, at least not for Strike checks past S19
+                    #"coldness", don't believe this is true, at least not for Strike checks past S19
                     "buoyancy",
                 ]:
                     multiplier += 0.05
@@ -124,6 +124,12 @@ def get_multiplier(
             multiplier += 0.2 * stadium.grandiosity
         elif mod == Mod.GAUDY:
             multiplier += 0.02 * len(stadium.mods)
+        elif mod == Mod.CLUTTERED:
+            multiplier += 0.02 * stadium.filthiness
+        elif mod == Mod.NIGHT_VISION and meta.weather == Weather.ECLIPSE:
+            multiplier += 0.5
+        elif mod == Mod.MINIMIZED:
+            multiplier == 0.0
 
     if player.bat == "NIGHT_VISION_GOGGLES" and meta.weather == Weather.ECLIPSE:
         # Blessing description: Item. Random player on your team hits 50% better during Solar Eclipses.
@@ -162,15 +168,15 @@ def get_strike_threshold(
         12: (0.2,  0.3,     0.2,   0.1,    0,   0,  0.85),
         13: (0.2,  0.3,     0.2,   0.1,    0,   0,  0.85),
         14: (0.2,  0.285,   0.2,   0.1,    0,   0,  0.86),
-        15: (0.2,  0.285,   0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
-        16: (0.2,  0.285,   0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
-        17: (0.2,  0.285,   0.2,   0.1,    0,   0,  0.86),  # todo: not sure but seems right
-        18: (0.25, 0.285,   0.2, 0.085, -0.085, -0.035,  0.86),  # todo: a solid starter guess
+        15: (0.2,  0.285,   0.2,   0.1,    0,   0,  0.86),  
+        16: (0.2,  0.285,   0.2,   0.1,    0,   0,  0.86),  
+        17: (0.2,  0.285,   0.2,   0.1,    0,   0,  0.86),  
+        18: (0.25, 0.285,   0.2, 0.085, -0.085, -0.035,  0.86), 
         19: (0.25, 0.28,   0.2, 0.085, -0.085, -0.035,  0.86),
-        20: (0.25, 0.28,   0.2, 0.085, -0.085, -0.035,  0.86), # todo: guessing
-        21: (0.25, 0.28,   0.2, 0.085, -0.085, -0.035,  0.86), # todo: guessing
-        22: (0.25, 0.28,   0.2, 0.085, -0.085, -0.035,  0.86), # todo: guessing
-        23: (0.25, 0.28,   0.2, 0.085, -0.085, -0.035,  0.86), # todo: guessing
+        20: (0.25, 0.28,   0.2, 0.085, -0.085, -0.035,  0.86),
+        21: (0.25, 0.28,   0.2, 0.085, -0.085, -0.035,  0.86), 
+        22: (0.25, 0.28,   0.2, 0.085, -0.085, -0.035,  0.86), 
+        23: (0.25, 0.28,   0.2, 0.085, -0.085, -0.035,  0.86), # No longer guessing :D
     }[meta.season]
     # fmt: on
 
