@@ -223,7 +223,7 @@ class Resim:
             "2021-05-10T18:05:08.668Z": 1,
             "2021-05-10T20:21:59.360Z": 1,
             "2021-05-11T00:00:17.142Z": 1,
-            "2021-05-11T01:00:16.921Z": 1,
+            "2021-05-11T01:00:16.921Z": 2,
             "2021-05-12T06:00:17.186Z": 1,
             "2021-05-12T12:24:31.667Z": 1,
             "2021-05-13T15:00:17.580Z": -1,
@@ -243,7 +243,7 @@ class Resim:
             "2021-07-26T16:08:28.076Z": 1, # consumer roll suspiciously low, might actually be party
             "2021-07-26T17:36:38.281Z": 4, # maxi socks item gem broken
             "2021-07-26T18:09:17.129Z": 2, # observed?
-            "2021-07-26T18:20:09.033Z": 1, # consumer attack item defend push?
+            "2021-07-26T18:20:09.430Z": 1, # consumer attack item defend push?
             "2021-07-28T09:22:11.719Z": 3,
             "2021-07-28T11:03:52.137Z": 1, # this might be secret base attract - the threshold would've had to be duobled, but who knows...
 
@@ -896,7 +896,7 @@ class Resim:
                 "4f8ce860-fb5e-4cff-8111-d687fa438876": 2,
                 "e0880bb0-60b2-4778-a209-977bd4b23ab6": 1,
                 "a12bbed2-68b4-4db0-b408-6727b28743c3": 1,
-                "fa320c4c-ceab-48a5-b3a1-8a064977d974": 217,  # earlsiesta reading
+                "fa320c4c-ceab-48a5-b3a1-8a064977d974": 218,  # earlsiesta reading
                 "426196ac-8600-4929-af6f-d750517eec87": 1,
                 "0486ea3c-9a94-4fdc-82cd-78feca6e00d7": 1,
                 "9485f77d-3c78-40dc-a6ba-d56e231a5902": 1,
@@ -1008,6 +1008,7 @@ class Resim:
                 "d2616569-7fea-46cb-9bbf-9efc663afb11": 1,
                 "2f6de2a7-1328-49df-84e4-48e9aee9bad1": 2,
                 "106247aa-9d2d-4133-bf34-f6055b5160ae": 1,
+                "194af894-a382-450c-9203-7160898b8223": 1,
             }
             game_id = self.event["gameTags"][0] # state not setup yet
             for _ in range(extra_start_rolls.get(game_id, 0)):
@@ -3661,6 +3662,8 @@ class Resim:
         else:
             party_roll = 1
 
+        party_threshold = 0.0055 if self.season < 20 else 0.00525
+
         if self.ty == EventType.PARTY:
             self.log_roll(Csv.PARTY, "Party", party_roll, True)
             team_roll = self.roll("target team")  # <0.5 for home, >0.5 for away
@@ -3673,56 +3676,7 @@ class Resim:
                 self.roll("extra party?")
 
             return True
-
-        # we have a positive case at 0.005210187516443421 (2021-03-19T14:22:26.078Z)
-        # and one at 0.005465967826364659 (2021-03-19T07:09:38.068Z)
-        # and one at 0.0054753553805302335 (2021-03-17T11:13:54.609Z)
-        # and one at 0.005489946742006868 (2021-04-07T16:25:17.109Z)
-        # and one at 0.0054976162782947036 (2021-03-05T01:04:16.078Z), pre-ballparks??
-        # this is probably influenced by ballpark myst or something (or not??)
-        # although a negative case at 2021-06-26T15:05:38.315Z (0.00537)
-        elif party_roll < 0.0055 and self.event["created"] not in [
-            "2021-06-26T15:05:38.315Z",
-            "2021-06-26T16:18:59.850Z",
-            "2021-06-26T20:11:44.065Z",
-            "2021-06-26T03:26:55.260Z",
-            "2021-06-21T19:19:11.857Z",
-            "2021-06-21T21:06:09.786Z",
-            "2021-06-23T23:15:32.729Z",
-            "2021-06-24T02:20:11.278Z",
-            "2021-06-24T06:09:46.048Z",
-            "2021-06-24T06:14:41.289Z",
-            "2021-06-24T07:05:35.942Z",
-            "2021-06-29T03:16:35.357Z",
-            "2021-06-29T04:12:51.123Z",
-            "2021-06-29T05:23:28.625Z",
-            "2021-07-22T02:20:22.499Z",
-            "2021-07-22T02:28:47.325Z",
-            "2021-07-22T07:11:25.278Z",
-            "2021-07-28T10:17:53.606Z",
-            "2021-07-28T10:26:05.631Z",
-            "2021-07-28T11:08:29.582Z",
-            "2021-07-26T18:11:34.607Z",
-            "2021-07-22T08:14:13.237Z",
-            "2021-07-22T12:02:42.230Z",
-            "2021-07-22T11:21:27.905Z",
-            "2021-07-22T07:15:02.927Z"
-            "2021-07-22T18:17:24.202Z",
-            "2021-07-22T22:11:48.547Z",
-            "2021-07-22T23:07:48.452Z",
-            "2021-07-22T23:20:19.925Z",
-            "2021-07-23T01:27:50.207Z",
-            "2021-07-23T03:13:23.250Z",
-            "2021-07-23T03:23:55.236Z",
-            "2021-07-23T04:06:42.325Z",
-            "2021-07-23T04:10:12.574Z",
-            "2021-07-23T06:14:53.974Z",
-            "2021-07-23T06:16:53.478Z",
-            "2021-07-19T18:23:15.686Z",
-            "2021-07-19T19:28:44.885Z",
-            "2021-07-19T20:07:28.994Z",
-            "2021-07-19T21:25:33.259Z",
-        ]:
+        elif party_roll < party_threshold and self.event["created"] not in []:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod(Mod.PARTY_TIME):
                 self.print("!!! home team is in party time")
