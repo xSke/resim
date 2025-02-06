@@ -4119,7 +4119,7 @@ class Resim:
             double_strike_overrides = {
                 "2021-05-21T05:32:00.224Z": True,
                 "2021-06-16T01:14:32.242Z": True,
-                "2021-07-22T10:07:27.012Z": False,
+                #"2021-07-22T10:07:27.012Z": False, removed as realigns later with a party roll
                 # "2021-06-22T17:19:20.764Z": True,
             }
 
