@@ -205,10 +205,6 @@ class Resim:
         self.print(f"===== {self.ty.value} {self.desc}")
         self.print(f"===== rng pos: {self.rng.get_state_str()}")
 
-        # I have no idea why there's an extra roll here, but it works.
-        if self.game_id == "e1fda957-f4ac-4188-835d-265a67b9585d" and self.play == 145:
-            self.roll("???")
-
         event_adjustments = {
             "2021-03-01T20:22:00.461Z": -1,  # fix for missing data
             "2021-03-01T21:00:16.006Z": -1,  # fix for missing data
@@ -217,17 +213,12 @@ class Resim:
             "2021-03-02T14:00:15.843Z": 1,
             "2021-04-05T15:23:26.102Z": 1,
             "2021-04-12T15:19:56.073Z": -2,
-            "2021-04-12T15:22:50.866Z": 1,
-            # "2021-04-14T15:08:13.155Z": -1,  # fix for missing data
-            "2021-04-14T17:06:28.047Z": -2,  # i don't know
-            "2021-04-14T19:07:51.129Z": -2,  # may be attractor-related?
-            "2021-05-10T18:05:08.668Z": 1,
+            "2021-04-12T15:22:50.866Z": 1, # there's a low roll on the item damage here
+            "2021-05-10T18:05:08.668Z": 1, # likely mind trick edge case?
             "2021-05-13T15:00:17.580Z": -1,
             "2021-05-13T16:38:59.820Z": 387,  # skipping latesiesta
-            "2021-05-14T11:21:37.843Z": 1,  # instability?
             "2021-06-16T06:22:08.507Z": 1, # elsewhere return related?
 
-            # "2021-06-21T22:17:23.159Z": 2, # the flooding?
             "2021-06-25T22:10:22.558Z": 2, # extra roll for consumers, maybe a defense?
             "2021-06-24T10:13:01.619Z": 4, # sac or something?
 
@@ -243,12 +234,13 @@ class Resim:
             # the roll in 2021-07-26T17:09:56.933Z really happens earlier, this event being delayed breaks some stuff
             "2021-07-26T17:09:54.480Z": 1,
             "2021-07-26T17:09:57.341Z": -1,
-            "2021-07-22T09:18:04.585Z": 3, # no idea
-            "2021-07-23T08:27:00.305Z": 1, # grand slam weird
+            # "2021-07-22T09:18:04.585Z": 3, # no idea
+            "2021-07-23T08:27:00.305Z": 1, # grand slam weird?
             "2021-07-23T09:11:48.567Z": 1, # grand slam weird?
-            "2021-07-23T10:19:55.173Z": 1, 
+            "2021-07-23T10:19:55.173Z": 1, # grand slam weird?
+            "2021-07-22T10:07:23.346Z": -1, # no idea
 
-            "2021-07-23T14:22:51.364Z": -1, # what
+            "2021-07-23T14:22:51.364Z": -1, # there's a couple different places this can go, not sure where the problem is
 
             "2021-07-19T18:11:34.836Z": 1, # ??
         }
@@ -1159,9 +1151,7 @@ class Resim:
                     self.roll("charm item damage???")
                     self.roll("charm item damage???")
 
-                # doesn't happen for Kennedy Loser at 2021-04-06T23:12:09.244Z, but does at 2021-05-21T01:22:53.936Z and again later for Don
-                if self.season > 14:
-                    self.handle_batter_reverb()
+                self.handle_batter_reverb()
 
                 if self.batting_team.has_mod(Mod.PSYCHIC):
                     if self.batter.undefined():
@@ -2315,6 +2305,7 @@ class Resim:
             "2021-06-24T05:09:20.868Z",
             "2021-07-28T09:24:31.243Z",
             "2021-07-23T04:09:42.750Z",
+            "2021-07-22T09:18:04.254Z",
         ]
 
         # cheating a little to predict the future etc
@@ -2670,7 +2661,7 @@ class Resim:
                 target = self.data.get_player(self.event["playerTags"][0])
 
             # this really needs a refactor, helga and jon's instability incins need to proc in the sub function (and they do)
-            if self.ty == EventType.INCINERATION and "Kansas City Breath Mints" not in self.desc and self.event["created"] not in ["2021-07-22T06:03:17.918Z", "2021-07-22T06:06:08.970Z", "2021-07-23T10:04:54.389Z"]:
+            if self.ty == EventType.INCINERATION and "Kansas City Breath Mints" not in self.desc and self.event["created"] not in ["2021-07-22T06:03:17.918Z", "2021-07-22T06:06:08.970Z", "2021-07-23T10:04:54.389Z", "2021-05-14T11:21:35.835Z"]:
                 if "A Debt was collected" not in self.desc:
                     self.log_roll(Csv.WEATHERPROC, "Burn", eclipse_roll, True)
 
@@ -3678,6 +3669,18 @@ class Resim:
             if did_attractor_enter_this_tick:
                 secret_runner_id = self.next_update["secretBaserunner"]
 
+        # more consequences of the weird attractor async thing
+        # one tick before these events, the game chose an attractor and "put them" in the secret base
+        # but for some reason we don't see the secret base id until the next tick
+        # however, per roll counts, there is still someone in the base, so we should NOT roll for secret base
+        # i think this might be the same situation as the above block, but there's an inning switch in between, so our lookahead breaks
+        if self.event["created"] == "2021-04-14T19:07:51.129Z":
+            # forrest best
+            secret_runner_id = "d35ccee1-9559-49a1-aaa4-7809f7b5c46e"
+        if self.event["created"] == "2021-04-14T17:06:27.921Z":
+            # peanut holloway
+            secret_runner_id = "667cb445-c288-4e62-b603-27291c1e475d"
+
         secret_base_enter_eligible = Base.SECOND in bases and not secret_runner_id
         # "fifth", but it's between third and fourth...
         secret_base_exit_eligible = (
@@ -4128,7 +4131,7 @@ class Resim:
             double_strike_overrides = {
                 #"2021-05-21T05:32:00.224Z": True, now unnecessary due to strike formula improvements
                 #"2021-06-16T01:14:32.242Z": True, Last Double strike override goodbye!
-                #"2021-07-22T10:07:27.012Z": False, removed as realigns later with a party roll
+                # "2021-07-22T10:07:27.012Z": False, # removed as realigns later with a party roll
                 # "2021-06-22T17:19:20.764Z": True,
             }
 
