@@ -129,7 +129,7 @@ def get_multiplier(
         elif mod == Mod.NIGHT_VISION and meta.weather == Weather.ECLIPSE:
             multiplier += 0.5
         elif mod == Mod.MINIMIZED:
-            multiplier == 0.0
+            return 0.00001 #Apparently this should just be 0, but it turns out that one of our formulas divides by an attribute. Let's not divide by zero shall we
 
     if player.bat == "NIGHT_VISION_GOGGLES" and meta.weather == Weather.ECLIPSE:
         # Blessing description: Item. Random player on your team hits 50% better during Solar Eclipses.
