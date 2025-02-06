@@ -4118,7 +4118,7 @@ class Resim:
             # ideally we'd get rid of these and our formula would just guess right but alas
             double_strike_overrides = {
                 #"2021-05-21T05:32:00.224Z": True, now unnecessary due to strike formula improvements
-                "2021-06-16T01:14:32.242Z": True, #Should likely be resolved once pitchers + traveling is resolved
+                #"2021-06-16T01:14:32.242Z": True, Last Double strike override goodbye!
                 #"2021-07-22T10:07:27.012Z": False, removed as realigns later with a party roll
                 # "2021-06-22T17:19:20.764Z": True,
             }
