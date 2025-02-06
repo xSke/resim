@@ -80,6 +80,7 @@ class Csv(Enum):
     BSYCHIC = "bsychic"
     ITEM_CREATION = "item_creation"
     UPGRADE_OUT = "upgrade_out"
+    SWEEP = "sweep"
 
 
 class Resim:
@@ -226,7 +227,7 @@ class Resim:
             "2021-05-14T11:21:37.843Z": 1,  # instability?
             "2021-06-16T06:22:08.507Z": 1, # elsewhere return related?
 
-            "2021-06-21T22:17:23.159Z": 2, # the flooding?
+            # "2021-06-21T22:17:23.159Z": 2, # the flooding?
             "2021-06-25T22:10:22.558Z": 2, # extra roll for consumers, maybe a defense?
             "2021-06-24T10:13:01.619Z": 4, # sac or something?
 
@@ -2502,11 +2503,6 @@ class Resim:
 
         if self.batter.undefined():
             pass
-            # self.roll("undefined (foul)")            
-            # self.roll("undefined (foul)")            
-            # self.roll("undefined (foul)")            
-            # self.roll("undefined (foul)")            
-            # self.roll("undefined (foul)")            
 
         self.log_roll(Csv.FOULS, outcomestr, foul_roll, known_outcome)
 
@@ -2567,13 +2563,19 @@ class Resim:
         self.damage(self.pitcher, "pitcher")
         self.damage(self.batter, "batter")
 
-    def check_filth_delta(self):
-        self.data.fetch_stadiums(self.event["created"])
-        filth_before = self.data.get_stadium(self.stadium.id).filthiness
-        self.data.fetch_stadiums(self.event["created"], 10)
-        filth_after = self.data.get_stadium(self.stadium.id).filthiness
-        if filth_before != filth_after:
-            self.print(f"!!!FILTH CHANGED: {filth_before} -> {filth_after}")
+    def check_filth_delta(self, expected_change=None):
+        # todo: this is very unreliable because of fetch resolution
+        pass
+        # self.data.fetch_stadiums(self.event["created"])
+        # filth_before = self.data.get_stadium(self.stadium.id).filthiness
+        # self.data.fetch_stadium_after(self.stadium.id, self.event["created"])
+        # filth_after = self.data.get_stadium(self.stadium.id).filthiness
+        # if filth_before != filth_after:
+        #     self.print(f"!!!FILTH CHANGED: {filth_before} -> {filth_after}")
+            
+        #     delta = filth_after - filth_before
+        #     if expected_change and abs(expected_change - delta) > 0.000001:
+        #         self.print(f"!!! warn: expected filth change of {expected_change}, found {delta}")
 
 
     def handle_batter_up(self):
@@ -3289,8 +3291,22 @@ class Resim:
                     )
 
             if self.ty == EventType.FLOODING_SWEPT:
+                undertakers = []
+                players = (
+                    self.batting_team.lineup + self.batting_team.rotation
+                )  # + self.pitching_team.lineup + self.pitching_team.rotation
+                for player_id in players:
+                    player = self.data.get_player(player_id)
+                    if (
+                        player.has_mod(Mod.UNDERTAKER)
+                        and not player.has_any(Mod.ELSEWHERE)
+                    ):
+                        self.print(f"(have undertaker: {player.name})")
+                        undertakers.append(player)
+
                 # handle flood
                 swept_players = []
+                successful_undertakers = set()
                 for runner_id in self.update["baseRunners"]:
                     runner = self.data.get_player(runner_id)
 
@@ -3302,40 +3318,33 @@ class Resim:
                     if (self.season, self.day) >= (15, 64):
                         exempt_mods += [Mod.EGO2, Mod.EGO3, Mod.EGO4, Mod.LEGENDARY]
                     if not runner.has_any(*exempt_mods):
-                        self.roll(f"sweep ({runner.name})")
+                        sweep_roll = self.roll(f"sweep ({runner.name})")
 
                         if f"{runner.raw_name} was swept Elsewhere" in self.desc:
+                            self.log_roll(Csv.SWEEP, "Sweep", sweep_roll, True, relevant_runner=runner)
                             swept_players.append(runner_id)
 
+                            if not runner.has_mod(Mod.NEGATIVE):
+                                for undertaker in undertakers:
+                                    if runner_id != undertaker.id and undertaker.id not in successful_undertakers:
+                                        was_successful_dive = (undertaker.raw_name + " dove in") in self.desc
+                                        undertaker_threshold = 0.65 if self.season > 18 else 0.4
+
+                                        self.roll("undertaker")
+                                        self.roll("undertaker", threshold=undertaker_threshold, passed=was_successful_dive)
+
+                                        if was_successful_dive:
+                                            successful_undertakers.add(undertaker.id)
+                                            break
+                        else:
+                            self.log_roll(Csv.SWEEP, "NoSweep", sweep_roll, False, relevant_runner=runner)
+
                 if self.stadium.id and not self.stadium.has_mod(Mod.FLOOD_PUMPS):
-                    self.roll("filthiness")
-                    self.check_filth_delta()
-
-                if swept_players:
-                    # todo: what are the criteria here
-                    if not any(filter(lambda p: not self.data.get_player(p).has_mod(Mod.NEGATIVE), swept_players)):
-                        return True
-
-                    has_undertaker = False
-                    players = (
-                        self.batting_team.lineup + self.batting_team.rotation
-                    )  # + self.pitching_team.lineup + self.pitching_team.rotation
-                    for player_id in players:
-                        player = self.data.get_player(player_id)
-                        if (
-                            player.has_mod(Mod.UNDERTAKER)
-                            and not player.has_any(Mod.ELSEWHERE)
-                            and player_id not in swept_players
-                        ):
-                            self.print(f"(have undertaker: {player.name})")
-                            has_undertaker = True
-
-                    if has_undertaker:
-                        self.roll("undertaker")
-                        self.roll("undertaker")
-
-                        if len(swept_players) > 1:
-                            self.print(f"warn: undertaker with multiple swept players (what do?)")
+                    filth_roll = self.roll("filthiness")
+                    expected_filth_delta = 0.00008 + filth_roll*0.00007 if self.season > 13 else 0.00005 + filth_roll*0.00005
+                    if self.stadium.has_mod(Mod.ANTI_FLOOD_PUMPS):
+                        expected_filth_delta *= 5
+                    self.check_filth_delta(expected_filth_delta)
 
                 return True
 

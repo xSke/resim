@@ -93,6 +93,7 @@ class Mod(Enum):
     AFFINITY_FOR_CROWS = auto()
     AFTER_PARTY = auto()
     AIR_BALLOONS = auto()
+    ANTI_FLOOD_PUMPS = auto()
     ATTRACTOR = auto()
     BASE_INSTINCTS = auto()
     BIG_BUCKET = auto()
@@ -1148,6 +1149,17 @@ class GameData:
         for item in resp["items"]:
             self.players[item["entityId"]] = PlayerData.from_chron(
                 item["data"], item["validFrom"], self.players.get(item["entityId"])
+            )
+
+    def fetch_stadium_after(self, stadium_id, timestamp):
+        key = f"stadium_{stadium_id}_after_{timestamp}"
+        resp = get_cached(
+            key,
+            f"{CHRONICLER_URI}/v2/versions?type=stadium&id={stadium_id}&after={timestamp}&count=1&order=asc",
+        )
+        for item in resp["items"]:
+            self.stadiums[item["entityId"]] = StadiumData.from_chron(
+                item["data"], item["validFrom"], self.stadiums.get(item["entityId"])
             )
 
     def fetch_item_at(self, item_id, timestamp):
