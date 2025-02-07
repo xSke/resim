@@ -3311,7 +3311,7 @@ class Resim:
                     if not runner.has_any(*exempt_mods):
                         sweep_roll = self.roll(f"sweep ({runner.name})")
 
-                        if f"{runner.raw_name} was swept Elsewhere" in self.desc:
+                        if f"{runner.raw_name} was swept Elsewhere" in self.desc or f"{runner.raw_name} is swept Elsewhere" in self.desc:
                             self.log_roll(Csv.SWEEP, "Sweep", sweep_roll, True, relevant_runner=runner)
                             swept_players.append(runner_id)
 
