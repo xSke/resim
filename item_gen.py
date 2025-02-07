@@ -627,6 +627,11 @@ NUM_ELEMENTS_FN = {
         ItemRollType.GLITTER: lambda x: 0 if x < 0.5 else 1 if x < 0.9 else 2,
         ItemRollType.PRIZE: lambda x: 1 if x < 0.45 else 2 if x < 0.95 else 3,
     },
+    (22, 0): {
+        ItemRollType.CHEST: lambda x: 0 if x < 0.05 else 1 if x < 0.55 else 2 if x < 0.95 else 3,
+        ItemRollType.GLITTER: lambda x: 0 if x < 0.5 else 1 if x < 0.9 else 2,
+        ItemRollType.PRIZE: lambda x: 1 if x < 0.47 else 2 if x < 0.95 else 3, # todo: check this for sure, we have a 0.4601 that's definitely only *one* element (2021-07-20T15:00:08.612Z)
+    }
 }
 
 

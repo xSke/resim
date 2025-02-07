@@ -243,6 +243,8 @@ class Resim:
             "2021-07-23T14:22:51.364Z": -1, # there's a couple different places this can go, not sure where the problem is
 
             "2021-07-19T18:11:34.836Z": 1, # ??
+            "2021-07-21T11:13:17.022Z": 3, # ??? i think this home run is actually fake somehow
+            "2021-07-21T21:08:45.629Z": 1, # elsewhere scattering?
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -810,8 +812,10 @@ class Resim:
             self.roll("thieves guild?")
             self.roll("thieves guild?")
 
-            if self.event["created"] in ["2021-07-19T18:38:17.282Z", "2021-07-22T12:24:29.719Z", "2021-07-22T21:24:03.118Z", "2021-07-23T03:26:25.413Z"]:
+            if self.event["created"] in ["2021-07-19T18:38:17.282Z", "2021-07-22T12:24:29.719Z", "2021-07-22T21:24:03.118Z", "2021-07-23T03:26:25.413Z", "2021-07-20T14:31:06.765Z", "2021-07-21T10:27:28.256Z", "2021-07-21T11:34:52.841Z"]:
                 self.roll("thieves guild?")
+            else:
+                self.print(f"no extra thieves guild roll?")
 
             return True
         if self.ty == EventType.THIEVES_GUILD_ITEM:
@@ -864,6 +868,10 @@ class Resim:
                 (20, 63): 10,
                 (20, 108): 10,
                 (20, 112): 1,
+                (22, 9): 14,
+                (22, 18): 14,
+                (22, 36): 14,
+                (22, 45): 14,
                 (22, 63): 14,
                 (22, 72): 17569, # latesiesta (what the heck)
                 (22, 81): 14,
@@ -1051,6 +1059,8 @@ class Resim:
                 aldon_cashmoney_ii.last_update_time = self.event["created"]
             return True
         if self.ty == EventType.BALLPARK_MOD_RATIFIED:
+            return True
+        if self.ty == EventType.RELOAD_PROC:
             return True
         
     def handle_trader(self):
@@ -1365,6 +1375,12 @@ class Resim:
         return roll
 
     def handle_ball(self):
+        if "senses foul play" in self.desc:
+            # does this just immediately exit???
+            # happens when pitcher is hard boiled and batter has debt_zero
+            self.damage(self.batter, "batter") # guessing which damage
+            return
+
         known_outcome = "ball"
         if "strikes out" in self.desc and "uses a Mind Trick" in self.desc:
             # this was really rolled as a strike????? but not always????
@@ -1414,55 +1430,58 @@ class Resim:
                 self.log_roll(Csv.PSYCHIC, "Fail", psychic_roll, False)
 
         if self.ty == EventType.WALK:
-            if self.batting_team.has_mod(Mod.BASE_INSTINCTS):
-                instinct_roll = self.roll(
-                    "base instincts", threshold=0.2, passed="Base Instincts take them directly to" in self.desc
-                )
-
-                if "Base Instincts take them directly to" in self.desc:
-                    self.log_roll(Csv.MODPROC, "Walk", instinct_roll, True)
-                    base_roll = self.roll("which base")
-                    base_two_roll = self.roll("which base")
-
-                    if "Base Instincts take them directly to second base!" in self.desc:
-                        # Note: The fielder roll is used here as the formula multiplies two rolls together
-                        # and this is the easiest way to log two rolls at once
-                        self.log_roll(
-                            Csv.INSTINCTS,
-                            "Second",
-                            base_two_roll,
-                            False,
-                            fielder_roll=base_roll,
-                            fielder=self.get_fielder_for_roll(base_roll),
-                        )
-                    if "Base Instincts take them directly to third base!" in self.desc:
-                        self.log_roll(
-                            Csv.INSTINCTS,
-                            "Third",
-                            base_two_roll,
-                            True,
-                            fielder_roll=base_roll,
-                            fielder=self.get_fielder_for_roll(base_roll),
-                        )
-                if "Base Instincts take them directly to" not in self.desc:
-                    self.log_roll(Csv.MODPROC, "Balk", instinct_roll, False)
-
-            for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
-                runner = self.data.get_player(runner_id)
-                if base == Base.THIRD:
-                    if runner.raw_name in self.desc and "scores" in self.desc:
-                        self.damage(runner, "runner")
-                if base == Base.SECOND and "Base Instincts" in self.desc and "scores" in self.desc:
-                    if runner.raw_name in self.desc:
-                        self.damage(runner, "runner")
-                if base == Base.FIRST and "Base Instincts" in self.desc and "scores" in self.desc:
-                    if runner.raw_name in self.desc:
-                        self.damage(runner, "runner")
-
-            self.damage(self.pitcher, "pitcher")
-            self.damage(self.batter, "batter")
+            self.handle_walk()
         else:
             self.damage(self.pitcher, "pitcher")
+
+    def handle_walk(self):
+        if self.batting_team.has_mod(Mod.BASE_INSTINCTS):
+            instinct_roll = self.roll(
+                "base instincts", threshold=0.2, passed="Base Instincts take them directly to" in self.desc
+            )
+
+            if "Base Instincts take them directly to" in self.desc:
+                self.log_roll(Csv.MODPROC, "Walk", instinct_roll, True)
+                base_roll = self.roll("which base")
+                base_two_roll = self.roll("which base")
+
+                if "Base Instincts take them directly to second base!" in self.desc:
+                    # Note: The fielder roll is used here as the formula multiplies two rolls together
+                    # and this is the easiest way to log two rolls at once
+                    self.log_roll(
+                        Csv.INSTINCTS,
+                        "Second",
+                        base_two_roll,
+                        False,
+                        fielder_roll=base_roll,
+                        fielder=self.get_fielder_for_roll(base_roll),
+                    )
+                if "Base Instincts take them directly to third base!" in self.desc:
+                    self.log_roll(
+                        Csv.INSTINCTS,
+                        "Third",
+                        base_two_roll,
+                        True,
+                        fielder_roll=base_roll,
+                        fielder=self.get_fielder_for_roll(base_roll),
+                    )
+            if "Base Instincts take them directly to" not in self.desc:
+                self.log_roll(Csv.MODPROC, "Balk", instinct_roll, False)
+
+        for base, runner_id in zip(self.update["basesOccupied"], self.update["baseRunners"]):
+            runner = self.data.get_player(runner_id)
+            if base == Base.THIRD:
+                if runner.raw_name in self.desc and "scores" in self.desc:
+                    self.damage(runner, "runner")
+            if base == Base.SECOND and "Base Instincts" in self.desc and "scores" in self.desc:
+                if runner.raw_name in self.desc:
+                    self.damage(runner, "runner")
+            if base == Base.FIRST and "Base Instincts" in self.desc and "scores" in self.desc:
+                if runner.raw_name in self.desc:
+                    self.damage(runner, "runner")
+
+        self.damage(self.pitcher, "pitcher")
+        self.damage(self.batter, "batter")
 
     def handle_strike(self):
         if ", swinging" in self.desc or "strikes out swinging." in self.desc:
@@ -2306,6 +2325,7 @@ class Resim:
             "2021-07-28T09:24:31.243Z",
             "2021-07-23T04:09:42.750Z",
             "2021-07-22T09:18:04.254Z",
+            "2021-07-20T07:02:43.599Z",
         ]
 
         # cheating a little to predict the future etc
@@ -4610,7 +4630,7 @@ class Resim:
             # For some reason, this swap doesn't actually happen. Possibly a bug with a player getting swapped multiple times?
             if event["created"] in ["2021-04-20T15:01:43.671Z", "2021-06-18T03:11:33.191Z"]:
                 return
-            if event["created"] == "2021-07-26T18:16:26.686Z":
+            if event["created"] in ["2021-07-26T18:16:26.686Z", "2021-07-20T04:31:50.511Z"]:
                 # by the time we get this event it's already happened in our data??
                 return
             team = self.data.get_team(meta["teamId"])
@@ -4622,11 +4642,14 @@ class Resim:
             b_location = (
                 team.rotation if meta["bLocation"] == 1 else (team.lineup if meta["bLocation"] == 0 else team.shadows)
             )
-            a_idx = a_location.index(a_player)
-            b_idx = b_location.index(b_player)
-            b_location[b_idx] = a_player
-            a_location[a_idx] = b_player
-            team.last_update_time = self.event["created"]
+            if a_player not in a_location or b_player not in b_location:
+                self.error("could not execute player swap, didn't find the players in that spot!!!")
+            else:
+                a_idx = a_location.index(a_player)
+                b_idx = b_location.index(b_player)
+                b_location[b_idx] = a_player
+                a_location[a_idx] = b_player
+                team.last_update_time = self.event["created"]
 
         if event["type"] == EventType.PLAYER_BORN_FROM_INCINERATION:
             # Roscoe Sundae replaced the incinerated Case Sports. etc
