@@ -194,12 +194,6 @@ class Resim:
             "48ad61f1-a231-4061-bb84-331ce891626a": Mod.ZERO,
             "b0a8c4c3-eeca-49a7-bf47-771a614bb3f3": Mod.LOVE,
             "a0e2ba91-16d5-4f39-9bc8-7ee35042fae0": Mod.AAA,
-            "580a949d-ad9b-4a5d-a621-f029c308cd1d": Mod.ELECTRIC,
-            "79a8d82b-99b7-4155-9033-e0ea9081c9b5": Mod.FIERY,
-            "7aec27ef-8d32-41ca-bf5c-c49627715545": Mod.ELECTRIC,
-            "3a08c930-88b4-4505-8539-5e51ccb02edb": Mod.BASE_INSTINCTS,
-            "70c5097a-986a-444f-a992-f39624d939ac": Mod.AA,
-            "f12cd00e-a499-4268-80d1-888522bbd038": Mod.LOVE,
         }
         if self.game_id in a_blood_type_overrides:
             blood_type = a_blood_type_overrides[self.game_id]
@@ -3601,12 +3595,6 @@ class Resim:
                         break # <-- load-bearing
 
                 if not pulled_back:
-                    if (player.name == "Vessalius Sundae"
-                        and self.game_id == "acd850ea-be75-452c-9a38-e00758de353b"
-                        and self.event["created"] > "2021-06-23T21:14:21.000Z"
-                    ):
-                        continue
-
                     self.roll(f"elsewhere ({player.raw_name})")
 
                     if returned:
@@ -4671,14 +4659,6 @@ class Resim:
         ):
             self.batter.add_mod(Mod.OVERPERFORMING, ModType.GAME)
             self.batter.last_update_time = self.event["created"]
-
-        # fix for starting mid game
-        if self.game_id == "21531c41-c358-409d-a79e-7063c802e536" and self.event["created"] > "2021-06-25T03:27:08.050":
-            mira_lemma = self.data.get_player("5991ccb3-7eed-46d9-9d7c-69dec9b56d4b")
-            if mira_lemma.has_mod(Mod.ELSEWHERE):
-                mira_lemma.remove_mod(Mod.ELSEWHERE, ModType.PERMANENT)
-                mira_lemma.raw_name = "---a L-m-a"
-                pass
 
     def apply_event_changes(self, event):
         # maybe move this function to data.py?
