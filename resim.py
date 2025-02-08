@@ -512,7 +512,7 @@ class Resim:
                 weather = Weather(game["weather"])
                 self.roll(f"postseason weather ({weather.name})")
 
-                self.calc_next_game_odds(game_id)
+                self.calc_next_game_odds(game_id, use_early_data=False)
 
         # happens start of game day
         # calculating odds for the upcoming batch of games (hence: not on day 99)
@@ -532,10 +532,15 @@ class Resim:
 
         raw_updates = self.data.get_raw_game_updates(game_id)
 
-        game_data = [u['data'] for u in raw_updates if u['data']['homeOdds'] > 0][0]
+        game_data = [u['data'] for u in raw_updates if u['data']['homeOdds'] > 0 and u['data']['homePitcher']][0]
         if not use_early_data:
             game_data = [u['data'] for u in raw_updates if u['data']['gameStart']][0]
         
+        data_known_invalid = False
+        # missing the "early" event so we don't get the wrong odds
+        if game_id == "c8bfd47f-3fbb-48fb-a1f7-5c95daf26f81" and use_early_data:
+            data_known_invalid = True
+
         home_odds = game_data['homeOdds']
         away_odds = game_data['awayOdds']
 
@@ -545,6 +550,7 @@ class Resim:
         delta = (fuzz_roll-0.5)*0.07
 
         self.print(f"=== matchup: s{game_data['season']+1}d{game_data['day']+1}, game {game_id}, {game_data['awayTeamNickname']}@{game_data['homeTeamNickname']}")
+        self.print(f"=== {game_data['awayPitcherName']} @ {game_data['homePitcherName']}")
         self.print(f"home odds: {game_data['homeOdds']}")
         self.print(f"away odds: {game_data['awayOdds']}")
 
@@ -583,7 +589,8 @@ class Resim:
             self.print(f"unambiguous unfuzzed home odds: {unfuzzed_home_odds}")
             self.print(f"unambiguous unfuzzed away odds: {unfuzzed_away_odds}")
 
-            self.odds_log.append(OddsLog(game_id=game_id, season=game_data["season"], day=game_data["day"], home_batting_stars=home_batting_stars, away_batting_stars=away_batting_stars, home_pitching_stars=home_pitching_stars, away_pitching_stars=away_pitching_stars, home_wins=home_wins, away_wins=away_wins, home_odds=unfuzzed_home_odds, away_odds=unfuzzed_away_odds, home_batters=len(home_team.lineup), away_batters=len(away_team.lineup), home_pitcher_id=game_data['homePitcher'], away_pitcher_id=game_data['awayPitcher'], home_team=home_team.id, away_team=away_team.id))
+            if not data_known_invalid:
+                self.odds_log.append(OddsLog(game_id=game_id, season=game_data["season"], day=game_data["day"], home_batting_stars=home_batting_stars, away_batting_stars=away_batting_stars, home_pitching_stars=home_pitching_stars, away_pitching_stars=away_pitching_stars, home_wins=home_wins, away_wins=away_wins, home_odds=unfuzzed_home_odds, away_odds=unfuzzed_away_odds, home_batters=len(home_team.lineup), away_batters=len(away_team.lineup), home_pitcher_id=game_data['homePitcher'], away_pitcher_id=game_data['awayPitcher'], home_team=home_team.id, away_team=away_team.id))
 
             for odd in [unfuzzed_home_odds, unfuzzed_away_odds]:
                 rounded = str(odd)[:10]
