@@ -123,6 +123,7 @@ class Mod(Enum):
     FORCE = auto()
     GAUDY = auto()
     GRAVITY = auto()
+    GREEN_LIGHT = auto()
     GRIND_RAIL = auto()
     GROWTH = auto()
     GUARDED = auto()
@@ -364,6 +365,7 @@ class EventType(IntEnum):
     A_BLOOD_TYPE = 198
     PLAYER_SOUL_INCREASED = 199
     BALLPARK_MOD_RATIFIED = 203
+    SMASH = 204
     HYPE_BUILT = 206
     PRACTICING_MODERATION = 208
     RUNS_SCORED = 209
@@ -382,6 +384,7 @@ class EventType(IntEnum):
     VOICEMAIL = 228
     THIEVES_GUILD_ITEM = 230
     THIEVES_GUILD_PLAYER = 231
+    TUMBLEWEED_SOUNDS = 232
     TRADER_TRAITOR = 233
     TRADE_FAILED = 234
     TRADE_SUCCESS = 236
@@ -831,7 +834,16 @@ class PlayerData(TeamOrPlayerMods):
     @classmethod
     def from_chron(cls, data: Dict[str, Any], last_update_time: str, prev_player_data: Optional["PlayerData"]):
         data_state = data.get("state", {})
-        items = [ItemData.from_dict(item) for item in data.get("items") or []]
+        items = []
+        for item in data.get("items") or []:
+            # Thanks, Parker
+            if isinstance(item, str):
+                i = ItemData.null()
+                i.id = item
+                items.append(i)
+            else:
+                items.append(ItemData.from_dict(item))
+            
         player_data = PlayerData(
             id=data["id"],
             last_update_time=last_update_time,
@@ -889,7 +901,7 @@ class PlayerData(TeamOrPlayerMods):
         full_stat = getattr(self, stat)
         item_stat = full_stat - raw_stat
         return raw_stat * multiplier + item_stat
-    
+
     def undefined(self) -> bool:
         # todo: actually *do* the rolls...
         return self.has_mod(Mod.SCATTERED) and self.has_mod(Mod.UNDEFINED)

@@ -631,7 +631,12 @@ NUM_ELEMENTS_FN = {
         ItemRollType.CHEST: lambda x: 0 if x < 0.05 else 1 if x < 0.55 else 2 if x < 0.95 else 3,
         ItemRollType.GLITTER: lambda x: 0 if x < 0.5 else 1 if x < 0.9 else 2,
         ItemRollType.PRIZE: lambda x: 1 if x < 0.47 else 2 if x < 0.95 else 3, # todo: check this for sure, we have a 0.4601 that's definitely only *one* element (2021-07-20T15:00:08.612Z)
-    }
+    },
+    (23, 0): {
+        ItemRollType.CHEST: lambda x: 0 if x < 0.05 else 1 if x < 0.55 else 2 if x < 0.95 else 3,
+        ItemRollType.GLITTER: lambda x: 0 if x < 0.35 else 1 if x < 0.9 else 2,
+        ItemRollType.PRIZE: lambda x: 1 if x < 0.45 else 2 if x < 0.95 else 3,
+    },
 }
 
 
@@ -897,6 +902,24 @@ SUFFIX_POOL = {
     ),
 }
 
+# Very unsure about this, but there's a Helmet of Wisdom that drops in glitter and the roll doesn't work with the other pool. But the community chest drop a few games earlier needs the old pool.
+SUFFIX_POOL_GLITTER = {(20, 0): (
+        "Unknown",
+        "Blaserunning",
+        "Fourtitude",
+        "Unknown",
+        "Stamina",
+        "Vanity",
+        "Vitality",
+        "Intelligence",
+        "Strength",
+        "Charisma",
+        "Wisdom",
+        "Dexterity",
+        "the Feast",
+        "the Famine",
+    ),
+}
 
 DELTA = 0.00000000000001
 
@@ -965,7 +988,7 @@ def roll_item(
     prefix_pool = list(get_pool_for_day(prefix_pool, season, day))
     post_prefix_pool = POST_PREFIX_POOL_GLITTER if roll_type == ItemRollType.GLITTER else POST_PREFIX_POOL_CHEST
     post_prefix_pool = get_pool_for_day(post_prefix_pool, season, day)
-    suffix_pool = get_pool_for_day(SUFFIX_POOL, season, day)
+    suffix_pool = get_pool_for_day(SUFFIX_POOL_GLITTER if roll_type == ItemRollType.GLITTER and season >= 20 else SUFFIX_POOL, season, day)
     for _ in range(num_elements):
         value = roll(f"pre-prefix???")
         if value < 0.25:
