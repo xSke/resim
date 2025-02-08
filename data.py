@@ -68,7 +68,6 @@ def get_cached(key, url):
                 return data
             except json.JSONDecodeError:
                 pass
-
     data = requests.get(url).json()
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f)
@@ -1182,6 +1181,30 @@ class GameData:
             if update["data"]["gameStart"]:
                 play = update["data"]["playCount"]
                 self.plays[(game_id, play)] = update["data"]
+    
+    def fetch_standings_at(self, standings_id, timestamp):
+        key = f"standings_{standings_id}_{timestamp}"
+        resp = get_cached(
+            key,
+            f"{CHRONICLER_URI}/v2/entities?type=standings&id={standings_id}&at={timestamp}",
+        )
+        return resp["items"][0]
+
+    def fetch_season_at(self, season_id, timestamp):
+        key = f"season_{season_id}_{timestamp}"
+        resp = get_cached(
+            key,
+            f"{CHRONICLER_URI}/v2/entities?type=season&id={season_id}&at={timestamp}",
+        )
+        return resp["items"][0]
+    
+    def fetch_game_order(self, season, day):
+        key = f"game_order_{season}_{day}"
+        resp = get_cached(
+            key,
+            f"https://api.sibr.dev/eventually/v2/events?sim=thisidisstaticyo&type=0&season={season}&day={day}&sortorder=asc"
+        )
+        return [evt["gameTags"][0] for evt in resp]
 
     def fetch_league_data(self, timestamp, delta_secs: float = 0):
         self.fetch_sim(timestamp, delta_secs)

@@ -82,6 +82,8 @@ class Csv(Enum):
     UPGRADE_OUT = "upgrade_out"
     SWEEP = "sweep"
 
+# todo: get rid of this crime, it breaks under multiprocessing anyway
+seen_odds = {}
 
 class Resim:
     def __init__(self, rng, out_file, run_name, raise_on_errors=True, csvs_to_log=[]):
@@ -118,6 +120,8 @@ class Resim:
         self.event = None
         self.prev_event = None
 
+        self.run_name = run_name.replace(":", "_")
+
         if run_name:
             os.makedirs("roll_data", exist_ok=True)
             run_name = run_name.replace(":", "_")
@@ -126,6 +130,7 @@ class Resim:
         else:
             self.csvs = {}
         self.roll_log: List[LoggedRoll] = []
+        self.odds_log: List[OddsLog] = []
 
     def print(self, *args, **kwargs):
         if self.out_file is None:
@@ -245,6 +250,7 @@ class Resim:
             "2021-07-19T18:11:34.836Z": 1, # ??
             "2021-07-21T11:13:17.022Z": 3, # ??? i think this home run is actually fake somehow
             "2021-07-21T21:08:45.629Z": 1, # elsewhere scattering?
+            "2021-07-23T22:07:38.888Z": 2, # fix for item gen problem
         }
         to_step = event_adjustments.get(self.event["created"])
         if to_step is not None:
@@ -482,6 +488,125 @@ class Resim:
             else:
                 self.log_roll(Csv.WEATHERPROC, "Salmon", salmon_roll, False)
     
+    def start_game_day(self, season, day):
+        # happens end of last game day, really
+        current_game_order = self.data.fetch_game_order(season, day)
+        for game_id in current_game_order: 
+            raw_updates = self.data.get_raw_game_updates(game_id)
+            predicted_home_pitcher = [u["data"]["homePitcher"] for u in raw_updates if u["data"]["homePitcher"]][0]
+            real_home_pitcher = [u["data"]["homePitcher"] for u in raw_updates if u["data"]["homePitcher"] and u["data"]["gameStart"]][0]
+            predicted_away_pitcher = [u["data"]["awayPitcher"] for u in raw_updates if u["data"]["awayPitcher"]][0]
+            real_away_pitcher = [u["data"]["awayPitcher"] for u in raw_updates if u["data"]["awayPitcher"] and u["data"]["gameStart"]][0]
+            
+            self.print(f"predicted home pitcher: {predicted_home_pitcher}, predicted away pitcher: {predicted_away_pitcher}")
+            self.print(f"real home pitcher: {real_home_pitcher}, real away pitcher: {real_away_pitcher}")
+            mismatch = predicted_home_pitcher != real_home_pitcher or predicted_away_pitcher != real_away_pitcher
+
+            if mismatch:
+                self.print(f"!!! warn: mispredicted pitchers on {season, day}")
+                self.calc_next_game_odds(game_id, use_early_data=False)
+
+        if day >= 99:
+            for game_id in current_game_order:
+                game = self.data.get_update(game_id, 5)
+                weather = Weather(game["weather"])
+                self.roll(f"postseason weather ({weather.name})")
+
+                self.calc_next_game_odds(game_id)
+
+        # happens start of game day
+        # calculating odds for the upcoming batch of games (hence: not on day 99)
+        if day < 98:
+            upcoming_game_order = self.data.fetch_game_order(season, day+1)
+            self.print(f"next day order: {upcoming_game_order}")
+            for upcoming_game_id in upcoming_game_order:
+                self.calc_next_game_odds(upcoming_game_id)
+        pass
+
+    def calc_next_game_odds(self, game_id, use_early_data=True):
+        # todo: merge this into data.py, it belongs there
+        # yes we are intentionally fetching standings for the "previous" day
+        # when doing upcoming-game odds, because that's what it'd have available
+        season = self.data.fetch_season_at(self.data.sim["seasonId"], self.event["created"])["data"]
+        standings = self.data.fetch_standings_at(season["standings"], self.event["created"])["data"]
+
+        raw_updates = self.data.get_raw_game_updates(game_id)
+
+        game_data = [u['data'] for u in raw_updates if u['data']['homeOdds'] > 0][0]
+        if not use_early_data:
+            game_data = [u['data'] for u in raw_updates if u['data']['gameStart']][0]
+        
+        home_odds = game_data['homeOdds']
+        away_odds = game_data['awayOdds']
+
+        self.print("===")
+
+        fuzz_roll = self.roll("odds fuzzing")
+        delta = (fuzz_roll-0.5)*0.07
+
+        self.print(f"=== matchup: s{game_data['season']+1}d{game_data['day']+1}, game {game_id}, {game_data['awayTeamNickname']}@{game_data['homeTeamNickname']}")
+        self.print(f"home odds: {game_data['homeOdds']}")
+        self.print(f"away odds: {game_data['awayOdds']}")
+
+        home_wins = standings["wins"].get(game_data["homeTeam"], 0)
+        away_wins = standings["wins"].get(game_data["awayTeam"], 0)
+
+        # assuming team data will be correct as of time-of-call
+        home_team = self.data.get_team(game_data["homeTeam"])
+        away_team = self.data.get_team(game_data["awayTeam"])
+
+        def batting_stars(p):
+            return ((1 - p.data['tragicness']) ** 0.01) * (p.data['thwackability'] ** 0.35) * (p.data['moxie'] ** 0.075) * (p.data['divinity'] ** 0.35) * (p.data['musclitude'] ** 0.075) * ((1 - p.data['patheticism']) ** 0.05) * (p.data['martyrdom'] ** 0.02)
+
+        def pitching_stars(p):
+            return (p.data["shakespearianism"] ** 0.1) * (p.data["unthwackability"] ** 0.5) * (p.data["coldness"] ** 0.025) * (p.data["overpowerment"] ** 0.15) * (p.data["ruthlessness"] ** 0.4)
+
+        home_batting_stars = sum(batting_stars(self.data.get_player(batter_id)) for batter_id in home_team.lineup)
+        away_batting_stars = sum(batting_stars(self.data.get_player(batter_id)) for batter_id in away_team.lineup)
+        home_pitching_stars = pitching_stars(self.data.get_player(game_data['homePitcher']))
+        away_pitching_stars = pitching_stars(self.data.get_player(game_data['awayPitcher']))
+                
+        self.print(f"home wins: {home_wins}, away wins: {away_wins}")
+        self.print(f"home bstars: {home_batting_stars}, away bstars: {away_batting_stars}")
+        self.print(f"home pstars: {home_pitching_stars}, away pstars: {away_pitching_stars}")
+        self.print(f"fuzz roll: {fuzz_roll} (delta: {delta})")
+
+        if abs(delta) < abs(home_odds-0.5) or delta > 0:
+            # unambiguous
+            if home_odds > away_odds:
+                unfuzzed_home_odds = home_odds - delta
+                unfuzzed_away_odds = away_odds + delta
+            else:
+                unfuzzed_home_odds = home_odds + delta
+                unfuzzed_away_odds = away_odds - delta
+
+            self.print(f"unambiguous unfuzzed home odds: {unfuzzed_home_odds}")
+            self.print(f"unambiguous unfuzzed away odds: {unfuzzed_away_odds}")
+
+            self.odds_log.append(OddsLog(game_id=game_id, season=game_data["season"], day=game_data["day"], home_batting_stars=home_batting_stars, away_batting_stars=away_batting_stars, home_pitching_stars=home_pitching_stars, away_pitching_stars=away_pitching_stars, home_wins=home_wins, away_wins=away_wins, home_odds=unfuzzed_home_odds, away_odds=unfuzzed_away_odds, home_batters=len(home_team.lineup), away_batters=len(away_team.lineup), home_pitcher_id=game_data['homePitcher'], away_pitcher_id=game_data['awayPitcher'], home_team=home_team.id, away_team=away_team.id))
+
+            for odd in [unfuzzed_home_odds, unfuzzed_away_odds]:
+                rounded = str(odd)[:10]
+                if rounded in seen_odds:
+                    self.print(f"odds {rounded} already seen at: {seen_odds[rounded]}")
+                    seen_odds[rounded].append(game_id)
+                else:
+                    seen_odds[rounded] = [game_id]
+        else:
+            # ambiguous
+            for sign in [-1, 1]:
+                unfuzzed_home_odds = home_odds + delta*sign
+                unfuzzed_away_odds = away_odds - delta*sign
+                self.print(f"*possible* unfuzzed home odds: {unfuzzed_home_odds}")
+                self.print(f"*possible* unfuzzed away odds: {unfuzzed_away_odds}")
+                for odd in [unfuzzed_home_odds, unfuzzed_away_odds]:
+                    rounded = str(odd)[:10]
+                    if rounded in seen_odds:
+                        self.print(f"odds {rounded} already seen at: {seen_odds[rounded]}")
+                        seen_odds[rounded].append(game_id)
+                    else:
+                        seen_odds[rounded] = [game_id]
+
     def handle_misc(self):
         if self.update["gameStartPhase"] != self.next_update["gameStartPhase"]:
             self.print(f"GAME START PHASE: {self.update["gameStartPhase"]} -> {self.next_update["gameStartPhase"]} phase")
@@ -729,8 +854,9 @@ class Resim:
                 # The Second Wyatt Masoning
                 # The rolls normally assigned to "Let's Go" happen before the Second Wyatt Masoning
                 if self.desc == "Wyatt Mason was pulled through the Rift.":
-                    for _ in range(12):
-                        self.roll("game start")
+                    self.started_days.add((13, 72))
+
+                    self.start_game_day(13, 72)
                 self.generate_player()
             return True
         if self.ty in [
@@ -823,18 +949,6 @@ class Resim:
             self.roll("thieves guild?")
             return True
         if self.ty in [EventType.LETS_GO]:
-            # game start - probably like, postseason weather gen
-            if self.event["day"] >= 99:
-                self.roll("game start")
-
-            if self.event["day"] != 98 and (
-                # These rolls happen before the Second Wyatt Masoning
-                self.event["season"] != 13
-                or self.event["day"] != 72
-            ):
-                # *why*
-                self.roll("game start")
-
             # todo: figure out the real logic here, i'm sure there's some
             # a lot of these seem to be end-of-week rolls, eg. super roamin procs
             extra_start_rolls = {
@@ -876,13 +990,18 @@ class Resim:
                 (22, 72): 17569, # latesiesta (what the heck)
                 (22, 81): 14,
                 (22, 90): 14,
+                (22, 99): 14+4, # what's the extra 4? wild card picks?
             }
 
             game_id = self.event["gameTags"][0] # state not setup yet
+
             sd = (self.event['season'], self.event['day'])
             self.print(f"game start: {sd} (zero-indexed)")
             if sd not in self.started_days:
                 self.started_days.add(sd)
+                
+                self.start_game_day(self.event['season'], self.event['day'])
+
                 for _ in range(extra_start_rolls.get(sd, 0)):
                     self.roll(f"align start {game_id} day {self.day}")
 
@@ -897,19 +1016,6 @@ class Resim:
 
             self.print(self.stadium.mods)
 
-            raw_updates = self.data.get_raw_game_updates(self.game_id)
-            predicted_home_pitcher = [u["data"]["homePitcher"] for u in raw_updates if u["data"]["homePitcher"]][0]
-            real_home_pitcher = [u["data"]["homePitcher"] for u in raw_updates if u["data"]["homePitcher"] and u["data"]["gameStart"]][0]
-            predicted_away_pitcher = [u["data"]["awayPitcher"] for u in raw_updates if u["data"]["awayPitcher"]][0]
-            real_away_pitcher = [u["data"]["awayPitcher"] for u in raw_updates if u["data"]["awayPitcher"] and u["data"]["gameStart"]][0]
-            
-            self.print(f"predicted home pitcher: {predicted_home_pitcher}, predicted away pitcher: {predicted_away_pitcher}")
-            self.print(f"real home pitcher: {real_home_pitcher}, real away pitcher: {real_away_pitcher}")
-            mismatch = predicted_home_pitcher != real_home_pitcher or predicted_away_pitcher != real_away_pitcher
-
-            if mismatch:
-                self.print(f"!!! warn: mispredicted pitchers on {self.event['season'], self.event['day']}")
-                self.roll("mispredicted pitcher")
             return True
         if self.ty in [EventType.FLAG_PLANTED]:
             for _ in range(11):
@@ -983,6 +1089,7 @@ class Resim:
         if self.ty == EventType.JAZZ:
             self.print(f"(season {self.season+1} day {self.day+1}, game {self.game_id}, {self.away_team.nickname}@{self.home_team.nickname}, at {self.stadium.nickname})")
             self.print(f"(ballpark weather: {self.stadium.weather})")
+            result_weather = self.data.get_update(self.game_id, self.play+3)["weather"]
 
             if self.season == 23:
                 riff_pool = "bah boo bee bip ska ski sha shoo skoo da doo dah dee la bow bah bop wah do doh boh louie ooie ooo ah".split()
@@ -1018,6 +1125,10 @@ class Resim:
                 weather_roll = self.roll("jazz weather")
                 self.print(f"(weather index: {int(weather_roll*38)})")
                 self.roll("riff length", (len(riff_words)-3)/3, (len(riff_words)-3+1)/3)
+
+                # with open("jazz.json", "a") as f:
+                #     import json
+                #     f.write(json.dumps({"season": self.season, "day": self.day, "weather": result_weather, "roll": weather_roll, "upgrades": {k.value: v for k, v in self.stadium.weather.items()}}) + "\n")
                 
                 for word in riff_words:
                     lo, hi = 0, 1
@@ -3734,6 +3845,7 @@ class Resim:
                 "d12e21ba-5779-44f1-aa83-b788e5da8655",
                 "7b7cc1fb-d730-4bca-8b03-e5658be61136",
                 "7bdc5ef4-49aa-4052-961e-b2ea724d9ffb",
+                "7b81a595-2f49-4cc5-8ed0-1ea7283cdf5f",
             ]
         ):
             secret_base_exit_eligible = False
@@ -4772,6 +4884,13 @@ class Resim:
         for csv in self.csvs.values():
             csv.close()
 
+        import csv, dataclasses
+        if self.odds_log:
+            with open(f"roll_data/odds_{self.run_name}.csv", "w", newline="") as f:
+                dw = csv.DictWriter(f, fieldnames=list(self.odds_log[0].__dict__.keys()))
+                dw.writeheader()
+                dw.writerows((dataclasses.asdict(ol) for ol in self.odds_log))
+
 
 def advance_bases(occupied, amount, up_to=4):
     occupied = [b + (amount if b < up_to else 0) for b in occupied]
@@ -4840,3 +4959,23 @@ class LoggedRoll:
     roll_name: str
     lower_bound: float
     upper_bound: float
+
+@dataclass
+class OddsLog:
+    game_id: str
+    season: int
+    day: int
+    home_batting_stars: float
+    away_batting_stars: float
+    home_batters: int
+    away_batters: int
+    home_pitching_stars: float
+    away_pitching_stars: float
+    home_pitcher_id: str
+    away_pitcher_id: str
+    home_team: str
+    away_team: str
+    home_wins: float
+    away_wins: float
+    home_odds: float
+    away_odds: float
