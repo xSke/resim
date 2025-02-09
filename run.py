@@ -5,6 +5,7 @@ from collections import defaultdict
 from enum import Enum, auto
 from multiprocessing import Pool, Queue
 from os.path import splitext
+from pathlib import Path
 from queue import Empty
 from sys import stdout
 from tqdm import tqdm
@@ -291,11 +292,17 @@ def parse_args():
         metavar="CSV",
         help="Only log these CSV types. Default is logging all CSV types. Use --csv-list to see possible CSVs.",
     )
+    parser.add_argument("--no-csv", default=False, action="store_true", help="Don't include any CSVs. Overrides --csv.")
     parser.add_argument("--csv-list", default=False, action="store_true", help="List the CSVs which can be included")
     parser.add_argument("--season", action="extend", nargs="+", type=int, help="Season(s) to include, zero-indexed")
+    parser.add_argument("--roll-stream", default=None, type=Path,
+                        help="Save the complete stream of rolls for each fragment to a file in this directory")
 
     args = parser.parse_args()
-    args.csv = [Csv(Csv.__members__.get(csv, csv)) for csv in args.csv]
+    if args.no_csv:
+        args.csv = []
+    else:
+        args.csv = [Csv(Csv.__members__.get(csv, csv)) for csv in args.csv]
     return args
 
 
@@ -323,7 +330,7 @@ def main():
     print("Running resim...")
     with tqdm(total=total_events, unit=" events", unit_scale=True) as progress:
         all_pool_args = [
-            ((args.silent, args.outfile, args.csv), fragment)
+            ((args.silent, args.outfile, args.csv, args.roll_stream), fragment)
             for fragment in FRAGMENTS_WITH_SEASON
             if not args.season or fragment[0] in args.season
         ]
@@ -417,11 +424,11 @@ def init_pool_worker(init_args):
 def run_fragment(pool_args, progress_callback=None):
     if PROGRESS_QUEUE:
         PROGRESS_QUEUE.put((ProgressEventType.FRAGMENT_START, None))
-    (silent, out_file_name, csvs_to_log), (season, rng_state, rng_offset, step, start_time, end_time) = pool_args
+    (silent, out_file_name, csvs_to_log, stream_file_dir), (season, rng_state, rng_offset, step, start_time, end_time) = pool_args
     out_file = get_out_file(silent, out_file_name, start_time)
     rng = Rng(rng_state, rng_offset)
     rng.step(step)
-    resim = Resim(rng, out_file, run_name=f"s{season}-{start_time}", raise_on_errors=False, csvs_to_log=csvs_to_log)
+    resim = Resim(rng, out_file, run_name=f"s{season}-{start_time}", raise_on_errors=False, csvs_to_log=csvs_to_log, stream_file_dir=stream_file_dir)
 
     unreported_progress = 0
 
