@@ -86,10 +86,15 @@ class Csv(Enum):
 seen_odds = {}
 
 class Resim:
-    def __init__(self, rng, out_file, run_name, raise_on_errors=True, csvs_to_log=[]):
+    def __init__(self, rng, out_file, run_name, raise_on_errors=True, csvs_to_log=[], stream_file_dir=None):
         object_cache = {}
         self.rng = rng
         self.out_file = out_file
+        if stream_file_dir is None:
+            self.stream_file = None
+        else:
+            self.stream_file = open(stream_file_dir / (run_name + ".csv"), "w")
+            self.stream_file.write(f"type,label,value,threshold\n")
         self.data = GameData()
         self.fetched_days = set()
         self.started_days = set()
@@ -257,6 +262,7 @@ class Resim:
             self.rng.step(to_step)
             time = self.event["created"]
             self.print(f"!!! CORRECTION: stepping {to_step} @ {time}")
+            self.emit_correction_to_stream(to_step)
 
         if self.handle_misc():
             return
@@ -630,9 +636,9 @@ class Resim:
 
     def handle_misc(self):
         if self.update["gameStartPhase"] != self.next_update["gameStartPhase"]:
-            self.print(f"GAME START PHASE: {self.update["gameStartPhase"]} -> {self.next_update["gameStartPhase"]} phase")
+            self.print(f"GAME START PHASE: {self.update['gameStartPhase']} -> {self.next_update['gameStartPhase']} phase")
         if self.update["newInningPhase"] != self.next_update["newInningPhase"]:
-            self.print(f"NEW INNING PHASE: {self.update["newInningPhase"]} -> {self.next_update["newInningPhase"]} inphase")
+            self.print(f"NEW INNING PHASE: {self.update['newInningPhase']} -> {self.next_update['newInningPhase']} inphase")
 
         if (
             self.season >= 17
@@ -726,7 +732,7 @@ class Resim:
                                 eligible_items.append(item)
                             if "eDense" in self.desc and "eDense" not in item.elements:
                                 eligible_items.append(item)
-                    self.print(f"eligible items: {len(eligible_items)}, 20% is {len(eligible_items)*0.2}, children: {len(self.event["metadata"]["children"])}")
+                    self.print(f"eligible items: {len(eligible_items)}, 20% is {len(eligible_items)*0.2}, children: {len(self.event['metadata']['children'])}")
 
             # skipping pregame messages
             return True
@@ -4859,6 +4865,17 @@ class Resim:
 
         self.save_data()
 
+    def emit_roll_to_stream(self, label: str, value: float, threshold: float | None):
+        if self.stream_file is None:
+            return
+        self.stream_file.write(f"roll,{label},{value},{threshold}\n")
+
+    def emit_correction_to_stream(self, to_step: int):
+        if self.stream_file is None:
+            return
+        for _ in range(to_step):
+            self.stream_file.write(f"correction,,{to_step},\n")
+
     def roll(
         self,
         label,
@@ -4869,6 +4886,7 @@ class Resim:
     ) -> float:
         value = self.rng.next()
         self.print(f"{label}: {value}")
+        self.emit_roll_to_stream(label, value, threshold)
 
         if threshold is not None and passed is not None:
             if passed:
@@ -4906,6 +4924,9 @@ class Resim:
     def save_data(self):
         for csv in self.csvs.values():
             csv.close()
+
+        if self.stream_file is not None:
+            self.stream_file.close()
 
         import csv, dataclasses
         if self.odds_log:
