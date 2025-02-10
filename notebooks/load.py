@@ -166,6 +166,7 @@ def _load_objects(df: pd.DataFrame, object_key: str) -> DataObjectMap:
             raise ValueError(f"Cannot load object of unknown type '{obj['type']}'")
 
     object_map[np.nan] = NULL_OBJECTS[object_key]
+    object_map[pd.NA] = NULL_OBJECTS[object_key]
 
     return object_map
 
@@ -192,9 +193,9 @@ def data(
     all_files = braced_glob(f"../roll_data/s{season_str}*-{roll_type}.csv")
 
     df = pd.concat(
-        (pd.read_csv(f, dtype={"stadium_id": "string", "is_strike": "boolean"}) for f in all_files), ignore_index=True
+        (pd.read_csv(f, dtype={"stadium_id": "string", "is_strike": "boolean", "stadium_file": "string"}) for f in all_files), ignore_index=True
     )
-
+    
     df["stat_relevant_data"] = df[STAT_RELEVANT_DATA_KEYS].apply(_get_stat_relevant_data, axis=1)
     for object_key in itertools.chain(roles, TEAM_OBJECTS, OTHER_OBJECTS):
         objects = _load_objects(df, object_key)
