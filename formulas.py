@@ -125,7 +125,7 @@ def get_multiplier(
         elif mod == Mod.GAUDY:
             multiplier += 0.02 * len(stadium.mods)
         elif mod == Mod.CLUTTERED:
-            multiplier += 0.02 * stadium.filthiness
+            multiplier += 0.2 * stadium.filthiness
         elif mod == Mod.NIGHT_VISION and meta.weather == Weather.ECLIPSE:
             multiplier += 0.5
         elif mod == Mod.MINIMIZED:
