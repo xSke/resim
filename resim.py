@@ -1,3 +1,4 @@
+import json
 import math
 import os
 import re
@@ -93,8 +94,7 @@ class Resim:
         if stream_file_dir is None:
             self.stream_file = None
         else:
-            self.stream_file = open(stream_file_dir / (run_name + ".csv"), "w")
-            self.stream_file.write(f"type,label,value,threshold\n")
+            self.stream_file = open(stream_file_dir / (run_name + ".ndjson"), "w")
         self.data = GameData()
         self.fetched_days = set()
         self.started_days = set()
@@ -4920,16 +4920,22 @@ class Resim:
 
         self.save_data()
 
-    def emit_roll_to_stream(self, label: str, value: float, threshold: float | None):
+    def emit_roll_to_stream(self, label: str, value: float, passed: Optional[bool], threshold: Optional[float]):
         if self.stream_file is None:
             return
-        self.stream_file.write(f"roll,{label},{value},{threshold}\n")
+        self.stream_file.write(json.dumps({
+            "label": label,
+            "roll": value,
+            "passed": passed,
+            "threshold": threshold
+        }) + "\n")
 
     def emit_correction_to_stream(self, to_step: int):
         if self.stream_file is None:
             return
-        for _ in range(to_step):
-            self.stream_file.write(f"correction,,{to_step},\n")
+        self.stream_file.write(json.dumps({
+            "correction": to_step
+        }) + "\n")
 
     def roll(
         self,
@@ -4941,7 +4947,7 @@ class Resim:
     ) -> float:
         value = self.rng.next()
         self.print(f"{label}: {value}")
-        self.emit_roll_to_stream(label, value, threshold)
+        self.emit_roll_to_stream(label, value, passed, threshold)
 
         if threshold is not None and passed is not None:
             if passed:
