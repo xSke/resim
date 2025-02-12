@@ -55,8 +55,7 @@ def get_multiplier(
                 if attr not in [
                     "patheticism",
                     "thwackability",
-                    #"ruthlessness", don't believe this is true, at least not for Strike checks past S19
-                    #"coldness", don't believe this is true, at least not for Strike checks past S19
+                    "ruthlessness", #The Thieves got robbed. This one is confirmed for all seasons for Strikes and for Swing on Balls
                     "buoyancy",
                 ]:
                     multiplier += 0.05
