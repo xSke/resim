@@ -123,6 +123,7 @@ class Mod(Enum):
     FORCE = auto()
     GAUDY = auto()
     GRAVITY = auto()
+    GREEN_LIGHT = auto()
     GRIND_RAIL = auto()
     GROWTH = auto()
     GUARDED = auto()
