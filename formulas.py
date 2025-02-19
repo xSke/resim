@@ -55,8 +55,7 @@ def get_multiplier(
                 if attr not in [
                     "patheticism",
                     "thwackability",
-                    #"ruthlessness", don't believe this is true, at least not for Strike checks past S19
-                    #"coldness", don't believe this is true, at least not for Strike checks past S19
+                    "ruthlessness", #The Thieves got robbed. This one is confirmed for all seasons for Strikes and for Swing on Balls
                     "buoyancy",
                 ]:
                     multiplier += 0.05
@@ -125,16 +124,16 @@ def get_multiplier(
         elif mod == Mod.GAUDY:
             multiplier += 0.02 * len(stadium.mods)
         elif mod == Mod.CLUTTERED:
-            multiplier += 0.02 * stadium.filthiness
+            multiplier += 0.2 * stadium.filthiness
         elif mod == Mod.NIGHT_VISION and meta.weather == Weather.ECLIPSE:
             multiplier += 0.5
         elif mod == Mod.MINIMIZED:
             return 0.00001 #Apparently this should just be 0, but it turns out that one of our formulas divides by an attribute. Let's not divide by zero shall we
-        elif mod == Mod.GREEN_LIGHT:
-            if meta.weather == Weather.POLARITY_PLUS:
-                multiplier += 0.5
-            elif meta.weather == Weather.POLARITY_MINUS:
-                multiplier -= 0.5
+        elif mod == Mod.GREEN_LIGHT and meta.weather == Weather.POLARITY_PLUS:
+            multiplier += 0.5
+        elif mod == Mod.GREEN_LIGHT and meta.weather == Weather.POLARITY_MINUS:
+            multiplier -=0.5
+
 
     if player.bat == "NIGHT_VISION_GOGGLES" and meta.weather == Weather.ECLIPSE:
         # Blessing description: Item. Random player on your team hits 50% better during Solar Eclipses.
