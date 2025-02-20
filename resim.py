@@ -152,6 +152,12 @@ class Resim:
             error_string = " ".join(args)
             raise RuntimeError(error_string)
 
+    def has_stadium_or_league_mod(self, mod: Mod) -> bool:
+        if self.stadium.has_mod(mod):
+            return True
+        league_mods = self.data.sim["attr"]
+        return str(mod) in league_mods
+
     def handle(self, event):
         self.setup_data(event)
 
@@ -227,15 +233,22 @@ class Resim:
             "2021-05-10T18:05:08.668Z": 1, # likely mind trick edge case?
             "2021-05-13T15:00:17.580Z": -1,
             "2021-05-13T16:38:59.820Z": 387,  # skipping latesiesta
-            "2021-06-16T06:22:08.507Z": 1, # elsewhere return related?
+            "2021-06-16T06:22:08.507Z": 1, # elsewhere return related? seeker returns and immediately rolls?
 
-            "2021-06-25T22:10:22.558Z": 2, # extra roll for consumers, maybe a defense?
-            "2021-06-24T10:13:01.619Z": 4, # sac or something?
-
-            "2021-06-29T05:04:54.101Z": 1, # funky? might be item damage related (two careful players)
-
+            "2021-06-21T16:21:16.847Z": 1,
+            "2021-06-22T07:24:35.976Z": 1, # placing fifth base?
+            "2021-06-22T10:05:19.402Z": 1, # grind rail?
+            "2021-06-22T13:18:21.977Z": 1, # grind rail?
+            "2021-06-22T13:27:55.405Z": 1, # grind rail? These three are all right after a grind rail that we know is right because of the score rolls?
+            "2021-06-23T03:06:34.599Z": 1, # bloodrain
+            "2021-06-23T07:03:45.048Z": 3, # double play?
+            "2021-06-23T07:21:32.667Z": 2, # advance on sac with same player on base twice
+            "2021-06-23T11:00:54.472Z": 1, # undefined player tags up and scores. Their item breaks.
+            "2021-06-24T10:13:01.619Z": 4, # advance on sac with same player on base twice
+            "2021-06-24T13:09:16.489Z": 1, # possibly caused by "The Echo Chamber traps a wave. Wyatt Mason X is temporarily Reverberating!"
+            "2021-06-24T21:18:53.536Z": -1, # Too many item damage rolls when an item takes damage.
+            "2021-06-24T23:09:12.212Z": 2, # Might be a fake home run, but then it'd be 1 roll too long.
             "2021-07-26T16:08:28.076Z": 1, # consumer roll suspiciously low, might actually be party
-            "2021-07-26T17:36:38.281Z": 4, # maxi socks item gem broken
             "2021-07-26T18:09:17.129Z": 2, # observed?
             "2021-07-26T18:20:09.430Z": 1, # consumer attack item defend push?
             "2021-07-28T09:22:11.719Z": 3,
@@ -306,10 +319,10 @@ class Resim:
 
         if self.handle_polarity():
             return
-        
+
         if self.handle_consumers():
             return
-                
+
         if self.handle_ballpark():
             return
 
@@ -414,7 +427,7 @@ class Resim:
                 self.handle_salmon()
 
             if cur_phase == 2:
-                has_hotel_motel = self.stadium.has_mod(Mod.HOTEL_MOTEL) or self.season >= 18
+                has_hotel_motel = self.has_stadium_or_league_mod(Mod.HOTEL_MOTEL)
                 if has_hotel_motel and self.day < 27:
                     hotel_roll = self.roll("hotel motel")
 
@@ -945,6 +958,8 @@ class Resim:
             EventType.BIG_DEAL,
             EventType.WON_INTERNET_SERIES,
             EventType.UNDEFINED_TYPE,
+            EventType.TUMBLEWEED_SOUNDS,
+            EventType.SMASH,
         ]:
             # skip postseason
             return True
@@ -1060,7 +1075,15 @@ class Resim:
                 (19, 108): 10,
                 (19, 113): 2,
                 (20, 9): 10,
+                (20, 18): 10,
+                (20, 27): 226, # earlsiesta
+                (20, 36): 10,
+                (20, 45): 10,
+                (20, 54): 10,
                 (20, 63): 10,
+                (20, 79): 1,
+                (20, 81): 10,
+                (20, 90): 13,
                 (20, 108): 10,
                 (20, 112): 1,
                 (22, 9): 14,
@@ -1491,15 +1514,15 @@ class Resim:
         if self.is_strike:
             if self.batter.undefined():
                 # div/musc/path/thwack
-                self.roll("undefined (swing on strike)")            
-                self.roll("undefined (swing on strike)")            
-                self.roll("undefined (swing on strike)")            
-                self.roll("undefined (swing on strike)")            
+                self.roll("undefined (swing on strike)")
+                self.roll("undefined (swing on strike)")
+                self.roll("undefined (swing on strike)")
+                self.roll("undefined (swing on strike)")
         else:
             if self.batter.undefined():
                 # moxie/path
-                self.roll("undefined (swing on ball)")            
-                self.roll("undefined (swing on ball)")            
+                self.roll("undefined (swing on ball)")
+                self.roll("undefined (swing on ball)")
 
         roll = self.roll("swing")
 
@@ -2297,6 +2320,7 @@ class Resim:
             # if this is a REAL home run, and not an UPGRADED home run, add here
             # (will only be applicable when formula guesses wrong)
             fakeout_overrides = [
+                "2021-06-21T18:05:12.440Z",
                 "2021-06-26T16:26:38.648Z",
                 "2021-06-21T19:25:24.958Z",
                 "2021-06-21T18:05:12.440Z",
@@ -2314,12 +2338,19 @@ class Resim:
                 "2021-07-23T04:14:53.537Z",
             ]
 
+            fakeout_opposite_overrides = [
+                # these ones are ACTUALLY fake
+                "2021-06-21T16:21:15.688Z",
+                "2021-06-23T11:25:07.154Z",
+                "2021-06-25T01:04:24.810Z",
+            ]
+
             out_roll, out_threshold = self.roll_out(False)
 
             # assuming this can never be >0.04
             predicted_upgrade_roll = self.get_predicted_upgrade_roll()
 
-            if self.season >= 20 and out_roll > out_threshold and self.event["created"] not in fakeout_overrides and predicted_upgrade_roll < 0.04:
+            if self.season >= 20 and predicted_upgrade_roll < 0.04 and (out_roll > out_threshold and self.event["created"] not in fakeout_overrides) or (self.event["created"] in fakeout_opposite_overrides):
                 fly_threshold = get_fly_or_ground_threshold(
                     self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
                 )
@@ -2416,8 +2447,7 @@ class Resim:
                     False,
                 )
 
-        # air balloons were ratified in s21 latesiesta so would turn into a sim mod (todo: make sim mod check nicer)
-        if self.stadium.has_mod(Mod.AIR_BALLOONS) or Mod.AIR_BALLOONS.name in self.data.sim["attr"]:
+        if self.has_stadium_or_league_mod(Mod.AIR_BALLOONS):
             self.roll("pop balloon?")
             if "struck and popped" in self.desc:
                 self.roll("num birds scared")
@@ -2457,6 +2487,19 @@ class Resim:
         # (will only be applicable when formula guesses wrong)
         # i think these can only be singles, too, so might need to skip the double/triple checks
         fakeout_override = [
+            "2021-06-21T22:11:39.832Z",
+            "2021-06-22T02:20:17.067Z",
+            "2021-06-22T02:24:32.718Z",
+            "2021-06-22T02:26:47.660Z",
+            "2021-06-22T03:09:00.056Z",
+            "2021-06-22T03:18:49.932Z",
+            "2021-06-22T17:07:40.424Z",
+            "2021-06-23T10:09:20.677Z",
+            "2021-06-23T13:08:29.835Z",
+            "2021-06-24T21:02:20.819Z",
+            "2021-06-24T21:03:06.513Z",
+            "2021-06-24T21:03:31.595Z",
+            "2021-06-25T18:13:28.166Z",
             "2021-06-25T22:15:33.133Z",
             "2021-06-26T20:19:15.403Z",
             "2021-06-26T17:02:37.346Z",
@@ -2513,9 +2556,13 @@ class Resim:
         fakeout_opposite_overrides = [
             # these ones are ACTUALLY fake
             "2021-06-21T20:06:14.133Z",
+            "2021-06-22T02:00:48.644Z",
             "2021-06-23T22:13:01.358Z",
             "2021-06-24T03:05:50.319Z",
             "2021-06-24T05:09:20.868Z",
+            "2021-06-24T23:19:29.431Z",
+            "2021-06-25T05:11:17.052Z",
+            "2021-06-25T15:08:54.821Z",
             "2021-07-28T09:24:31.243Z",
             "2021-07-23T04:09:42.750Z",
             "2021-07-22T09:18:04.254Z",
@@ -2837,6 +2884,9 @@ class Resim:
                 self.roll(f"unstable {player.name}")
                 rolled_unstable = True
 
+                if f"tried to incinerate {player.name}, but they're" in self.desc:
+                    break
+
                 if self.ty == EventType.INCINERATION:
                     # todo: merge this block with the one in the incineration block one once we understand how flow works
                     self.roll("instability target?")
@@ -2847,12 +2897,11 @@ class Resim:
                     return True
             if player.has_mod(Mod.FIRE_EATER) and not player.has_mod(Mod.ELSEWHERE):
                 self.roll(f"fire eater ({player.name})")
-
-                if self.ty == EventType.INCINERATION_BLOCKED:
-                    # fire eater proc - target roll maybe?
-                    self.roll("target")
-                    return True
                 break
+        if self.ty == EventType.INCINERATION_BLOCKED:
+            # fire eater proc - target roll maybe?
+            self.roll("target")
+            return True
 
     def handle_weather(self):
         if self.weather == Weather.SUN_2:
@@ -3058,7 +3107,8 @@ class Resim:
             ):
                 player = self.data.get_player(player_id)
                 # in game da1fd5a4-45bb-4dd3-811a-ebfb34fddd07, Kaylee Boyea haunts, who's the only allergic player "in the game", and thus needs an extra roll
-                if player.peanut_allergy or player_id in ["cab95673-f31b-4fb1-9764-25ceb03dd761"]:
+                if player.peanut_allergy or player_id in ["cab95673-f31b-4fb1-9764-25ceb03dd761",
+                "294600e7-6421-438d-b125-aff72dabbc42"]:
                     has_allergic_players = True
 
             if has_allergic_players:
@@ -3647,6 +3697,8 @@ class Resim:
                 # Seems to not get rolled when Wyatt Mason IV echoes scattered.
                 if unscatter_roll < threshold and (not player.has_mod(Mod.ECHO) or player.raw_name != player.name):
                     self.roll(f"unscatter letter ({player.raw_name})")
+                    # I guess ideally, we could figure out exactly how this roll works and update player.raw_name instead of a full fetch
+                    self.data.fetch_player_after(player.id, self.event["created"])
 
     def do_elsewhere_return(self, player):
         scatter_times = 0
@@ -3733,10 +3785,25 @@ class Resim:
                             return True
 
                         if "A CONSUMER!" in self.desc:
+                            # Putting the extra roll first seems to make the other two rolls fit the pools better.
+                            # Maybe it's rolling for which Plasma/Liquid when there are multiple options?
+                            if self.event["created"] in [
+                                "2021-06-24T19:04:00.349Z",
+                                "2021-06-24T21:18:28.742Z",
+                                "2021-06-25T10:01:08.293Z",
+                                "2021-06-25T11:11:34.945Z",
+                                "2021-06-25T18:09:41.279Z",
+                                "2021-06-25T19:13:16.497Z",
+                                "2021-06-25T20:05:07.687Z",
+                                "2021-06-25T20:12:53.202Z",
+                                "2021-06-25T20:20:26.999Z",
+                                ]:
+                                self.roll("???")
+
                             # this is liquid/plasma kapowing consumers
                             # one of these might be a roll for the text?
-                            self.roll("kapow")
-                            self.roll("kapow")
+                            self.roll("interjection")
+                            self.roll("wrestling move")
                             return True
                         
                         for _ in range(25):
@@ -3930,6 +3997,8 @@ class Resim:
                 "7b7cc1fb-d730-4bca-8b03-e5658be61136",
                 "7bdc5ef4-49aa-4052-961e-b2ea724d9ffb",
                 "7b81a595-2f49-4cc5-8ed0-1ea7283cdf5f",
+                "b0dd3c51-7298-41fc-b8e4-15a5bc7d68af",
+                "ee653605-274a-4026-a569-2505cf60c297",
             ]
         ):
             secret_base_exit_eligible = False
@@ -3980,6 +4049,11 @@ class Resim:
                     exit_roll,
                     False,
                 )
+
+            if secret_runner.undefined():
+                # this *might* be secret base?
+                self.roll(f"undefined (secret base exit)")
+                self.roll(f"undefined (secret base exit)")
 
             if self.ty == EventType.EXIT_SECRET_BASE:
                 return True
@@ -4072,7 +4146,7 @@ class Resim:
                     
                 self.roll("trick 1 name")
 
-                m = re.search("They do a .*? \(([0-9]+)\)", self.desc)
+                m = re.search(r"They do a .*? \(([0-9]+)\)", self.desc)
                 expected_score_1 = int(m.group(1))
                 pro_factor = 2 if "Pro Skater" in self.desc else 1
                 self.print(f"(press: {runner.pressurization}, cinn: {runner.cinnamon})")
@@ -4110,7 +4184,7 @@ class Resim:
 
                 if "lose their balance and bail!" not in self.desc:
                     self.roll("trick 2 name")
-                    m = re.search("They(?: land|'re tagged out doing) a .*? \(([0-9]+)\)", self.desc)
+                    m = re.search(r"They(?: land|'re tagged out doing) a .*? \(([0-9]+)\)", self.desc)
                     expected_score_2 = int(m.group(1))
                     lo2 = runner.pressurization * 500
                     hi2 = runner.cinnamon * 3000 + 1000
@@ -4172,7 +4246,12 @@ class Resim:
                 # https://reblase.sibr.dev/game/9d224696-6775-42c0-8259-b4de84f850a8#b65483bc-a07f-88e3-9e30-6ff9365f865b
                 bases == [Base.THIRD, Base.FIRST, Base.SECOND]
                 and base == Base.FIRST
-            ):
+            ) or (self.event["created"], base) in [
+                ("2021-06-22T07:24:45.520Z", 2) # hand holding after placing fifth base
+            ]:
+                if bases == [Base.FOURTH, Base.FOURTH] and i == 1:
+                    break
+
                 runner = self.data.get_player(self.update["baseRunners"][i])
 
                 steal_roll = self.roll(f"steal ({base})")
@@ -4237,7 +4316,7 @@ class Resim:
                 break
 
     def create_item(self, event, roll_type: ItemRollType, prev_event):
-        match = re.search("(?:gained|The Winner gets) (.+?)( and ditched| and dropped|\.?$)", self.desc)
+        match = re.search(r"(?:gained|The Winner gets) (.+?)( and ditched| and dropped|\.?$)", self.desc)
 
         expected_item_name = match.group(1) if match else ""
         if roll_type == ItemRollType.PRIZE:
@@ -4329,14 +4408,28 @@ class Resim:
 
         known_result_overrides = {
             "2021-06-21T20:17:23.768Z": True,
+            "2021-06-21T23:09:15.837Z": True,
+            "2021-06-22T23:19:22.128Z": True,
+            "2021-06-22T14:17:44.150Z": True,
+            "2021-06-21T17:09:33.198Z": True,
+            "2021-06-22T04:20:53.338Z": True,
+            "2021-06-22T20:00:30.294Z": True,
+            "2021-06-23T02:02:53.823Z": True,
+            "2021-06-23T02:17:29.933Z": True,
+            "2021-06-23T21:21:57.253Z": True,
             "2021-06-24T03:00:24.613Z": True,
             "2021-06-24T04:12:06.096Z": True,
-            "2021-06-21T23:09:15.837Z": True,
-            "2021-06-26T03:06:40.110Z": True,
             "2021-06-24T05:15:00.980Z": True,
             "2021-06-24T08:12:41.052Z": True,
             "2021-06-24T09:20:42.736Z": True,
             "2021-06-24T11:10:24.784Z": True,
+            "2021-06-24T13:04:24.385Z": True,
+            "2021-06-25T00:17:53.903Z": True,
+            "2021-06-25T01:04:25.927Z": True,
+            "2021-06-25T01:13:06.773Z": True,
+            "2021-06-25T13:22:09.477Z": True,
+            "2021-06-25T14:01:33.893Z": True,
+            "2021-06-26T03:06:40.110Z": True,
         }
         if self.event["created"] in known_result_overrides:
             self.is_strike = known_result_overrides[self.event["created"]]
