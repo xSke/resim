@@ -420,8 +420,11 @@ def get_foul_threshold(
     batter_hype = stadium.hype if not meta.top_of_inning else 0
     pitcher_hype = stadium.hype if meta.top_of_inning else 0
     hypediff = (batter_hype - pitcher_hype) * (1 + 0.2 * vibes)
-
-    threshold = 0.25 + 0.1 * fwd - 0.1 * obt + 0.1 * batter_sum + 0.02 * hypediff
+    
+    if meta.season in [11,12,13,14,15,16,17,18]:
+        threshold = 0.25 + 0.1 * fwd - 0.1 * obt + 0.1 * batter_sum + 0.02 * hypediff
+    elif meta.season in [19,20,21,22,23]:
+        threshold = 0.25 + 0.1 * fwd - 0.1 * obt + 0.1 * batter_sum + 0.013 * hypediff
     return threshold
 
 
