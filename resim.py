@@ -233,37 +233,21 @@ class Resim:
             "2021-05-10T18:05:08.668Z": 1, # likely mind trick edge case?
             "2021-05-13T15:00:17.580Z": -1,
             "2021-05-13T16:38:59.820Z": 387,  # skipping latesiesta
-            "2021-06-16T06:22:08.507Z": 1, # elsewhere return related?
+            "2021-06-16T06:22:08.507Z": 1, # elsewhere return related? seeker returns and immediately rolls?
 
-            "2021-06-21T16:21:16.259Z": 3,
             "2021-06-21T16:21:16.847Z": 1,
-            "2021-06-22T02:00:53.491Z": 3,        
-            "2021-06-22T04:20:53.338Z": 2, # undefined mod rolls + item damage/careful
-            "2021-06-22T04:20:55.733Z": -2,
-            "2021-06-22T07:24:35.976Z": 1, # fifth base?
-            "2021-06-22T10:05:19.402Z": 1,
-            "2021-06-22T13:18:21.977Z": 1,
-            "2021-06-22T13:28:07.973Z": 1,
-            "2021-06-23T03:06:34.599Z": 1,
-            "2021-06-23T07:03:45.048Z": 3,
-            "2021-06-23T07:21:32.667Z": 2,
-            "2021-06-23T11:00:54.472Z": 1,
-            "2021-06-23T11:25:07.154Z": 3,
-            "2021-06-23T21:14:24.847Z": -1,
-            "2021-06-23T21:19:51.246Z": -2,
-            "2021-06-23T21:19:52.145Z": 1,
-            "2021-06-24T10:13:01.619Z": 4, # sac or something?
-            "2021-06-24T13:09:16.489Z": 1,
-            "2021-06-24T19:04:00.858Z": 1,
-            "2021-06-24T21:18:33.146Z": 1,
-            "2021-06-24T21:18:53.536Z": -1, # item damage rolls?
-            "2021-06-24T23:09:12.212Z": 2,
-            "2021-06-24T23:19:32.065Z": 3,
-            "2021-06-25T01:04:24.810Z": 3,
-            "2021-06-25T05:11:17.098Z": 3,
-            "2021-06-25T15:08:55.310Z": 3,
-            "2021-06-25T22:10:22.554Z": -2,
-            "2021-06-25T22:10:22.558Z": 2, # extra roll for consumers, maybe a defense?
+            "2021-06-22T07:24:35.976Z": 1, # placing fifth base?
+            "2021-06-22T10:05:19.402Z": 1, # grind rail?
+            "2021-06-22T13:18:21.977Z": 1, # grind rail?
+            "2021-06-22T13:27:55.405Z": 1, # grind rail? These three are all right after a grind rail that we know is right because of the score rolls?
+            "2021-06-23T03:06:34.599Z": 1, # bloodrain
+            "2021-06-23T07:03:45.048Z": 3, # double play?
+            "2021-06-23T07:21:32.667Z": 2, # advance on sac with same player on base twice
+            "2021-06-23T11:00:54.472Z": 1, # undefined player tags up and scores. Their item breaks.
+            "2021-06-24T10:13:01.619Z": 4, # advance on sac with same player on base twice
+            "2021-06-24T13:09:16.489Z": 1, # possibly caused by "The Echo Chamber traps a wave. Wyatt Mason X is temporarily Reverberating!"
+            "2021-06-24T21:18:53.536Z": -1, # Too many item damage rolls when an item takes damage.
+            "2021-06-24T23:09:12.212Z": 2, # Might be a fake home run, but then it'd be 1 roll too long.
             "2021-07-26T16:08:28.076Z": 1, # consumer roll suspiciously low, might actually be party
             "2021-07-26T18:09:17.129Z": 2, # observed?
             "2021-07-26T18:20:09.430Z": 1, # consumer attack item defend push?
@@ -2003,8 +1987,6 @@ class Resim:
                     fielder_idx = len(eligible_fielders)
             eligible_fielders.append(fielder)
 
-        if self.game_id == "acd850ea-be75-452c-9a38-e00758de353b":
-            self.print([fielder.name for fielder in eligible_fielders])
         if check_name and fielder_idx is not None:
             expected_min = fielder_idx / len(eligible_fielders)
             expected_max = (fielder_idx + 1) / len(eligible_fielders)
@@ -2356,12 +2338,19 @@ class Resim:
                 "2021-07-23T04:14:53.537Z",
             ]
 
+            fakeout_opposite_overrides = [
+                # these ones are ACTUALLY fake
+                "2021-06-21T16:21:15.688Z",
+                "2021-06-23T11:25:07.154Z",
+                "2021-06-25T01:04:24.810Z",
+            ]
+
             out_roll, out_threshold = self.roll_out(False)
 
             # assuming this can never be >0.04
             predicted_upgrade_roll = self.get_predicted_upgrade_roll()
 
-            if self.season >= 20 and out_roll > out_threshold and self.event["created"] not in fakeout_overrides and predicted_upgrade_roll < 0.04:
+            if self.season >= 20 and predicted_upgrade_roll < 0.04 and (out_roll > out_threshold and self.event["created"] not in fakeout_overrides) or (self.event["created"] in fakeout_opposite_overrides):
                 fly_threshold = get_fly_or_ground_threshold(
                     self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
                 )
@@ -2567,9 +2556,13 @@ class Resim:
         fakeout_opposite_overrides = [
             # these ones are ACTUALLY fake
             "2021-06-21T20:06:14.133Z",
+            "2021-06-22T02:00:48.644Z",
             "2021-06-23T22:13:01.358Z",
             "2021-06-24T03:05:50.319Z",
             "2021-06-24T05:09:20.868Z",
+            "2021-06-24T23:19:29.431Z",
+            "2021-06-25T05:11:17.052Z",
+            "2021-06-25T15:08:54.821Z",
             "2021-07-28T09:24:31.243Z",
             "2021-07-23T04:09:42.750Z",
             "2021-07-22T09:18:04.254Z",
@@ -3792,12 +3785,11 @@ class Resim:
                             return True
 
                         if "A CONSUMER!" in self.desc:
-                            # this is liquid/plasma kapowing consumers
-                            # one of these might be a roll for the text?
-                            self.roll("kapow 1")
-                            self.roll("kapow 2")
-
+                            # Putting the extra roll first seems to make the other two rolls fit the pools better.
+                            # Maybe it's rolling for which Plasma/Liquid when there are multiple options?
                             if self.event["created"] in [
+                                "2021-06-24T19:04:00.349Z",
+                                "2021-06-24T21:18:28.742Z",
                                 "2021-06-25T10:01:08.293Z",
                                 "2021-06-25T11:11:34.945Z",
                                 "2021-06-25T18:09:41.279Z",
@@ -3806,7 +3798,12 @@ class Resim:
                                 "2021-06-25T20:12:53.202Z",
                                 "2021-06-25T20:20:26.999Z",
                                 ]:
-                                self.roll("kapow 3")
+                                self.roll("???")
+
+                            # this is liquid/plasma kapowing consumers
+                            # one of these might be a roll for the text?
+                            self.roll("interjection")
+                            self.roll("wrestling move")
                             return True
                         
                         for _ in range(25):
@@ -4415,6 +4412,7 @@ class Resim:
             "2021-06-22T23:19:22.128Z": True,
             "2021-06-22T14:17:44.150Z": True,
             "2021-06-21T17:09:33.198Z": True,
+            "2021-06-22T04:20:53.338Z": True,
             "2021-06-22T20:00:30.294Z": True,
             "2021-06-23T02:02:53.823Z": True,
             "2021-06-23T02:17:29.933Z": True,
