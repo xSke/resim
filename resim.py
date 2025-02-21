@@ -3954,7 +3954,7 @@ class Resim:
         attractor_eligible = not secret_runner_id
         if attractor_eligible:
             attract_roll = self.roll("secret base attract")
-            if attract_roll < 0.00035 or attract_roll < 0.001 and self.season>=22::  # guessing at threshold, was 0.0002 in s15/s16?
+            if attract_roll < 0.00035 or attract_roll < 0.001 and self.season>=22:  # guessing at threshold, was 0.0002 in s15/s16?
                 update_one_after_next = self.data.get_update(self.game_id, self.play + 2)
                 attractor_id = self.next_update.get("secretBaserunner") or update_one_after_next.get("secretBaserunner")
                 if attractor_id:
