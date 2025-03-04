@@ -637,3 +637,21 @@ def get_triple_threshold(
             return float("nan")
         opw_pow = pitcher_opw**1.5
         return 0.042 + 0.2 * batter_gf - 0.056 * opw_pow - 0.05 * fielder_chase + 0.1 * ballpark_sum
+
+def get_advance_on_hit_threshold(
+    runner: PlayerData,
+    fielder: PlayerData,
+    pitching_team: TeamData,
+    stadium: StadiumData,
+    meta: StatRelevantData,
+):
+    # no vibes
+    fielder_tenac = fielder.multiplied(
+        "chasiness", get_multiplier(fielder, pitching_team, "fielder", "chasiness", meta, stadium)
+    )
+
+    # No mods or vibes here -- not sure if I need to use .multiplied at all
+    runner_cont = runner.multiplied("continuation", 1.0)
+
+    threshold = 0.7 - fielder_tenac + 0.6 * runner_cont
+    return max(min(threshold, 0.95), 0.01)
