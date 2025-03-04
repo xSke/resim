@@ -647,7 +647,7 @@ def get_advance_on_hit_threshold(
 ):
     # no vibes
     fielder_tenac = fielder.multiplied(
-        "chasiness", get_multiplier(fielder, pitching_team, "fielder", "chasiness", meta, stadium)
+        "tenaciousness", get_multiplier(fielder, pitching_team, "fielder", "tenaciousness", meta, stadium)
     )
 
     # No mods or vibes here -- not sure if I need to use .multiplied at all
