@@ -297,6 +297,10 @@ def parse_args():
     parser.add_argument("--season", action="extend", nargs="+", type=int, help="Season(s) to include, zero-indexed")
     parser.add_argument("--roll-stream", default=None, type=Path,
                         help="Save the complete stream of rolls for each fragment to a file in this directory")
+    parser.add_argument("--fragment", type=str, action="append",
+                        help="Process only this fragment. Fragments are identified by start date (which must exactly "
+                             "match the string from run.py). You may specify this argument multiple times to process "
+                             "multiple fragments. This overrides --season.")
 
     args = parser.parse_args()
     if args.no_csv:
@@ -325,14 +329,24 @@ def main():
             print(f"  {csv.name}")
         return
 
-    total_events = get_total_events(args.season)
+    if args.fragment:
+        fragments_to_process = [
+            fragment for fragment in FRAGMENTS_WITH_SEASON if fragment[4] in args.fragment
+        ]
+    elif args.season:
+        fragments_to_process = [
+            fragment for fragment in FRAGMENTS_WITH_SEASON if fragment[0] in args.season
+        ]
+    else:
+        fragments_to_process = FRAGMENTS_WITH_SEASON
+
+    total_events = get_total_events([fragment[4] for fragment in fragments_to_process])
 
     print("Running resim...")
     with tqdm(total=total_events, unit=" events", unit_scale=True) as progress:
         all_pool_args = [
             ((args.silent, args.outfile, args.csv, args.roll_stream), fragment)
-            for fragment in FRAGMENTS_WITH_SEASON
-            if not args.season or fragment[0] in args.season
+            for fragment in fragments_to_process
         ]
         if args.no_multiprocessing:
             for pool_args in all_pool_args:
@@ -375,17 +389,15 @@ def main():
     print("Finished")
 
 
-def _total_events_for_seasons(season_events: Dict[str, int], seasons: Optional[List[int]]):
-    if seasons is None:
-        return sum(season_events.values())
-    return sum(season_events[str(season)] for season in seasons)
+def _total_events_for_fragments(fragment_events: Dict[str, int], fragment_starts: List[str]):
+    return sum(fragment_events[fragment_start] for fragment_start in fragment_starts)
 
 
-def get_total_events(seasons: Optional[List[int]]):
+def get_total_events(fragment_starts: List[str]):
     # Using json as a "hash" because it's easy and the value we're hashing isn't too huge.
     # Note python's builtin `hash()` can't be used because it's not stable between runs.
     # "version" here is just a cachebuster
-    fragments_hash = json.dumps({"version": 2, "fragments": FRAGMENTS_WITH_SEASON})
+    fragments_hash = json.dumps({"version": 3, "fragments": FRAGMENTS_WITH_SEASON})
     try:
         with open("cache/event_count.json") as f:
             event_count_cache = json.load(f)
@@ -393,27 +405,24 @@ def get_total_events(seasons: Optional[List[int]]):
         pass
     else:
         if event_count_cache["fragments_hash"] == fragments_hash:
-            return _total_events_for_seasons(event_count_cache["seasons"], seasons)
+            return _total_events_for_fragments(event_count_cache["fragments"], fragment_starts)
     print("Counting events...")
     print("This may take a long time if new events need to be fetched from chron")
-    season_events = defaultdict(lambda: 0)
+    fragment_events = {}
     with tqdm(total=len(FRAGMENTS_WITH_SEASON), unit=" fragments") as progress:
         for season, _, _, _, start_time, end_time in FRAGMENTS_WITH_SEASON:
-            # JSON is going to stringify the season because it stringifies all object keys, so
-            # _total_events_for_seasons expects string keys, and therefore we need to stringify
-            # the keys here
-            season_events[str(season)] += len(get_feed_between(start_time, end_time))
+            fragment_events[start_time] = len(get_feed_between(start_time, end_time))
             progress.update()
             progress.set_description(f"Season {season}")
     with open("cache/event_count.json", "w") as f:
         json.dump(
             {
                 "fragments_hash": fragments_hash,
-                "seasons": season_events,
+                "fragments": fragment_events,
             },
             f,
         )
-    return _total_events_for_seasons(season_events, seasons)
+    return _total_events_for_fragments(fragment_events, fragment_starts)
 
 
 def init_pool_worker(init_args):
