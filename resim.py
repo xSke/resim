@@ -36,7 +36,7 @@ from formulas import (
     get_fly_or_ground_threshold,
     get_out_threshold,
     get_double_threshold,
-    get_triple_threshold,
+    get_triple_threshold, get_advance_on_hit_threshold,
 )
 from item_gen import ItemRollType, roll_item
 
@@ -2212,17 +2212,25 @@ class Resim:
         for runner_id, base, roll_outcome in calculate_advances(
             bases_before, bases_after, bases_hit, base_before_home + 1
         ):
+            runner = self.data.get_player(runner_id)
+            fielder = self.get_fielder_for_roll(defender_roll)
+
+            advance_threshold = get_advance_on_hit_threshold(
+                runner,
+                fielder,
+                self.pitching_team,
+                self.stadium,
+                self.get_stat_meta(),
+            )
             # work around missing data in next_update
             if self.event["created"] == "2021-04-14T15:11:04.159Z":
                 roll_outcome = False
-            roll = self.roll(f"adv ({base}, {roll_outcome}")
-            runner = self.data.get_player(runner_id)
+            roll = self.roll(f"adv ({base}, {roll_outcome}", passed=roll_outcome, threshold=advance_threshold)
 
             if runner.undefined():
                 self.roll("undefined (runner adv?)")
                 pass
 
-            fielder = self.get_fielder_for_roll(defender_roll)
             if fielder.undefined():
                 self.roll("undefined (runner adv? from fielder)")
 
