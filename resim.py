@@ -1436,7 +1436,9 @@ class Resim:
                 self.roll("psychic bug reverb")
 
     def handle_mild(self):
-        mild_roll = self.roll("mild")
+        threshold = 0.0005 + 0.004 * self.stadium.mysticism
+
+        mild_roll = self.roll("mild", threshold=threshold, passed=self.ty == EventType.MILD_PITCH)
         if self.ty == EventType.MILD_PITCH:
             # skipping mild proc
 
@@ -3766,15 +3768,21 @@ class Resim:
                     self.log_roll(Csv.CONSUMERS, "Miss", attack_roll, False, attacked_team=team)
 
     def handle_party(self):
+        party_threshold = 0.0055 if self.season < 20 else 0.00525
+
         if self.season == 23 and "SIM_PARTY_TIME" not in self.data.sim["attr"]:
             return        
         if self.season != 16 or self.day >= 85:
             # lol. turns out it just rolls party all the time and throws out the roll if the team isn't partying
-            party_roll = self.roll("party time")
+
+            # If this event is a Party we know this roll must have passed, but if it's not a Party we don't know
+            # anything, since there's a possibility that the roll still passed but the team wasn't in party time
+            passed = None
+            if self.ty == EventType.PARTY:
+                passed = True
+            party_roll = self.roll("party time", threshold=party_threshold, passed=passed)
         else:
             party_roll = 1
-
-        party_threshold = 0.0055 if self.season < 20 else 0.00525
 
         if self.ty == EventType.PARTY:
             self.log_roll(Csv.PARTY, "Party", party_roll, True)
