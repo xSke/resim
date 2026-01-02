@@ -16,6 +16,8 @@ EXCLUDE_FROM_CACHE = {
     "item": {"health"},
 }
 
+SESSION = requests.Session()
+
 stat_indices = [
     "tragicness",
     "buoyancy",
@@ -68,7 +70,7 @@ def get_cached(key, url):
                 return data
             except json.JSONDecodeError:
                 pass
-    data = requests.get(url).json()
+    data = SESSION.get(url).json()
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f)
     return data
@@ -1178,9 +1180,9 @@ class GameData:
             f"{CHRONICLER_URI}/v1/games/updates?count=2000&game={game_id}",
         )
         self.games[game_id] = resp["data"]
-        for update in resp["data"]:
+        for i, update in enumerate(resp["data"]):
             if update["data"]["gameStart"]:
-                play = update["data"]["playCount"]
+                play = update["data"].get("playCount", i)
                 self.plays[(game_id, play)] = update["data"]
     
     def fetch_standings_at(self, standings_id, timestamp):
