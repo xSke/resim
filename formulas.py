@@ -655,3 +655,26 @@ def get_advance_on_hit_threshold(
 
     threshold = 0.7 - fielder_tenac + 0.6 * runner_cont
     return max(min(threshold, 0.95), 0.01)
+
+def get_advance_on_ground_out_threshold(
+    runner: PlayerData,
+    fielder: PlayerData,
+    pitching_team: TeamData,
+    stadium: StadiumData,
+    meta: StatRelevantData,
+):
+    runner_vibes = runner.vibes(meta.day)
+    fielder_vibes = fielder.vibes(meta.day)
+
+    # no mods
+    runner_ind = runner.multiplied("indulgence", 1.0) * (1 + 0.2 * runner_vibes)
+    
+    fielder_tenac = fielder.multiplied(
+        "tenaciousness", get_multiplier(fielder, pitching_team, "fielder", "tenaciousness", meta, stadium)
+    ) * (1 + 0.2 * fielder_vibes)
+
+    elong = stadium.elongation - 0.5
+    incon = stadium.inconvenience - 0.5
+
+    return 0.5 + 0.35 * runner_ind - 0.1 * fielder_tenac - 0.1 * elong - 0.1 * incon
+

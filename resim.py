@@ -36,7 +36,9 @@ from formulas import (
     get_fly_or_ground_threshold,
     get_out_threshold,
     get_double_threshold,
-    get_triple_threshold, get_advance_on_hit_threshold,
+    get_triple_threshold,
+    get_advance_on_hit_threshold,
+    get_advance_on_ground_out_threshold,
 )
 from item_gen import ItemRollType, roll_item
 
@@ -2038,9 +2040,16 @@ class Resim:
                     is_next_free = True
 
                 roll_outcome = did_advance(base, runner_id)
+                advance_threshold = get_advance_on_hit_threshold(
+                    runner,
+                    fielder,
+                    self.pitching_team,
+                    self.stadium,
+                    self.get_stat_meta(),
+                )
 
                 if is_next_free:
-                    adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})")
+                    adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})", threshold=advance_threshold, passed=roll_outcome)
                     self.log_roll(
                         Csv.FLYOUT, f"advance_{base}", adv_roll, roll_outcome, fielder=fielder, relevant_runner=runner
                     )
@@ -2168,7 +2177,11 @@ class Resim:
                     roll_outcome = did_advance(base, runner_id) if not was_forced else None
 
                 # needs... fielder tenaciousness and runner indulgence?
-                adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})")
+                adv_roll = self.roll(
+                    f"adv? {base}/{runner.name} ({roll_outcome})",
+                    threshold=get_advance_on_ground_out_threshold(runner, fielder, self.pitching_team, self.stadium, self.get_stat_meta()),
+                    passed=roll_outcome,
+                )
                 if self.batter.undefined() and base == base_before_home: # sac?
                     # self.roll("undefined (advance batter)")
                     pass
@@ -4088,7 +4101,7 @@ class Resim:
                     
                 self.roll("trick 1 name")
 
-                m = re.search("They do a .*? \(([0-9]+)\)", self.desc)
+                m = re.search(r"They do a .*? \(([0-9]+)\)", self.desc)
                 expected_score_1 = int(m.group(1))
                 pro_factor = 2 if "Pro Skater" in self.desc else 1
                 self.print(f"(press: {runner.pressurization}, cinn: {runner.cinnamon})")
@@ -4126,7 +4139,7 @@ class Resim:
 
                 if "lose their balance and bail!" not in self.desc:
                     self.roll("trick 2 name")
-                    m = re.search("They(?: land|'re tagged out doing) a .*? \(([0-9]+)\)", self.desc)
+                    m = re.search(r"They(?: land|'re tagged out doing) a .*? \(([0-9]+)\)", self.desc)
                     expected_score_2 = int(m.group(1))
                     lo2 = runner.pressurization * 500
                     hi2 = runner.cinnamon * 3000 + 1000
@@ -4253,7 +4266,7 @@ class Resim:
                 break
 
     def create_item(self, event, roll_type: ItemRollType, prev_event):
-        match = re.search("(?:gained|The Winner gets) (.+?)( and ditched| and dropped|\.?$)", self.desc)
+        match = re.search(r"(?:gained|The Winner gets) (.+?)( and ditched| and dropped|\.?$)", self.desc)
 
         expected_item_name = match.group(1) if match else ""
         if roll_type == ItemRollType.PRIZE:
