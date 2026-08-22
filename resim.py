@@ -37,6 +37,10 @@ from formulas import (
     get_out_threshold,
     get_double_threshold,
     get_triple_threshold,
+    get_advance_on_hit_threshold,
+    get_advance_on_ground_out_threshold,
+    get_double_play_threshold,
+    get_advance_on_flyout_threshold,
 )
 from item_gen import ItemRollType, roll_item
 
@@ -1436,7 +1440,9 @@ class Resim:
                 self.roll("psychic bug reverb")
 
     def handle_mild(self):
-        mild_roll = self.roll("mild")
+        threshold = 0.0005 + 0.004 * self.stadium.mysticism
+
+        mild_roll = self.roll("mild", threshold=threshold, passed=self.ty == EventType.MILD_PITCH)
         if self.ty == EventType.MILD_PITCH:
             # skipping mild proc
 
@@ -2036,9 +2042,16 @@ class Resim:
                     is_next_free = True
 
                 roll_outcome = did_advance(base, runner_id)
+                advance_threshold = get_advance_on_flyout_threshold(
+                    base,
+                    runner,
+                    self.batting_team,
+                    self.stadium,
+                    self.get_stat_meta(),
+                )
 
                 if is_next_free:
-                    adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})")
+                    adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})", threshold=advance_threshold, passed=roll_outcome)
                     self.log_roll(
                         Csv.FLYOUT, f"advance_{base}", adv_roll, roll_outcome, fielder=fielder, relevant_runner=runner
                     )
@@ -2059,7 +2072,13 @@ class Resim:
         elif self.ty == EventType.GROUND_OUT:
             if len(self.update["basesOccupied"]) > 0:
                 # roll needs batter tragicness, fielder tenaciousness, pitcher shakespearianism
-                dp_roll = self.roll("dp?")
+                dp_threshold = get_double_play_threshold(
+                    self.batter, self.pitcher, fielder, self.batting_team, self.pitching_team, self.stadium, self.get_stat_meta()
+                )
+
+                is_dp = "into a double play!" in self.desc
+
+                dp_roll = self.roll("dp?", threshold=dp_threshold, passed=is_dp)
                 if self.batter.undefined():
                     # tragicness?
                     # the control flow is really weird here
@@ -2071,8 +2090,6 @@ class Resim:
                     if fielder.undefined():
                         self.roll("undefined (dp fielder)")
                         pass
-
-                    is_dp = "into a double play!" in self.desc
                     is_fc = "on fielder's choice" in self.desc
                     self.log_roll(Csv.GROUNDOUT_FORMULAS, "DP", dp_roll, is_dp, fielder=fielder)
 
@@ -2166,7 +2183,11 @@ class Resim:
                     roll_outcome = did_advance(base, runner_id) if not was_forced else None
 
                 # needs... fielder tenaciousness and runner indulgence?
-                adv_roll = self.roll(f"adv? {base}/{runner.name} ({roll_outcome})")
+                adv_roll = self.roll(
+                    f"adv? {base}/{runner.name} ({roll_outcome})",
+                    threshold=get_advance_on_ground_out_threshold(runner, fielder, self.pitching_team, self.stadium, self.get_stat_meta()),
+                    passed=roll_outcome,
+                )
                 if self.batter.undefined() and base == base_before_home: # sac?
                     # self.roll("undefined (advance batter)")
                     pass
@@ -2212,17 +2233,25 @@ class Resim:
         for runner_id, base, roll_outcome in calculate_advances(
             bases_before, bases_after, bases_hit, base_before_home + 1
         ):
+            runner = self.data.get_player(runner_id)
+            fielder = self.get_fielder_for_roll(defender_roll)
+
+            advance_threshold = get_advance_on_hit_threshold(
+                runner,
+                fielder,
+                self.pitching_team,
+                self.stadium,
+                self.get_stat_meta(),
+            )
             # work around missing data in next_update
             if self.event["created"] == "2021-04-14T15:11:04.159Z":
                 roll_outcome = False
-            roll = self.roll(f"adv ({base}, {roll_outcome}")
-            runner = self.data.get_player(runner_id)
+            roll = self.roll(f"adv ({base}, {roll_outcome}", passed=roll_outcome, threshold=advance_threshold)
 
             if runner.undefined():
                 self.roll("undefined (runner adv?)")
                 pass
 
-            fielder = self.get_fielder_for_roll(defender_roll)
             if fielder.undefined():
                 self.roll("undefined (runner adv? from fielder)")
 
@@ -3758,15 +3787,21 @@ class Resim:
                     self.log_roll(Csv.CONSUMERS, "Miss", attack_roll, False, attacked_team=team)
 
     def handle_party(self):
+        party_threshold = 0.0055 if self.season < 20 else 0.00525
+
         if self.season == 23 and "SIM_PARTY_TIME" not in self.data.sim["attr"]:
             return        
         if self.season != 16 or self.day >= 85:
             # lol. turns out it just rolls party all the time and throws out the roll if the team isn't partying
-            party_roll = self.roll("party time")
+
+            # If this event is a Party we know this roll must have passed, but if it's not a Party we don't know
+            # anything, since there's a possibility that the roll still passed but the team wasn't in party time
+            passed = None
+            if self.ty == EventType.PARTY:
+                passed = True
+            party_roll = self.roll("party time", threshold=party_threshold, passed=passed)
         else:
             party_roll = 1
-
-        party_threshold = 0.0055 if self.season < 20 else 0.00525
 
         if self.ty == EventType.PARTY:
             self.log_roll(Csv.PARTY, "Party", party_roll, True)
@@ -4072,7 +4107,7 @@ class Resim:
                     
                 self.roll("trick 1 name")
 
-                m = re.search("They do a .*? \(([0-9]+)\)", self.desc)
+                m = re.search(r"They do a .*? \(([0-9]+)\)", self.desc)
                 expected_score_1 = int(m.group(1))
                 pro_factor = 2 if "Pro Skater" in self.desc else 1
                 self.print(f"(press: {runner.pressurization}, cinn: {runner.cinnamon})")
@@ -4110,7 +4145,7 @@ class Resim:
 
                 if "lose their balance and bail!" not in self.desc:
                     self.roll("trick 2 name")
-                    m = re.search("They(?: land|'re tagged out doing) a .*? \(([0-9]+)\)", self.desc)
+                    m = re.search(r"They(?: land|'re tagged out doing) a .*? \(([0-9]+)\)", self.desc)
                     expected_score_2 = int(m.group(1))
                     lo2 = runner.pressurization * 500
                     hi2 = runner.cinnamon * 3000 + 1000
@@ -4175,18 +4210,18 @@ class Resim:
             ):
                 runner = self.data.get_player(self.update["baseRunners"][i])
 
-                steal_roll = self.roll(f"steal ({base})")
+                was_success = self.ty == EventType.STOLEN_BASE and (
+                    base + 1 == base_stolen
+                    or base_stolen == Base.FIFTH
+                    and bool(filter(lambda i: i.name == "The Fifth Base", runner.items))
+                )
+
+                steal_roll = self.roll(f"steal ({base})", passed=was_success)
                 if steal_fielder.undefined():
                     self.roll("undefined (fielder steal)")
                 if runner.undefined():
                     self.roll(f"undefined (runner steal {base})")
                     self.roll(f"undefined (runner steal {base})")
-
-                was_success = self.ty == EventType.STOLEN_BASE and (
-                    base + 1 == base_stolen
-                    or base_stolen == Base.FIFTH
-                    and filter(lambda i: i.name == "The Fifth Base", runner.items)
-                )
                 self.log_roll(
                     Csv.STEAL_ATTEMPT,
                     f"StealAttempt{base}",
@@ -4204,9 +4239,9 @@ class Resim:
                     if runner.undefined():
                         self.roll("undefined (steal success runner)")
 
-                    success_roll = self.roll("steal success")
                     was_caught = "caught stealing" in self.desc
 
+                    success_roll = self.roll("steal success", passed=not was_caught)
                     self.log_roll(
                         Csv.STEAL_SUCCESS,
                         f"StealSuccess{base}",
@@ -4237,7 +4272,7 @@ class Resim:
                 break
 
     def create_item(self, event, roll_type: ItemRollType, prev_event):
-        match = re.search("(?:gained|The Winner gets) (.+?)( and ditched| and dropped|\.?$)", self.desc)
+        match = re.search(r"(?:gained|The Winner gets) (.+?)( and ditched| and dropped|\.?$)", self.desc)
 
         expected_item_name = match.group(1) if match else ""
         if roll_type == ItemRollType.PRIZE:
