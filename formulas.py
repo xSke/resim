@@ -654,12 +654,12 @@ def get_double_play_threshold(
 
     # no vibes, yes multipliers
     batter_trag = batter.multiplied(
-        "tragicness", get_multiplier(batter, batting_team, "batter", "tragicness", meta, stadium)
+        "tragicness", 1 / get_multiplier(batter, batting_team, "batter", "tragicness", meta, stadium)
     )
     inv_batter_trag = 1 - batter_trag
 
     pitcher_shakes = pitcher.multiplied(
-        "shakespearianism", 1 / get_multiplier(pitcher, pitching_team, "pitcher", "shakespearianism", meta, stadium)
+        "shakespearianism", get_multiplier(pitcher, pitching_team, "pitcher", "shakespearianism", meta, stadium)
     )
     pitcher_shakes = (pitcher_shakes + 0.2 * hype) * (1 + 0.2 * pitcher_vibes)
 
