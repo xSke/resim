@@ -195,6 +195,42 @@ class Redata:
     def allergic(self, timestamp: str, _team_id: str, player_id: str):
         self.peanut_reaction(timestamp, player_id, -0.2)
 
+    def _flip_permutation(self, permutation: list[int]):
+        # i messed up how the permutation works but don't wanna fix it in the data...
+        # just unbreak it here
+        return [permutation.index(i) for i in range(len(permutation))]
+
+    def reverb_full(self, timestamp: str, team_id: str, permutation: list[int]):
+        assert len(set(permutation)) == len(permutation)
+        assert len(permutation) == len(self.teams[team_id]["lineup"] + self.teams[team_id]["rotation"])
+
+        self._append({
+            "type": "reverb_full",
+            "timestamp": timestamp,
+            "team_id": team_id,
+            "permutation": self._flip_permutation(permutation)
+        })
+
+    def reverb_lineup(self, timestamp: str, team_id: str, permutation: list[int]):
+        assert len(set(permutation)) == len(permutation)
+        assert len(permutation) == len(self.teams[team_id]["lineup"])
+        self._append({
+            "type": "reverb_lineup",
+            "timestamp": timestamp,
+            "team_id": team_id,
+            "permutation": self._flip_permutation(permutation)
+        })
+
+    def reverb_rotation(self, timestamp: str, team_id: str, permutation: list[int]):
+        assert len(set(permutation)) == len(permutation)
+        assert len(permutation) == len(self.teams[team_id]["rotation"])
+        self._append({
+            "type": "reverb_rotation",
+            "timestamp": timestamp,
+            "team_id": team_id,
+            "permutation": self._flip_permutation(permutation)
+        })
+
     def reroll_attributes(self, timestamp: str, player_id: str, rng: Rng, attributes: list[str]):
         delta = {}
         for attr in attributes:
@@ -259,6 +295,27 @@ class Redata:
             for k, v in event["delta"].items():
                 player[k] += v
                 # print(f"{player['name']}/{k} += {v}")
+        elif ty == "reverb_full":
+            team = self.teams[event["team_id"]]
+            before = team["lineup"] + team["rotation"]
+            perm = event["permutation"]
+            after = [before[perm[i]] for i in range(len(perm))]
+
+            lineup_len = len(team["lineup"])
+            team["lineup"] = after[:lineup_len]
+            team["rotation"] = after[lineup_len:]
+        elif ty == "reverb_lineup":
+            team = self.teams[event["team_id"]]
+            before = team["lineup"]
+            perm = event["permutation"]
+            after = [before[perm[i]] for i in range(len(perm))]
+            team["lineup"] = after
+        elif ty == "reverb_rotation":
+            team = self.teams[event["team_id"]]
+            before = team["rotation"]
+            perm = event["permutation"]
+            after = [before[perm[i]] for i in range(len(perm))]
+            team["rotation"] = after
 
     def find_player_in_team(self, team_id: str, player_id: str):
         team = self.teams[team_id]
@@ -1871,6 +1928,78 @@ def season_4_election(rd: Redata):
     ]:
         rd.reroll_attributes(S4_ELECTION_TIMESTAMP, player_id, rng, ["tragicness", "buoyancy", "thwackability", "moxie", "divinity", "musclitude", "patheticism", "martyrdom"])
 
+def season_5(rd: Redata):
+    # 2020-08-31T20:16:24.708Z 4 4 8ef67ba1-aab3-4129-92a3-d258ae9a4358 {'The Fridays were completely shuffled in the Reverb!'}
+    rd.reverb_full("2020-08-31T20:16:24.708Z", FRIDAYS, [4, 2, 5, 6, 7, 12, 0, 10, 8, 13, 9, 1, 3, 11])
+    
+    # 2020-08-31T23:22:01.797Z 4 7 8d6f1d6f-43e5-46a3-addb-66e74c373a9d {'The Lovers had their rotation shuffled in the Reverb!'}
+    rd.reverb_rotation("2020-08-31T23:22:01.797Z", LOVERS, [2, 0, 3, 4, 1])
+
+    # 2020-09-01T07:28:16.002Z 4 15 3cafb412-494b-472a-bc0c-596a1d0f558a {'The Garages had their lineup shuffled in the Reverb!'}
+    rd.reverb_lineup("2020-09-01T07:28:16.002Z", GARAGES, [1, 6, 2, 7, 8, 3, 0, 5, 4])
+
+    # 2020-09-01T18:12:54.623Z 4 26 39a4f1ee-408a-4138-9e2a-af0d50a47637 {'The Millennials had their lineup shuffled in the Reverb!'}
+    rd.reverb_lineup("2020-09-01T18:12:54.623Z", MILLENNIALS, [2, 8, 5, 0, 7, 6, 4, 3, 1])
+
+    # 2020-09-01T21:20:02.84Z 4 29 7aec4b53-6dd7-4dc4-8218-a09716804d6c {'The Firefighters were completely shuffled in the Reverb!'}
+    rd.reverb_full("2020-09-01T21:20:02.84Z", FIREFIGHTERS, [4, 8, 7, 6, 13, 11, 2, 3, 9, 10, 5, 0, 1, 12])
+
+    # 2020-09-01T21:22:11.311Z 4 29 58a62841-010d-4bb4-ae9d-33446506a675 {'The Fridays had their rotation shuffled in the Reverb!'}
+    rd.reverb_rotation("2020-09-01T21:22:11.311Z", FRIDAYS, [4, 0, 2, 3, 1])
+
+    # 2020-09-02T04:05:15.831Z 4 36 31bb9a9a-9bbd-40d3-8c42-81b42fc5dddb {'Magic hitter Washer Barajas swallowed a stray Peanut and had an allergic reaction!'}
+    rd.allergic("2020-09-02T04:05:15.831Z", MAGIC, rd.player_id(MAGIC, "Washer Barajas"))
+
+    # 2020-09-02T07:27:24.199Z 4 39 d676aabb-ba44-4c20-80e7-d7359c597a7a {'Rogue Umpire incinerated Magic hitter Richardson Turquoise! Replaced by Annie Roland'}
+    rd.incineration("2020-09-02T07:27:24.199Z", MAGIC, rd.player_id(MAGIC, "Richardson Turquoise"), "22bf9b1615cfbe43+159605", "4f7d7490-7281-4f8f-b62e-37e99a7c46a0", "Annie Roland")
+
+    # 2020-09-02T11:07:55.528Z 4 43 e1888802-54c4-4fdb-b287-a434934c7385 {'The Spies had their rotation shuffled in the Reverb!'}
+    rd.reverb_rotation("2020-09-02T11:07:55.528Z", SPIES, [4, 2, 0, 3, 1])
+
+    # 2020-09-02T11:16:39.584Z 4 43 3bffdd2d-9105-4989-aa24-8b96631b4696 {'The Pies had their rotation shuffled in the Reverb!'}
+    rd.reverb_rotation("2020-09-02T11:16:39.584Z", PIES, [0, 4, 1 ,2, 3])
+
+    # 2020-09-02T12:08:15.896Z 4 44 77d309a0-2c3f-4f86-be07-144bebe0887a {'Reverberations are at dangerous levels! Don Mitchell is now Reverberating wildly!'}
+    
+    # 2020-09-03T08:32:15.999Z 4 64 2221c202-9d98-40a4-af3b-57a83aa0d8ec {'The Jazz Hands had their rotation shuffled in the Reverb!'}
+    rd.reverb_rotation("2020-09-03T08:32:15.999Z", JAZZ_HANDS, [1, 4, 0, 2, 3])
+
+    # 2020-09-03T17:03:25.733Z 4 73 935c2927-3349-4d00-960a-96c61b3e41cd {'The Dalé had several players shuffled in the Reverb!'}
+    # todo: "several" isn't the same as "completely" rolls-wise
+    rd.reverb_full("2020-09-03T17:03:25.733Z", DALE, [0, 1, 2, 6, 4, 5, 3, 9, 8, 10, 13, 11, 12, 7])
+
+    # 2020-09-03T17:20:14.232Z 4 73 935c2927-3349-4d00-960a-96c61b3e41cd {'The Moist Talkers had their lineup shuffled in the Reverb!'}
+    rd.reverb_lineup("2020-09-03T17:20:14.232Z", MOIST_TALKERS, [5, 1, 2, 0, 3, 4, 7, 8, 6])
+
+    # 2020-09-03T21:05:33.022Z 4 77 ef1831d8-6950-4fb9-8dd0-1ead53a6b211 {'The Spies had their rotation shuffled in the Reverb!'}
+    rd.reverb_rotation("2020-09-03T21:05:33.022Z", SPIES, [1, 0, 2, 4, 3])
+
+    # 2020-09-04T01:31:57.002Z 4 81 8eea667c-d08c-41cf-acd0-5460dd827662 {'The Tacos had several players shuffled in the Reverb!'}
+    rd.reverb_full("2020-09-04T01:31:57.002Z", TACOS, [4, 1, 2, 3, 13, 5, 11, 7, 8, 9, 10, 6, 12, 0])
+
+    # 2020-09-04T10:17:27.759Z 4 90 a3c8e834-5c97-4a90-8231-2084edcccb26 {'Rogue Umpire incinerated Sunbeams hitter Emmett Internet! Replaced by Sutton Bishop'}
+    rd.incineration("2020-09-04T10:17:27.759Z", SUNBEAMS, rd.player_id(SUNBEAMS, "Emmett Internet"), "041347f1491cbacd+154620", "5eac7fd9-0d19-4bf4-a013-994acc0c40c0", "Sutton Bishop")
+
+    # 2020-09-04T10:20:08.128Z 4 90 33c113f6-4932-4227-bb0d-766d79ef3860 {'The Steaks had their lineup shuffled in the Reverb!'}
+    rd.reverb_lineup("2020-09-04T10:20:08.128Z", STEAKS, [5, 7, 4, 6, 1, 2, 3, 0, 8])
+
+    # 2020-09-04T11:20:13.987Z 4 91 a918ccfc-77bd-4643-8902-3274ba8ef7dd {'The Garages had their lineup shuffled in the Reverb!'}
+    rd.reverb_lineup("2020-09-04T11:20:13.987Z", GARAGES, [6, 7, 0, 4, 2, 3, 5, 8, 1])
+
+    # 2020-09-04T17:25:08.697Z 4 97 52803254-f7d7-4d65-bce6-4a8521b574ce {'Wyatt Glover and Halexandrey Walton switched teams in the feedback!'}
+    rd.swap_player("2020-09-04T17:25:08.697Z", TACOS, rd.player_id(TACOS, "Wyatt Glover"), MAGIC, rd.player_id(MAGIC, "Halexandrey Walton"))
+    rd.update_player("2020-09-04T17:25:08.697Z", rd.player_id(MAGIC, "Wyatt Glover"), dict(fate=19))
+    rd.update_player("2020-09-04T17:25:08.697Z", rd.player_id(TACOS, "Halexandrey Walton"), dict(fate=43))
+
+    # 2020-09-05T16:04:22.561Z 4 102 c092fb3b-4888-4294-8381-f4c7b3765cb4 {'The Crabs had their lineup shuffled in the Reverb!'}
+    rd.reverb_lineup("2020-09-05T16:04:22.561Z", CRABS, [8, 0, 6, 3, 7, 5, 1, 4, 2])
+
+    # 2020-09-05T17:11:17.46Z 4 103 9fb487ca-f154-4b3d-9872-aeec3ddd55d3 {'Lovers hitter Don Mitchell swallowed a stray Peanut and had a yummy reaction!'}
+    rd.yummy("2020-09-05T17:11:17.46Z", LOVERS, rd.player_id(LOVERS, "Don Mitchell"))
+
+    # 2020-09-06T01:26:47.857Z 4 111 9298a48f-c2fc-4821-9466-1ecacfd35a56 {'Firefighters hitter Declan Suzanne swallowed a stray Peanut and had an allergic reaction!'}
+    rd.allergic("2020-09-06T01:26:47.857Z", FIREFIGHTERS, rd.player_id(FIREFIGHTERS, "Declan Suzanne"))
+
 def main():
     rd = Redata()
 
@@ -1926,6 +2055,9 @@ def main():
 
     season_4_election(rd)
     rd.assert_consistency("2020-08-31T07:00:00Z")
+
+    season_5(rd)
+    rd.assert_consistency("2020-09-06T07:00:00Z")
 
     pass
 
