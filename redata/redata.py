@@ -172,6 +172,10 @@ class Redata:
         roll_cinnamon = timestamp > "2020-08-03T00:00:00Z"  # s3+
         new_player = generate_player(rng, new_player_id, new_player_name, roll_cinnamon=roll_cinnamon)
 
+        # maybe only s4+?
+        if new_player["patheticism"] > 0.99:
+            new_player["patheticism"] = 0.99
+
         self.create_player(timestamp, new_player)
         self.replace_player(timestamp, team_id, old_player_id, new_player_id)
 
@@ -199,7 +203,7 @@ class Redata:
 
     def team_id(self, name: str):
         for t in self.teams.values():
-            if t["nickname"] == name:
+            if t["nickname"] == name or t["id"] == name:
                 return t["id"]
         raise ValueError(f"team not found: {name}")
 
@@ -265,7 +269,6 @@ class Redata:
         raise ValueError(f"could not find player {player_id} in team {team_id} ({team['nickname']})")
 
     def assert_consistency(self, chron_timestamp: str):
-
         teams_resp = get_cached(
             f"teams_at_{chron_timestamp}",
             f"{CHRONICLER_URI}/v2/entities?type=team&at={chron_timestamp}&count=1000",
@@ -1579,6 +1582,108 @@ def season_3_election(rd: Redata):
 
     pass
 
+def season_3_4_siesta(rd: Redata):
+    # not accurate, we can be more granular ig
+    UNMASONING_TIMESTAMP = "2020-08-13T00:00:00Z"
+    for player_id, new_name in [
+        ("27c68d7f-5e40-4afa-8b6f-9df47b79e7dd", "Basilio Mason"),
+        ("63df8701-1871-4987-87d7-b55d4f1df2e9", "Mcdowell Mason"),
+        ("1f159bab-923a-4811-b6fa-02bfde50925a", "NaN"),
+        ("bf6a24d1-4e89-4790-a4ba-eeb2870cbf6f", "Rat Mason"),
+        ("ea44bd36-65b4-4f3b-ac71-78d87a540b48", "Wyatt Pothos"),
+        ("e4034192-4dc6-4901-bb30-07fe3cf77b5e", "Baldwin Breadwinner"),
+        ("a1ed3396-114a-40bc-9ff0-54d7e1ad1718", "Patel Beyonce"),
+        ("5ca7e854-dc00-4955-9235-d7fcd732ddcf", "Wyatt Quitter"),
+        ("75f9d874-5e69-438d-900d-a3fcb1d429b3", "Moses Mason"),
+        ("0bb35615-63f2-4492-80ec-b6b322dc5450", "Sexton Wheerer"),
+        ("0d5300f6-0966-430f-903f-a4c2338abf00", "Wyatt Dovenpart"),
+        ("f741dc01-2bae-4459-bfc0-f97536193eea", "Alejandro Leaf"),
+        ("e16c3f28-eecd-4571-be1a-606bbac36b2b", "Wyatt Glover"),
+        ("21d52455-6c2c-4ee4-8673-ab46b4b926b4", "Wyatt Owens"),
+    ]:
+        rd.update_player(UNMASONING_TIMESTAMP, player_id, {
+            "name": new_name
+        })
+        
+def season_4(rd: Redata):
+    # todo: be more specific about the types of feedback? might be able to pin down the actual trigger rolls eventually
+    # also todo: figure out wtf to do about the waveback here, deal with the manual corrections and such
+
+    # 2020-08-24T19:19:30.21Z 3 3 9b26923f-63e1-4cee-b99d-4774346eac85 {'Paula Mason and Thomas Kirby switched teams in the feedback!'}
+    rd.swap_player(
+        "2020-08-24T19:19:30.21Z",
+        FIREFIGHTERS,
+        rd.player_id(FIREFIGHTERS, "Paula Mason"),
+        STEAKS,
+        rd.player_id(STEAKS, "Thomas Kirby")
+    )
+
+    # 2020-08-25T04:15:22.202Z 3 12 cd8f90a4-6502-41d2-84b9-03b769c5e65f {'Tigers hitter Jessica Telephone swallowed a stray Peanut and had a yummy reaction!'}
+    rd.yummy("2020-08-25T04:15:22.202Z", TIGERS, rd.player_id("Tigers", "Jessica Telephone"))
+
+    # 2020-08-25T05:14:22.15Z 3 13 87c33c1e-34c6-47aa-95a2-f83e45c86421 {'Rogue Umpire incinerated Breath Mints hitter Whit Steakknife! Replaced by Stew Briggs'}
+    rd.incineration("2020-08-25T05:14:22.15Z", BREATH_MINTS, "33fbfe23-37bd-4e37-a481-a87eadb8192d", "060f9932fd96c641+50526", "46721a07-7cd2-4839-982e-7046df6e8b66", "Stew Briggs")
+
+    # 2020-08-25T06:19:12.262Z 3 14 ae931be2-ce6c-4cca-9ecb-74b5d147cc06 {'Alyssa Harrell and Penelope Mathews switched teams in the feedback!'}
+    rd.swap_player("2020-08-25T06:19:12.262Z", MILLENNIALS, rd.player_id(MILLENNIALS, "Alyssa Harrell"), MAGIC, rd.player_id(MAGIC, "Penelope Mathews"))
+
+    # 2020-08-25T15:05:12.894Z 3 23 d3575916-f4a7-4305-ace6-4da32133ad14 {'Fridays hitter Basilio Fig swallowed a stray Peanut and had an allergic reaction!'}
+    rd.allergic("2020-08-25T15:05:12.894Z", FRIDAYS, rd.player_id("Fridays", "Basilio Fig"))
+
+    # 2020-08-25T16:18:11.811Z 3 24 1e475551-41d7-488c-a420-4007ec93e89d {'Tot Fox and Valentine Games switched teams in the feedback!'}
+    rd.swap_player("2020-08-25T16:18:11.811Z", JAZZ_HANDS, rd.player_id(JAZZ_HANDS, "Tot Fox"), CRABS, rd.player_id(CRABS, "Valentine Games"))
+
+    # 2020-08-25T19:08:15.438Z 3 27 db128017-3264-439d-9366-04189b7a58ab {'Workman Gloom and Joe Voorhees switched teams in the feedback!'}
+    rd.swap_player("2020-08-25T19:08:15.438Z", SHOE_THIEVES, rd.player_id(SHOE_THIEVES, "Workman Gloom"), MOIST_TALKERS, rd.player_id(MOIST_TALKERS, "Joe Voorhees"))
+
+    # 2020-08-26T03:17:47.365Z 3 35 470e4879-bfc1-42a7-84a6-855ed65c1c05 {'Farrell Seagull and Avila Guzman switched teams in the feedback!'}
+    rd.swap_player("2020-08-26T03:17:47.365Z", DALE, rd.player_id(DALE, "Farrell Seagull"), GARAGES, rd.player_id(GARAGES, "Avila Guzman"))
+
+    # 2020-08-26T04:11:43.64Z 3 36 f6391c28-c342-4772-bf6a-bf82e86b53ed {'Morrow Wilson and Yeong-Ho Benitez switched teams in the feedback!'}
+    rd.swap_player("2020-08-26T04:11:43.64Z", SPIES, rd.player_id(SPIES, "Yeong-Ho Benitez"), PIES, rd.player_id(PIES, "Morrow Wilson"))
+
+    # 2020-08-26T10:00:38.646Z 3 42 4d247607-b807-494b-a3dc-6cd973cad336 {'Jessica Telephone and Spears Taylor switched teams in the feedback!'}
+    rd.swap_player("2020-08-26T10:00:38.646Z", TIGERS, rd.player_id(TIGERS, "Jessica Telephone"), PIES, rd.player_id(PIES, "Spears Taylor"))
+
+    # 2020-08-26T17:07:30.26Z 3 49 3587ffeb-66cf-46fc-a2ca-0638f99308f8 {'Rogue Umpire incinerated Steaks hitter Stevenson Monstera! Replaced by Combs Estes'}
+    rd.incineration("2020-08-26T17:07:30.26Z", STEAKS, rd.player_id(STEAKS, "Stevenson Monstera"), "fc5041d0fec42ff0+33864", "0295c6c2-b33c-47dd-affa-349da7fa1760", "Combs Estes")
+
+    # 2020-08-26T21:18:44.675Z 3 53 be9bd446-ae97-46eb-bee3-ce6c793d615b {'Moses Mason and Vito Kravitz switched teams in the feedback!'}
+    rd.swap_player("2020-08-26T21:18:44.675Z", TACOS, rd.player_id(TACOS, "Moses Mason"), FLOWERS, rd.player_id(FLOWERS, "Vito Kravitz"))
+
+    # 2020-08-26T22:14:04.914Z 3 54 86cdafe1-e5bb-45f9-af9f-13d16ab85a3f {'Rogue Umpire incinerated Breath Mints hitter Eduardo Ingram! Replaced by Lenny Spruce'}
+    rd.incineration("2020-08-26T22:14:04.914Z", BREATH_MINTS, rd.player_id(BREATH_MINTS, "Eduardo Ingram"), "3d61bee08b28ec4c+17069", "c09e64b6-8248-407e-b3af-1931b880dbee", "Lenny Spruce")
+
+    # 2020-08-27T01:10:07.424Z 3 57 450e7233-bfc1-4239-8e57-360e442947b1 {'Morrow Doyle and Hotbox Sato switched teams in the feedback!'}
+    rd.swap_player("2020-08-27T01:10:07.424Z", SHOE_THIEVES, rd.player_id(SHOE_THIEVES, "Morrow Doyle"), FLOWERS, rd.player_id(FLOWERS, "Hotbox Sato"))
+
+    # 2020-08-27T02:01:43.678Z 3 58 02430286-8961-45fe-9a3c-f5d02eeb09e3 {'Rogue Umpire incinerated Flowers hitter Matheo Carpenter! Replaced by Gloria Bugsnax'}
+    rd.incineration("2020-08-27T02:01:43.678Z", FLOWERS, rd.player_id(FLOWERS, "Matheo Carpenter"), "6ed59023c6fa2bca+15220", "8cd06abf-be10-4a35-a3ab-1a408a329147", "Gloria Bugsnax")
+
+    # this might have been connected to the feedback event itself (fate conflict/reroll?) but that requires locating in rng stream...
+    rd.update_player("2020-08-27T02:15:44.985Z", rd.player_id(FLOWERS, "Morrow Doyle"), { "fate": 10 })
+
+    # 2020-08-27T16:03:56.445Z 3 62 2fcec30f-ef95-4277-b958-46a7015962f4 {'Rogue Umpire incinerated Crabs hitter Combs Duende! Replaced by Finn James'}
+    rd.incineration("2020-08-27T16:03:56.445Z", CRABS, rd.player_id(CRABS, "Combs Duende"), "dd46374ceb52bf57+16115", "f9930cb1-7ed2-4b9a-bf4f-7e35f2586d71", "Finn James")
+
+    # 2020-08-28T11:10:35.074Z 3 81 968f7d96-ca35-45ac-ab68-4e1e541605fe {'Basilio Fig and Baldwin Breadwinner switched teams in the feedback!'}
+    rd.swap_player("2020-08-28T11:10:35.074Z", FRIDAYS, rd.player_id(FRIDAYS, "Basilio Fig"), TACOS, rd.player_id(TACOS, "Baldwin Breadwinner"))
+
+    # 2020-08-28T12:28:08.899Z 3 82 6e4e055b-40d3-48f6-84e8-3ba5f5bd7cc5 {'Ren Hunter and Richardson Games switched teams in the feedback!'}
+    rd.swap_player("2020-08-28T12:28:08.899Z", SHOE_THIEVES, rd.player_id(SHOE_THIEVES, "Ren Hunter"), MILLENNIALS, rd.player_id(MILLENNIALS, "Richardson Games"))
+
+    # manual waveback correction
+    # todo: should we get ghost sixpack dogwalker in here too, replicate that accurately?
+    rd.update_player("2020-08-28T19:54:23.418Z", "3a96d76a-c508-45a0-94a0-8f64cd6beeb4", {
+        "name": "Sixpack Dogwalker",
+        "thwackability": 0.666,
+        "ritual": "Talking to the Microphone"
+    })
+
+    # 2020-08-29T06:10:32.868Z 3 97 531fc360-30c8-4fa3-935f-c865c69fcb87 {'Rogue Umpire incinerated Flowers hitter Morrow Doyle! Replaced by Inez Owens'}
+    rd.incineration("2020-08-29T06:10:32.868Z", FLOWERS, rd.player_id(FLOWERS, "Morrow Doyle"), "d12ccb77b62cde4f+137992", "28964497-0efe-420c-9c1d-8574f224a4e9", "Inez Owens")
+    pass
+
 def main():
     rd = Redata()
 
@@ -1625,6 +1730,12 @@ def main():
 
     season_3_election(rd)
     rd.assert_consistency("2020-08-10T03:00:00Z")
+
+    season_3_4_siesta(rd)
+    rd.assert_consistency("2020-08-24T03:00:00Z")
+
+    season_4(rd)
+    rd.assert_consistency("2020-08-30T07:00:00Z")
 
     pass
 
