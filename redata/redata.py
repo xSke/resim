@@ -2000,6 +2000,184 @@ def season_5(rd: Redata):
     # 2020-09-06T01:26:47.857Z 4 111 9298a48f-c2fc-4821-9466-1ecacfd35a56 {'Firefighters hitter Declan Suzanne swallowed a stray Peanut and had an allergic reaction!'}
     rd.allergic("2020-09-06T01:26:47.857Z", FIREFIGHTERS, rd.player_id(FIREFIGHTERS, "Declan Suzanne"))
 
+def season_5_election(rd: Redata):
+    S5_ELECTION_TIMESTAMP = "2020-09-06T19:00:00Z"
+    rng = Rng.parse("9af3b0c0a561e21a+147")
+
+    # Zombies, Run! Presents Horde Hallucinations: Improved the Baltimore Crabs's baserunning by 17%
+    rand_amount = (rng.next() * (0.24+0.08)) - 0.08 # 0.7929858270216812
+    for player_id in rd.teams[CRABS]["lineup"]:
+        rd.player_attr_change(S5_ELECTION_TIMESTAMP, player_id, dict(
+            laserlikeness=rand_amount,
+            groundFriction=rand_amount,
+            baseThirst=rand_amount,
+            continuation=rand_amount,
+            indulgence=rand_amount,
+        ))
+
+    # Rollback Netcode: Improved the Baltimore Crabs overall by 6%
+    rand_amount = (rng.next() * (0.03+0.09)) - 0.03 # 0.7805652814211586
+    for player_id in rd.teams[CRABS]["lineup"] + rd.teams[CRABS]["rotation"]:
+        rd.player_attr_change(S5_ELECTION_TIMESTAMP, player_id, dict(
+            thwackability=rand_amount,
+            moxie=rand_amount,
+            divinity=rand_amount,
+            musclitude=rand_amount,
+            patheticism=-rand_amount,
+            buoyancy=rand_amount,
+            baseThirst=rand_amount,
+            laserlikeness=rand_amount,
+            groundFriction=rand_amount,
+            continuation=rand_amount,
+            indulgence=rand_amount,
+            martyrdom=rand_amount,
+            omniscience=rand_amount,
+            tenaciousness=rand_amount,
+            watchfulness=rand_amount,
+            anticapitalism=rand_amount,
+            chasiness=rand_amount,
+            shakespearianism=rand_amount,
+            suppression=rand_amount,
+            unthwackability=rand_amount,
+            coldness=rand_amount,
+            overpowerment=rand_amount,
+            ruthlessness=rand_amount,
+            totalFingers=1,
+        ))
+
+    # Falling Stars:
+    # Improved Nagomi Mcdaniel overall by 20%.
+    # Improved Forrest Best overall by 20%.
+    # Improved Kennedy Loser overall by 20%.
+    # Improved Pedro Davids overall by 20%.
+    for player_id in [
+        rd.player_id(CRABS, "Nagomi Mcdaniel"),
+        rd.player_id(CRABS, "Forrest Best"),
+        rd.player_id(CRABS, "Kennedy Loser"),
+        rd.player_id(CRABS, "Pedro Davids"),
+    ]:
+        rd.player_attr_change(S5_ELECTION_TIMESTAMP, player_id, dict(
+            thwackability=0.2,
+            moxie=0.2,
+            divinity=0.2,
+            musclitude=0.2,
+            patheticism=-0.2,
+            buoyancy=0.2,
+            baseThirst=0.2,
+            laserlikeness=0.2,
+            groundFriction=0.2,
+            continuation=0.2,
+            indulgence=0.2,
+            martyrdom=0.2,
+            omniscience=0.2,
+            tenaciousness=0.2,
+            watchfulness=0.2,
+            anticapitalism=0.2,
+            chasiness=0.2,
+            shakespearianism=0.2,
+            suppression=0.2,
+            unthwackability=0.2,
+            coldness=0.2,
+            overpowerment=0.2,
+            ruthlessness=0.2,
+            totalFingers=1,
+        ))
+
+    # The Plan? Pitch from the Plate: The Baltimore Crabs stole the best pitching hitter in the league, Axel Trololol from the Chicago Firefighters.
+    # They sent back Joshua Watson in return, who swapped positions to hitter.
+    rd.swap_player(S5_ELECTION_TIMESTAMP, FIREFIGHTERS, rd.player_id(FIREFIGHTERS, "Axel Trololol"), CRABS, rd.player_id(CRABS, "Joshua Watson"))
+
+    # Katamari: Improved the Chicago Firefighters's defense by 13%
+    rng.step(4)
+    rand_amount = (rng.next() * (0.24+0.08)) - 0.08 # 0.64489048669171
+    for player_id in rd.teams[FIREFIGHTERS]["lineup"] + rd.teams[FIREFIGHTERS]["rotation"]:
+        rd.player_attr_change(S5_ELECTION_TIMESTAMP, player_id, dict(
+            omniscience=rand_amount,
+            tenaciousness=rand_amount,
+            watchfulness=rand_amount,
+            anticapitalism=rand_amount,
+            chasiness=rand_amount,
+        ))
+
+    # Seduction: The Breckenridge Jazz Hands stole the best hitter in the league, Nagomi Mcdaniel, from the Baltimore Crabs. They sent back Holden Stanton.
+    rd.swap_player(S5_ELECTION_TIMESTAMP, CRABS, rd.player_id(CRABS, "Nagomi Mcdaniel"), JAZZ_HANDS, rd.player_id(JAZZ_HANDS, "Holden Stanton"))
+
+    # Fireproof Jacket: Mclaughlin Scorpler gained the Fireproof Jacket.
+
+    # Noise-Cancelling Headphones: Mclaughlin Scorpler gained Noise-Cancelling Headphones.
+    # (lol)
+
+    # Flame-Resistant Foam: The Moist Talkers have covered themselves with Fire-Resistant Foam, and will be immune to Incinerations next season.
+
+    # Mutual Aid: The Dallas Steaks's worst hitter, August Mina, and their worst pitcher, Conner Haley, swapped positions
+    rd.swap_player(S5_ELECTION_TIMESTAMP, STEAKS, rd.player_id(STEAKS, "August Mina"), STEAKS, rd.player_id(STEAKS, "Conner Haley"))
+
+    # The Plan? Hit from the Mound: The Dallas Steaks stole the best hitting pitcher in the league, August Sky from the Breckenridge Jazz Hands.
+    # They sent back Combs Estes in return, who swapped positions to pitcher.
+    rd.swap_player(S5_ELECTION_TIMESTAMP, JAZZ_HANDS, rd.player_id(JAZZ_HANDS, "August Sky"), STEAKS, rd.player_id(STEAKS, "Combs Estes"))
+
+    # Keeping it Wavy: Improved the Kansas City Breath Mints's minimum vibes by 15%
+    for player_id in rd.teams[BREATH_MINTS]["lineup"] + rd.teams[BREATH_MINTS]["rotation"]:
+        rd.player_attr_change(S5_ELECTION_TIMESTAMP, player_id, dict(pressurization=-0.15))
+
+    # Solidarity: Improved the Hawaii Fridays's max vibes by 15%
+    for player_id in rd.teams[FRIDAYS]["lineup"] + rd.teams[FRIDAYS]["rotation"]:
+        rd.player_attr_change(S5_ELECTION_TIMESTAMP, player_id, dict(cinnamon=0.15))
+
+
+    # Wax: The Fridays have plugged their ears with Wax, and will be immune to Feedback next season.
+
+    # Bad Neighbors:
+    # Impaired the Mexico City Wild Wings overall by 3%
+    # Impaired the Hawaii Fridays overall by 3%
+    # Impaired the Philly Pies overall by 3%
+    # Impaired the Yellowstone Magic overall by 3%
+    for team_id in [WILD_WINGS, FRIDAYS, PIES, MAGIC]:
+        team = rd.teams[team_id]
+        for player_id in team["lineup"] + team["rotation"]:
+            rd.player_attr_change(S5_ELECTION_TIMESTAMP, player_id, dict(
+                thwackability=-0.03,
+                moxie=-0.03,
+                divinity=-0.03,
+                musclitude=-0.03,
+                patheticism=0.03,
+                buoyancy=-0.03,
+                baseThirst=-0.03,
+                laserlikeness=-0.03,
+                groundFriction=-0.03,
+                continuation=-0.03,
+                indulgence=-0.03,
+                martyrdom=-0.03,
+                omniscience=-0.03,
+                tenaciousness=-0.03,
+                watchfulness=-0.03,
+                anticapitalism=-0.03,
+                chasiness=-0.03,
+                shakespearianism=-0.03,
+                suppression=-0.03,
+                unthwackability=-0.03,
+                coldness=-0.03,
+                overpowerment=-0.03,
+                ruthlessness=-0.03,
+                totalFingers=1,
+            ))
+
+    # Soul Swap:
+    # Randomized the pitching stats for the Charleston Shoe Thieves's worst player, Gunther O'Brian. 0 -> 2
+    # Randomized the pitching stats for the Charleston Shoe Thieves's worst player, Beasley Gloom. 0.5 -> 0.5
+    # Randomized the pitching stats for the Charleston Shoe Thieves's worst player, Beasley Gloom. 0.5 -> 2.5
+    # Randomized the pitching stats for the Charleston Shoe Thieves's worst player, Kevin Dudley. 0.5 -> 2
+    # Randomized the pitching stats for the Charleston Shoe Thieves's worst player, Snyder Briggs. 1 -> 0.5
+    rng.step(2)
+    for player_id in [
+        rd.player_id(SHOE_THIEVES, "Gunther O'Brian"),
+        rd.player_id(SHOE_THIEVES, "Beasley Gloom"),
+        rd.player_id(SHOE_THIEVES, "Beasley Gloom"),
+        rd.player_id(SHOE_THIEVES, "Kevin Dudley"),
+        rd.player_id(SHOE_THIEVES, "Snyder Briggs"),
+    ]:
+        rd.reroll_attributes(S5_ELECTION_TIMESTAMP, player_id, rng, ["shakespearianism", "suppression", "unthwackability", "coldness", "overpowerment", "ruthlessness"])
+
 def main():
     rd = Redata()
 
@@ -2058,6 +2236,9 @@ def main():
 
     season_5(rd)
     rd.assert_consistency("2020-09-06T07:00:00Z")
+
+    season_5_election(rd)
+    rd.assert_consistency("2020-09-07T07:00:00Z")
 
     pass
 
