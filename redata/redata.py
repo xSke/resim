@@ -1682,7 +1682,194 @@ def season_4(rd: Redata):
 
     # 2020-08-29T06:10:32.868Z 3 97 531fc360-30c8-4fa3-935f-c865c69fcb87 {'Rogue Umpire incinerated Flowers hitter Morrow Doyle! Replaced by Inez Owens'}
     rd.incineration("2020-08-29T06:10:32.868Z", FLOWERS, rd.player_id(FLOWERS, "Morrow Doyle"), "d12ccb77b62cde4f+137992", "28964497-0efe-420c-9c1d-8574f224a4e9", "Inez Owens")
-    pass
+
+def season_4_election(rd: Redata):
+    S4_ELECTION_TIMESTAMP = "2020-08-30T19:00:00Z"
+
+    # note: NOT the same order in the baserunning block?
+    ALT_ATTRIBUTES = PITCHING_ATTR_BLOCK + DEFENSE_ATTR_BLOCK + ["baseThirst", "laserlikeness", "continuation", "indulgence", "groundFriction"] + BATTING_ATTR_BLOCK
+
+    rng = Rng.parse("706953916a8d68d6+131")
+    # exit()
+
+    for team_id in ORIGINAL_TEAM_ORDER:
+        batter_idx = rng.next()
+        pitcher_idx = rng.next()
+
+        batter_fate_roll = int(rng.next() * 100)
+        pitcher_fate_roll = int(rng.next() * 100)
+
+        lineup = rd.teams[team_id]["lineup"]
+        rotation = rd.teams[team_id]["rotation"]
+
+        batter = lineup[int(batter_idx*len(lineup))]
+        pitcher = rotation[int(pitcher_idx*len(rotation))]
+
+        rd.reroll_attributes(S4_ELECTION_TIMESTAMP, batter, rng, ALT_ATTRIBUTES)
+        rd.update_player(S4_ELECTION_TIMESTAMP, batter, { "fate": batter_fate_roll })
+        rd.reroll_attributes(S4_ELECTION_TIMESTAMP, pitcher, rng, ALT_ATTRIBUTES)
+        rd.update_player(S4_ELECTION_TIMESTAMP, pitcher, { "fate": pitcher_fate_roll })
+
+    # Solidarity blessed the Hades Tigers. Improved the Hades Tigers' max vibes by 15%.
+    for player_id in rd.teams[TIGERS]["lineup"] + rd.teams[TIGERS]["rotation"]:
+        rd.player_attr_change(S4_ELECTION_TIMESTAMP, player_id, dict(cinnamon=0.15))
+
+
+    # The Best Offense blessed the Philly Pies. The Philly Pies's best pitching hitter, Elvis Figueroa, and their worst pitcher, Forrest Bookbaby, swapped positions.
+    rd.swap_player(S4_ELECTION_TIMESTAMP, PIES, rd.player_id(PIES, "Elvis Figueroa"), PIES, rd.player_id(PIES, "Forrest Bookbaby"))
+
+    # Questioning Their Every Decision blessed the Canada Moist Talkers
+    # Impaired the minimum vibes of the Houston Spies by 7%
+    # Impaired the minimum vibes of the Miami Dale by 7%
+    # Impaired the minimum vibes of the Seattle Garages by 7%
+    # Impaired the minimum vibes of the Breckenridge Jazz Hands by 7%
+    for team_id in [SPIES, DALE, GARAGES, JAZZ_HANDS]:
+        for player_id in rd.teams[team_id]["lineup"] + rd.teams[team_id]["rotation"]:
+            rd.player_attr_change(S4_ELECTION_TIMESTAMP, player_id, dict(pressurization=0.07))
+
+    # The Best Defense blessed the Baltimore Crabs. The Baltimore Crabs's best hitting pitcher, Oliver Notarobot, and their worst hitter, Joshua Watson, swapped positions.
+    rd.swap_player(S4_ELECTION_TIMESTAMP, CRABS, rd.player_id(CRABS, "Oliver Notarobot"), CRABS, rd.player_id(CRABS, "Joshua Watson"))
+
+    # Mutual Aid blessed the Baltimore Crabs. The Baltimore Crabs's worst hitter, Finn James, and their worst pitcher, Tillman Henderson, swapped positions.
+    rd.swap_player(S4_ELECTION_TIMESTAMP, CRABS, rd.player_id(CRABS, "Finn James"), CRABS, rd.player_id(CRABS, "Tillman Henderson"))
+
+    # Grappling Hook blessed the Charleston Shoe Thieves. Richardson Games gained the Grappling Hook. Their Baserunning and Defense increased by a big amount!
+    rd.player_attr_change(S4_ELECTION_TIMESTAMP, rd.player_id(SHOE_THIEVES, "Richardson Games"), dict(
+        baseThirst=0.6,
+        laserlikeness=0.6,
+        groundFriction=0.6,
+        continuation=0.6,
+        indulgence=0.6,
+        omniscience=0.6,
+        tenaciousness=0.6,
+        watchfulness=0.6,
+        anticapitalism=0.6,
+        chasiness=0.6,
+    ))
+
+    # Extra Elbows blessed the San Francisco Lovers.
+    # Yosh Carpenter's pitching was increased by 20%.
+    # Sandford Garner's pitching was increased by 20%.
+    # Sandford Garner's pitching was increased by 20%.
+    for player_id in [
+        rd.player_id(LOVERS, "Yosh Carpenter"),
+        rd.player_id(LOVERS, "Sandford Garner"),
+        rd.player_id(LOVERS, "Sandford Garner")
+    ]:
+        rd.player_attr_change(S4_ELECTION_TIMESTAMP, player_id, dict(
+            shakespearianism=0.20,
+            unthwackability=0.20,
+            coldness=0.20,
+            overpowerment=0.20,
+            ruthlessness=0.20,
+            suppression=0.20,
+            totalFingers=1,
+        ))
+
+    # Non-Dominant Arms blessed the Kansas City Breath Mints. Improved the Kansas City Breath Mints' pitching by 13%
+    rng = Rng.parse("706953916a8d68d6+1191")
+    amount = (rng.next() * 0.2) - 0.05
+    for player_id in rd.teams[BREATH_MINTS]["rotation"]:
+        rd.player_attr_change(S4_ELECTION_TIMESTAMP, player_id, dict(
+            shakespearianism=amount,
+            suppression=amount,
+            unthwackability=amount,
+            coldness=amount,
+            overpowerment=amount,
+            ruthlessness=amount,
+            totalFingers=1
+        ))
+
+    # Evil Wind Sprints blessed the Miami Dale. Improved the Miami Dale's baserunning by 15%
+    # vote, wimdy?
+    for player_id in rd.teams[DALE]["lineup"]:
+        rd.player_attr_change(S4_ELECTION_TIMESTAMP, player_id, dict(
+            baseThirst=0.15,
+            laserlikeness=0.15,
+            groundFriction=0.15,
+            continuation=0.15,
+            indulgence=0.15,
+        ))
+
+    # Getting in Their Heads (Literally) blessed the Boston Flowers.
+    # Impaired the Charleston Shoe Thieves's maximum vibes by 7%
+    # Impaired the Hawai'i Fridays's maximum vibes by 7%
+    # Impaired the Yellowstone Magic's maximum vibes by 7%
+    # Impaired the New York Millennials's maximum vibes by 7%
+    for team_id in [SHOE_THIEVES, FRIDAYS, MAGIC, MILLENNIALS]:
+        for player_id in rd.teams[team_id]["lineup"] + rd.teams[team_id]["rotation"]:
+            rd.player_attr_change(S4_ELECTION_TIMESTAMP, player_id, dict(cinnamon=-0.07))
+
+    # Exploratory Surgeries blessed the Boston Flowers.
+    # Randomized the stats for the Boston Flowers's worst pitcher, Chambers Simmons, from zero stars to 1 star
+    # Randomized the stats for the Boston Flowers's worst pitcher, Chambers Simmons, from 1 star to 1.5 stars
+    # Randomized the stats for the Boston Flowers's worst pitcher, Dunn Keyes, from 1.5 stars to 1 star
+    # this immediately follows Non-Dominant Arms in the rng
+    for player_id in [
+        rd.player_id(FLOWERS, "Chambers Simmons"),
+        rd.player_id(FLOWERS, "Chambers Simmons"),
+        rd.player_id(FLOWERS, "Dunn Keyes")
+    ]:
+        rd.reroll_attributes(S4_ELECTION_TIMESTAMP, player_id, rng, ["shakespearianism", "suppression", "unthwackability", "coldness", "overpowerment", "ruthlessness"])
+
+    # Keeping It Wavy, presented by Friends at the Table blessed the Hawai'i Fridays.
+    # Improved the Hawai'i Fridays' minimum vibes by 15%
+    for player_id in rd.teams[FRIDAYS]["lineup"] + rd.teams[FRIDAYS]["rotation"]:
+        rd.player_attr_change(S4_ELECTION_TIMESTAMP, player_id, dict(pressurization=-0.15))
+
+    # The Rack blessed the Hawai'i Fridays. Improved the Hawai'i Fridays' defense by 15%
+    for player_id in rd.teams[FRIDAYS]["lineup"] + rd.teams[FRIDAYS]["rotation"]:
+        rd.player_attr_change(S4_ELECTION_TIMESTAMP, player_id, dict(
+            omniscience=0.15,
+            tenaciousness=0.15,
+            watchfulness=0.15,
+            anticapitalism=0.15,
+            chasiness=0.15,
+        ))
+
+    # Mushroom blessed the Mexico City Wild Wings. José Haley gained the Mushroom. Their Power and Max Vibes increased, but their Baserunning went down.
+    rd.player_attr_change(S4_ELECTION_TIMESTAMP, rd.player_id(WILD_WINGS, "José Haley"), dict(
+        divinity=0.6,
+        musclitude=0.6,
+        baseThirst=-0.4,
+        laserlikeness=-0.4,
+        groundFriction=-0.1,
+        continuation=-0.4,
+        indulgence=-0.4,
+        cinnamon=0.4
+    ))
+
+    # Precognition blessed the Hellmouth Sunbeams.
+    # Improved Nagomi Nava's hitting by 20%.
+    # Improved Emmett Internet's hitting by 20%.
+    # Improved Randall Marijuana's hitting by 20%.
+    for player_id in [
+        rd.player_id(SUNBEAMS, "Nagomi Nava"),
+        rd.player_id(SUNBEAMS, "Emmett Internet"),
+        rd.player_id(SUNBEAMS, "Randall Marijuana")
+    ]:
+        rd.player_attr_change(S4_ELECTION_TIMESTAMP, player_id, dict(
+            thwackability=0.20,
+            moxie=0.20,
+            divinity=0.20,
+            musclitude=0.20,
+            patheticism=-0.20,
+            buoyancy=0.20,
+            martyrdom=0.20,
+        ))
+
+    # Summoning Circle blessed the Houston Spies.
+    # Randomized the stats for the Houston Spies's worst hitter, Marco Escobar, from 1.5 stars to 1.5 stars
+    # Randomized the stats for the Houston Spies's worst hitter, Marco Escobar, from 1.5 stars to 1 star
+    # Randomized the stats for the Houston Spies's worst hitter, Marco Escobar, from 1 star to 3 stars 
+    # todo: assert the star values here
+    rng = Rng.parse("706953916a8d68d6+1214")
+    for player_id in [
+        rd.player_id(SPIES, "Marco Escobar"),
+        rd.player_id(SPIES, "Marco Escobar"),
+        rd.player_id(SPIES, "Marco Escobar")
+    ]:
+        rd.reroll_attributes(S4_ELECTION_TIMESTAMP, player_id, rng, ["tragicness", "buoyancy", "thwackability", "moxie", "divinity", "musclitude", "patheticism", "martyrdom"])
 
 def main():
     rd = Redata()
@@ -1736,6 +1923,9 @@ def main():
 
     season_4(rd)
     rd.assert_consistency("2020-08-30T07:00:00Z")
+
+    season_4_election(rd)
+    rd.assert_consistency("2020-08-31T07:00:00Z")
 
     pass
 
