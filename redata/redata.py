@@ -2244,6 +2244,8 @@ def handle_data_events(rd: Redata, events: list[dict]):
                 rd.blooddrain_baserunning(evt["timestamp"], evt["sippee_id"], evt["sipper_id"])
             elif evt["category"] == "defensive":
                 rd.blooddrain_defense(evt["timestamp"], evt["sippee_id"], evt["sipper_id"])
+        elif evt["type"] == "function":
+            evt["function"]()
         elif evt["type"] == "feedback":
             rd.swap_player(evt["timestamp"], evt["player_a_team"], evt["player_a_id"], evt["player_b_team"], evt["player_b_id"])
             if "player_a_fate" in evt:
@@ -2254,10 +2256,35 @@ def handle_data_events(rd: Redata, events: list[dict]):
             rd.incineration(evt["timestamp"], evt["target_team_id"], evt["target_id"], evt["seed"], evt["replacement_id"], evt["replacement_name"])
         elif evt["type"] == "peanut_allergic":
             rd.allergic(evt["timestamp"], evt["team_id"], evt["player_id"])
+        elif evt["type"] == "peanut_yummy":
+            rd.yummy(evt["timestamp"], evt["team_id"], evt["player_id"])
         elif evt["type"] == "reverb_lineup":
             rd.reverb_lineup(evt["timestamp"], evt["team_id"], rd._flip_permutation(evt["permutation"]))
         elif evt["type"] == "reverb_rotation":
             rd.reverb_rotation(evt["timestamp"], evt["team_id"], rd._flip_permutation(evt["permutation"]))
+        elif evt["type"] == "pecked_free":
+            # shelled -> superallergic
+            rd.update_player(evt["timestamp"], evt["player_id"], {"peanutAllergy": True})
+        elif evt["type"] == "party":
+            rng = Rng.parse(evt["seed"])
+            rng.step(-1)
+            order = DEFENSE_ATTR_BLOCK + PITCHING_ATTR_BLOCK + BASERUNNING_ATTR_BLOCK + BATTING_ATTR_BLOCK + ["cinnamon"]
+
+            lo, hi = 0.06, 0.1
+            if evt["team_id"] == DALE:
+                # LOTP
+                lo, hi = lo*1.1, hi*1.1
+            player = rd.players[evt["player_id"]]
+            team = rd.teams[evt["team_id"]]
+            diff = {}
+            for attr in order:
+                val = rng.next() * (hi-lo) + lo
+                if attr in ["patheticism", "tragicness"]:
+                    diff[attr] = -val
+                else:
+                    diff[attr] = val
+                # print(f"d{evt['day']} {team['nickname']} {player['name']} {attr} diff {val}")
+            rd.player_attr_change(evt["timestamp"], evt["player_id"], diff)
         elif evt["type"] == "feedback_failed":
             rd.player_attr_change(evt["timestamp"], evt["immune_player_id"], dict(
                 thwackability=0.02,
@@ -2563,7 +2590,19 @@ def season_6_election(rd: Redata):
 
     # this change was made a bit later
     rd.update_team("2020-09-14T01:52:01.842Z", DALE, { "slogan": "¡Dale!", "fullName": "Miami Dale", "nickname": "Dale" })
-    
+
+def season_7(rd: Redata):
+    with open(os.path.dirname(__file__) + "/s7_events.json") as f:
+        events = json.load(f)
+
+    def fix_wild_wings():
+        rd.update_team("2020-09-19T19:43:08.648Z", WILD_WINGS, {"nickname": "Wild Wings", "fullName": "Mexico City Wild Wings"})
+
+    handle_data_events(rd, events + [
+        # stupid hack to get this into the event list at the right place
+        {"type": "function", "function": fix_wild_wings, "timestamp": "2020-09-19T19:43:08.648Z"}
+    ])
+
 def main():
     rd = Redata()
 
@@ -2633,6 +2672,9 @@ def main():
 
     season_6_election(rd)
     rd.assert_consistency("2020-09-14T07:00:00Z")
+
+    season_7(rd)
+    rd.assert_consistency("2020-09-20T07:00:00Z")
 
     pass
 

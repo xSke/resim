@@ -30,7 +30,7 @@ def find_game_outcomes(game_id):
     for upd in updates:
         outcomes = upd["data"]["outcomes"]
         if outcomes != last_outcomes:
-            for new_outcome in (set(outcomes) - set(last_outcomes)):
+            for new_outcome in outcomes[len(last_outcomes):]:
                 yield Outcome(game_id=game_id, timestamp=upd["timestamp"], text=new_outcome, update=upd)
         last_outcomes = outcomes
 
@@ -87,10 +87,10 @@ def solve_windowed(known_rolls):
 
         sol = solve_in_math_random_order(w)
         if sol:
+            # to fix alignment...
             rng = Rng(sol[0]["state"], sol[0]["offset"])
-            rng.step(-wi)
             seed, offset = rng.find_seed()
-            return seed_str(seed, offset)
+            return seed_str(seed, offset-wi)
 
 def solve_diff(player_before, player_after, range, stat_order):
     lo, hi = range
@@ -269,17 +269,40 @@ def handle_outcome(outcome: Outcome):
         stat_order = DEFENSE_ATTR_BLOCK + PITCHING_ATTR_BLOCK + BASERUNNING_ATTR_BLOCK + BATTING_ATTR_BLOCK + ["cinnamon"]
 
         season = outcome.update["data"]["season"]
-        lohi = (0.04, 0.08) if season > 6 else (0.06, 0.1)
 
-        # print(player_after.name)
+        if season == 6:
+            lohi = (0.06, 0.1)
+            if team.id == DALE:
+                lohi = lohi[0]*1.1, lohi[1]*1.1
+        else:
+            lohi = 0.04, 0.08
+            if team.id == DALE:
+                lohi = lohi[0]*1.2, lohi[1]*1.2
+
+        # diffs = []
         for s in stat_order:
             bef = player.data[s]
             aft = player_after.data[s]
-            diff = aft-bef
-            # print(s, bef, aft, diff)
+            # diff = aft-bef
         # diffs = [player_after.data[s] - player.data[s] for s in stat_order]
         # print()
+        # print("party solving", player.name, lohi)
         sol = solve_diff(player, player_after, lohi, stat_order)
+        if sol:
+            r = Rng.parse(sol)
+            r.step(-1)
+            lo, hi = lohi
+            for attr in stat_order:
+                val = r.next() * (hi-lo) + lo
+                if attr in ["tragicness", "patheticism"]:
+                    new_value = player.data[attr] - val
+                else:
+                    new_value = player.data[attr] + val
+
+                guess_diff = new_value - player.data[attr]
+                real_diff = player_after.data[attr] - player.data[attr]
+                # if real_diff != guess_diff:
+                    # print(f"!!! mismatch: {player.name} {attr}, rolled {val}, got {real_diff}")
 
         # if sol:
         #     print(sol)
@@ -370,6 +393,10 @@ def handle_outcome(outcome: Outcome):
     elif "The Instability chains" in outcome.text or "The Instability spreads" in outcome.text:
         pass
     elif "The Birds pecked" in outcome.text:
+        target_name = outcome.text.split(" pecked ")[1].split(" free!")[0]
+        player = player_by_name(target_name)
+        team = player_team(player.id, [ht, at])
+        return dict(type="pecked_free", player_id=player.id, team_id=team.id)
         # literally once
         pass
     elif "swallowed a stray Peanut" in outcome.text:
@@ -392,8 +419,9 @@ def handle_outcome(outcome: Outcome):
     pass
 
 outcome_jsons = []
-for season in [5]:
+for season in [6]:
     season_games = [g for g in all_games if g["data"]["season"] == season]
+    # season_games = [g for g in season_games if g["gameId"] == "b9a32210-3598-4650-8a4d-7c443733f2c3"]
 
     for game in season_games:
         for outcome in find_game_outcomes(game["gameId"]):
