@@ -98,6 +98,15 @@ class Redata:
     def update_player(self, timestamp, id: str, delta: dict):
         self._append({"type": "update_player", "timestamp": timestamp, "player_id": id, "delta": delta})
 
+    def move_player(self, timestamp, player_id: str, src_team_id: str, dest_team_id: str, dest_position: str):
+        self._append({"type": "move_player", "timestamp": timestamp, "player_id": player_id, "src_team_id": src_team_id, "dest_team_id": dest_team_id, "dest_position": dest_position})
+
+    def remove_player(self, timestamp, team_id: str, player_id: str):
+        self._append({"type": "remove_player", "timestamp": timestamp, "team_id": team_id, "player_id": player_id})
+
+    def insert_player(self, timestamp, team_id: str, player_id: str, position: str, index: int):
+        self._append({"type": "insert_player", "timestamp": timestamp, "team_id": team_id, "player_id": player_id, "position": position, "index": index})
+
     def replace_player(self, timestamp: str, team_id: str, old_player_id: str, new_player_id: str):
         self._append(
             {
@@ -344,6 +353,24 @@ class Redata:
             perm = event["permutation"]
             after = [before[perm[i]] for i in range(len(perm))]
             team["rotation"] = after
+        elif ty == "move_player":
+            player_id = event["player_id"]
+            dest_team = self.teams[event["dest_team_id"]]
+            dest_position = event["dest_team_position"]
+
+            src_team = self.teams[event["src_team_id"]]
+            old_pos = self.find_player_in_team(event["src_team_id"], player_id)
+            src_team[old_pos[0]].remove(player_id)
+
+            dest_team[dest_position].append(player_id)
+        elif ty == "remove_player":
+            player_id = event["player_id"]
+            team = self.teams[event["team_id"]]
+            pos = self.find_player_in_team(event["team_id"], player_id)
+            team[pos].remove(player_id)
+        elif ty == "insert_player":
+            team = self.teams[event["team_id"]]
+            team[event["position"]].insert(event["index"], event["player_id"])
 
     def find_player_in_team(self, team_id: str, player_id: str):
         team = self.teams[team_id]
@@ -2206,11 +2233,8 @@ def season_5_election(rd: Redata):
     ]:
         rd.reroll_attributes(S5_ELECTION_TIMESTAMP, player_id, rng, ["shakespearianism", "suppression", "unthwackability", "coldness", "overpowerment", "ruthlessness"])
 
-def season_6(rd: Redata):
-    with open(os.path.dirname(__file__) + "/s6_events.json") as f:
-        events = json.load(f)
-
-    for evt in events:
+def handle_data_events(rd: Redata, events: list[dict]):
+    for evt in sorted(events, key=lambda x: x["timestamp"]):
         if evt["type"] == "blooddrain":
             if evt["category"] == "hitting":
                 rd.blooddrain_batting(evt["timestamp"], evt["sippee_id"], evt["sipper_id"])
@@ -2263,9 +2287,283 @@ def season_6(rd: Redata):
             ))
             rd.player_attr_change(evt["timestamp"], evt["source_player_id"], dict(ruthlessness=-0.05))
 
+
+def season_6(rd: Redata):
+    with open(os.path.dirname(__file__) + "/s6_events.json") as f:
+        events = json.load(f)
+
+    handle_data_events(rd, events)
     rd.update_team("2020-09-11T19:00:14.988Z", WILD_WINGS, {"location": "Wexico City", "nickname": "Mild Wings", "fullName": "Wexico City Mild Wings"})
     rd.update_team("2020-09-11T20:46:23.888Z", WILD_WINGS, {"location": "Mexico City", "nickname": "Mild Wings", "fullName": "Mexico City Mild Wings"})
 
+
+def season_6_election(rd: Redata):
+    S6_ELECTION_TIMESTAMP = "2020-09-13T19:00:00Z"
+
+    # Night Vision Goggles: Sutton Dreamy gained Night Vision Goggles.
+
+    # Shrink Ray: Holden Stanton gained the Shrink Ray.
+    rd.player_attr_change(S6_ELECTION_TIMESTAMP, rd.player_id(CRABS, "Holden Stanton"), dict(
+        moxie=0.1,
+        divinity=-0.05,
+        musclitude=-0.07,
+        baseThirst=0.2,
+        laserlikeness=0.2,
+        groundFriction=0.17499999999999993, # i don't like this stray float, maybe we can resolve that?
+        continuation=0.2,
+        indulgence=0.2,
+    ))
+
+    # Headhunter: The Baltimore Crabs stole the best player in the The Wild League, hitter Nagomi Mcdaniel, from the Breckenridge Jazz Hands. They sent back Holden Stanton.
+    rd.swap_player(S6_ELECTION_TIMESTAMP, JAZZ_HANDS, rd.player_id(JAZZ_HANDS, "Nagomi Mcdaniel"), CRABS, rd.player_id(CRABS, "Holden Stanton"))
+
+    # Single-Season Fourth Strike: The Jazz Hands have received the Fourth Strike.
+
+    # Gravity Boots: Steph Weeks gained Gravity Boots.
+
+    # Headliners: Arranged Kansas City Breath Mints's lineup in order of their Idolatry.
+    # 1 - Boyfriend Monreal
+    # 2 - Hewitt Best
+    # 3 - Rodriguez Internet
+    # 4 - Eizabeth Guerra
+    # 5 - Stew Briggs
+    # 6 - Dickerson Morse
+    # 7 - Marquez Clark
+    # 8 - Grey Alvarado
+    # 9 - Lenny Spruce
+    lineup_order = [
+        rd.player_id(BREATH_MINTS, "Boyfriend Monreal"),
+        rd.player_id(BREATH_MINTS, "Hewitt Best"),
+        rd.player_id(BREATH_MINTS, "Rodriguez Internet"),
+        rd.player_id(BREATH_MINTS, "Eizabeth Guerra"),
+        rd.player_id(BREATH_MINTS, "Stew Briggs"),
+        rd.player_id(BREATH_MINTS, "Dickerson Morse"),
+        rd.player_id(BREATH_MINTS, "Marquez Clark"),
+        rd.player_id(BREATH_MINTS, "Grey Alvarado"),
+        rd.player_id(BREATH_MINTS, "Lenny Spruce"),
+    ]
+    rd.update_team(S6_ELECTION_TIMESTAMP, BREATH_MINTS, {"lineup": lineup_order})
+
+    # Spin Attack: Boosted the Kansas City Breath Mints speed by 15%
+    for player_id in rd.teams[BREATH_MINTS]["lineup"] + rd.teams[BREATH_MINTS]["rotation"]:
+        rd.player_attr_change(S6_ELECTION_TIMESTAMP, player_id, dict(
+            # i guess this is what "speed" means...
+            musclitude=0.0225,
+            laserlikeness=0.12,
+            groundFriction=0.075,
+            continuation=0.075,
+        ))
+
+    # Lottery Pick: 
+    # FIRE AND SMOKE
+    # AN EGG
+    # HATCHING
+    # JAYLEN HOTDOGFINGERS RETURNS
+    # MIKE TOWNSEND RETREATS TO SHADOWS
+    jaylen = "04e14d7b-5021-4250-a3cd-932ba8e0a889"
+    rd.insert_player(S6_ELECTION_TIMESTAMP, GARAGES, jaylen, "bullpen", 0)
+    rd.swap_player(S6_ELECTION_TIMESTAMP, GARAGES, rd.player_id(GARAGES, "Jaylen Hotdogfingers"), GARAGES, rd.player_id(GARAGES, "Mike Townsend"))
+
+    # Fireproof Jacket: Oliver Mueller gained the Fireproof Jacket.
+
+    # Sharing Signs: Improved the Wild Low's hitting rating by 10% and impaired their pitching rating by -5%
+    wild_low_teams = [FLOWERS, SUNBEAMS, SPIES, DALE, TACOS]
+    for team_id in wild_low_teams:
+        for player_id in rd.teams[team_id]["lineup"] + rd.teams[team_id]["rotation"]:
+            rd.player_attr_change(S6_ELECTION_TIMESTAMP, player_id, dict(
+                thwackability=0.1,
+                moxie=0.1,
+                divinity=0.1,
+                musclitude=0.1,
+                patheticism=-0.1,
+                buoyancy=0.1,
+                martyrdom=0.1,
+            ))
+        for player_id in rd.teams[team_id]["lineup"] + rd.teams[team_id]["rotation"]:
+            rd.player_attr_change(S6_ELECTION_TIMESTAMP, player_id, dict(
+                shakespearianism=-0.05,
+                suppression=-0.05,
+                unthwackability=-0.05,
+                coldness=-0.05,
+                overpowerment=-0.05,
+                ruthlessness=-0.05,
+                totalFingers=1,
+            ))
+
+
+    # Ooze: Boosted the New York Millennials power by 10%
+    for player_id in rd.teams[MILLENNIALS]["lineup"] + rd.teams[MILLENNIALS]["rotation"]:
+        rd.player_attr_change(S6_ELECTION_TIMESTAMP, player_id, dict(
+            # i guess this is what "power" means...
+            divinity=0.1,
+            musclitude=0.1,
+            groundFriction=0.05,
+        ))
+
+    # The Best Defense: The New York Millennials's best hitting pitcher, Bates Bentley, and their worst hitter, Penelope Mathews, swapped positions.
+    rd.swap_player(S6_ELECTION_TIMESTAMP, MILLENNIALS, rd.player_id(MILLENNIALS, "Bates Bentley"), MILLENNIALS, rd.player_id(MILLENNIALS, "Penelope Mathews"))
+
+    # Rate and Review, brought to you by The Multitude Podcast Collective: Boosted the Dallas Steaks's most Idolized player, Conner Haley, by 25%
+    rd.player_attr_change(S6_ELECTION_TIMESTAMP, rd.player_id(STEAKS, "Conner Haley"), dict(
+        thwackability=0.25,
+        moxie=0.25,
+        divinity=0.25,
+        musclitude=0.25,
+        patheticism=-0.25,
+        buoyancy=0.25,
+        baseThirst=0.25,
+        laserlikeness=0.25,
+        groundFriction=0.25,
+        continuation=0.25,
+        indulgence=0.25,
+        martyrdom=0.25,
+        shakespearianism=0.25,
+        suppression=0.25,
+        unthwackability=0.25,
+        coldness=0.25,
+        overpowerment=0.25,
+        ruthlessness=0.25,
+        omniscience=0.25,
+        tenaciousness=0.25,
+        watchfulness=0.25,
+        anticapitalism=0.25,
+        chasiness=0.25,
+        totalFingers=1
+    ))
+
+    # Collect Call: Randomized the Steaks's least Idolized player, Leach Herman. 1 -> 2
+    rng = Rng.parse("6ebdd663e6ef1c88+159")
+    # yes this is also the "wrong" order for baserunning block
+    attr_order = PITCHING_ATTR_BLOCK + DEFENSE_ATTR_BLOCK + ["baseThirst", "laserlikeness", "continuation", "indulgence", "groundFriction"] + BATTING_ATTR_BLOCK
+    rd.reroll_attributes(S6_ELECTION_TIMESTAMP, rd.player_id(STEAKS, "Leach Herman"), rng, attr_order)
+
+    # Who?: Charleston Shoe Thieves stole the least popular player in the league, hitter Howell Franklin, from the Houston Spies, and maxed their stats. They sent back their worst hitter, Joe Voorhees.
+    rd.swap_player(S6_ELECTION_TIMESTAMP, SPIES, rd.player_id(SPIES, "Howell Franklin"), SHOE_THIEVES, rd.player_id(SHOE_THIEVES, "Joe Voorhees"))
+    howell = rd.player_id(SHOE_THIEVES, "Howell Franklin")
+    while round_rating(batting_rating(rd.players[howell])) < 5:
+        rd.player_attr_change(S6_ELECTION_TIMESTAMP, howell, dict(
+            thwackability=0.01,
+            moxie=0.01,
+            divinity=0.01,
+            musclitude=0.01,
+            patheticism=-0.01,
+            buoyancy=0.01,
+            martyrdom=0.01,
+        ))
+    # and then undo one step...?
+    rd.player_attr_change(S6_ELECTION_TIMESTAMP, howell, dict(
+        thwackability=-0.01,
+        moxie=-0.01,
+        divinity=-0.01,
+        musclitude=-0.01,
+        patheticism=0.01,
+        buoyancy=-0.01,
+        martyrdom=-0.01,
+    ))
+
+    # Mutually Arising:
+    # Improved the Mexico City Mild Wings's overall rating by 2%
+    # Improved the Hawaii Fridays's overall rating by 2%
+    # Improved the Philly Pies's overall rating by 2%
+    # Improved the Charleston Shoe Thieves's overall rating by 2%
+    # Improved the Yellowstone Magic's overall rating by 2%
+    for team_id in [WILD_WINGS, FRIDAYS, PIES, SHOE_THIEVES, MAGIC]:
+        for player_id in rd.teams[team_id]["lineup"] + rd.teams[team_id]["rotation"]:
+            rd.player_attr_change(S6_ELECTION_TIMESTAMP, player_id, dict(
+                thwackability=0.02,
+                moxie=0.02,
+                divinity=0.02,
+                musclitude=0.02,
+                patheticism=-0.02,
+                buoyancy=0.02,
+                baseThirst=0.02,
+                laserlikeness=0.02,
+                groundFriction=0.02,
+                continuation=0.02,
+                indulgence=0.02,
+                martyrdom=0.02,
+                shakespearianism=0.02,
+                suppression=0.02,
+                unthwackability=0.02,
+                coldness=0.02,
+                overpowerment=0.02,
+                ruthlessness=0.02,
+                omniscience=0.02,
+                tenaciousness=0.02,
+                watchfulness=0.02,
+                anticapitalism=0.02,
+                chasiness=0.02,
+                totalFingers=1
+            ))
+
+    # Move the Mounds Closer: Improved the Wild Low's pitching rating by 10% and impaired their hitting rating by -5%
+    for team_id in wild_low_teams:
+        for player_id in rd.teams[team_id]["lineup"] + rd.teams[team_id]["rotation"]:
+            rd.player_attr_change(S6_ELECTION_TIMESTAMP, player_id, dict(
+                thwackability=-0.05,
+                moxie=-0.05,
+                divinity=-0.05,
+                musclitude=-0.05,
+                patheticism=0.05,
+                buoyancy=-0.05,
+                martyrdom=-0.05,
+            ))
+        for player_id in rd.teams[team_id]["lineup"] + rd.teams[team_id]["rotation"]:
+            rd.player_attr_change(S6_ELECTION_TIMESTAMP, player_id, dict(
+                shakespearianism=0.1,
+                suppression=0.1,
+                unthwackability=0.1,
+                coldness=0.1,
+                overpowerment=0.1,
+                ruthlessness=0.1,
+                totalFingers=1,
+            ))
+
+    # Vulture: The Hellmouth Sunbeams stole the best player in the Wild Low, hitter Hahn Fox, from the Boston Flowers. They sent back Alaynabella Hollywood.
+    rd.swap_player(S6_ELECTION_TIMESTAMP, FLOWERS, rd.player_id(FLOWERS, "Hahn Fox"), SUNBEAMS, rd.player_id(SUNBEAMS, "Alaynabella Hollywood"))
+
+    # Party Line: A Duplicate of Fridays pitcher Evelton McBlase was created by the Spies.
+    # Evelton McBlase II takes the place of Donia Bailey, who retreats to the Shadows.
+    # TODO: i believe this was actually done slightly after processing? check data...
+    eviltwin = dict(rd.players[rd.player_id(FRIDAYS, "Evelton McBlase")])
+    eviltwin["id"] = "2c4b2a6d-9961-4e40-882c-a338f4e72117"
+    eviltwin["name"] = "Evelton McBlase II"
+    rd.create_player(S6_ELECTION_TIMESTAMP, eviltwin)
+    rd.insert_player(S6_ELECTION_TIMESTAMP, SPIES, eviltwin["id"], "bullpen", 0)
+    rd.player_attr_change(S6_ELECTION_TIMESTAMP, eviltwin["id"], dict(
+        thwackability=-0.05,
+        moxie=-0.05,
+        divinity=-0.05,
+        musclitude=-0.05,
+        patheticism=0.05,
+        buoyancy=-0.05,
+        baseThirst=-0.05,
+        laserlikeness=-0.05,
+        groundFriction=-0.05,
+        continuation=-0.05,
+        indulgence=-0.05,
+        martyrdom=-0.05,
+        shakespearianism=-0.05,
+        suppression=-0.05,
+        unthwackability=-0.05,
+        coldness=-0.05,
+        overpowerment=-0.05,
+        ruthlessness=-0.05,
+        omniscience=-0.05,
+        tenaciousness=-0.05,
+        watchfulness=-0.05,
+        anticapitalism=-0.05,
+        chasiness=-0.05,
+        totalFingers=1
+    ))
+    rd.swap_player(S6_ELECTION_TIMESTAMP, SPIES, rd.player_id(SPIES, "Donia Bailey"), SPIES, rd.player_id(SPIES, "Evelton McBlase II"))
+
+    # The Best Offense: The Houston Spies's best pitching hitter, Alexandria Rosales, and their worst pitcher, Evelton McBlase II, swapped positions.
+    rd.swap_player(S6_ELECTION_TIMESTAMP, SPIES, rd.player_id(SPIES, "Alexandria Rosales"), SPIES, rd.player_id(SPIES, "Evelton McBlase II"))
+
+    # this change was made a bit later
+    rd.update_team("2020-09-14T01:52:01.842Z", DALE, { "slogan": "¡Dale!", "fullName": "Miami Dale", "nickname": "Dale" })
+    
 def main():
     rd = Redata()
 
@@ -2328,8 +2626,13 @@ def main():
     season_5_election(rd)
     rd.assert_consistency("2020-09-07T07:00:00Z")
 
+    # todo: high filter division shuffle
+
     season_6(rd)
-    rd.assert_consistency("2020-09-12T07:00:00Z")
+    rd.assert_consistency("2020-09-13T07:00:00Z")
+
+    season_6_election(rd)
+    rd.assert_consistency("2020-09-14T07:00:00Z")
 
     pass
 
