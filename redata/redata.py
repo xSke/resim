@@ -15,6 +15,7 @@ from redata.constants import (
     BASERUNNING_ATTR_BLOCK,
     DEFENSE_ATTR_BLOCK,
 )
+import json, os.path
 
 LOVERS = "b72f3061-f573-40d7-832a-5ad475bd7909"
 TACOS = "878c1bf6-0d21-4659-bfee-916c8314d69c"
@@ -195,6 +196,33 @@ class Redata:
     def allergic(self, timestamp: str, _team_id: str, player_id: str):
         self.peanut_reaction(timestamp, player_id, -0.2)
 
+    def blooddrain(self, timestamp: str, sippee_id: str, sipper_id: str, attrs: list[str]):
+        sipper_delta = {}
+        sippee_delta = {}
+        for attr in attrs:
+            if attr == "patheticism":
+                sipper_delta[attr] = -0.1
+                sippee_delta[attr] = 0.1
+            else:
+                sipper_delta[attr] = 0.1
+                sippee_delta[attr] = -0.1
+        self.player_attr_change(timestamp, sippee_id, sippee_delta)
+        self.player_attr_change(timestamp, sipper_id, sipper_delta)
+
+    def blooddrain_batting(self, timestamp: str, sippee_id: str, sipper_id: str):
+        self.blooddrain(timestamp, sippee_id, sipper_id, BATTING_ATTR_BLOCK)
+
+    def blooddrain_pitching(self, timestamp: str, sippee_id: str, sipper_id: str):
+        self.blooddrain(timestamp, sippee_id, sipper_id, PITCHING_ATTR_BLOCK)
+        self.player_attr_change(timestamp, sippee_id, {"totalFingers": 1})
+        self.player_attr_change(timestamp, sipper_id, {"totalFingers": 1})
+
+    def blooddrain_baserunning(self, timestamp: str, sippee_id: str, sipper_id: str):
+        self.blooddrain(timestamp, sippee_id, sipper_id, BASERUNNING_ATTR_BLOCK)
+
+    def blooddrain_defense(self, timestamp: str, sippee_id: str, sipper_id: str):
+        self.blooddrain(timestamp, sippee_id, sipper_id, DEFENSE_ATTR_BLOCK)
+        
     def _flip_permutation(self, permutation: list[int]):
         # i messed up how the permutation works but don't wanna fix it in the data...
         # just unbreak it here
@@ -2178,6 +2206,66 @@ def season_5_election(rd: Redata):
     ]:
         rd.reroll_attributes(S5_ELECTION_TIMESTAMP, player_id, rng, ["shakespearianism", "suppression", "unthwackability", "coldness", "overpowerment", "ruthlessness"])
 
+def season_6(rd: Redata):
+    with open(os.path.dirname(__file__) + "/s6_events.json") as f:
+        events = json.load(f)
+
+    for evt in events:
+        if evt["type"] == "blooddrain":
+            if evt["category"] == "hitting":
+                rd.blooddrain_batting(evt["timestamp"], evt["sippee_id"], evt["sipper_id"])
+            elif evt["category"] == "pitching":
+                rd.blooddrain_pitching(evt["timestamp"], evt["sippee_id"], evt["sipper_id"])
+            elif evt["category"] == "baserunning":
+                rd.blooddrain_baserunning(evt["timestamp"], evt["sippee_id"], evt["sipper_id"])
+            elif evt["category"] == "defensive":
+                rd.blooddrain_defense(evt["timestamp"], evt["sippee_id"], evt["sipper_id"])
+        elif evt["type"] == "feedback":
+            rd.swap_player(evt["timestamp"], evt["player_a_team"], evt["player_a_id"], evt["player_b_team"], evt["player_b_id"])
+            if "player_a_fate" in evt:
+                rd.update_player(evt["timestamp"], evt["player_a_id"], {"fate": evt["player_a_fate"]})
+            if "player_b_fate" in evt:
+                rd.update_player(evt["timestamp"], evt["player_b_id"], {"fate": evt["player_b_fate"]})
+        elif evt["type"] == "incineration":
+            rd.incineration(evt["timestamp"], evt["target_team_id"], evt["target_id"], evt["seed"], evt["replacement_id"], evt["replacement_name"])
+        elif evt["type"] == "peanut_allergic":
+            rd.allergic(evt["timestamp"], evt["team_id"], evt["player_id"])
+        elif evt["type"] == "reverb_lineup":
+            rd.reverb_lineup(evt["timestamp"], evt["team_id"], rd._flip_permutation(evt["permutation"]))
+        elif evt["type"] == "reverb_rotation":
+            rd.reverb_rotation(evt["timestamp"], evt["team_id"], rd._flip_permutation(evt["permutation"]))
+        elif evt["type"] == "feedback_failed":
+            rd.player_attr_change(evt["timestamp"], evt["immune_player_id"], dict(
+                thwackability=0.02,
+                moxie=0.02,
+                divinity=0.02,
+                musclitude=0.02,
+                patheticism=-0.02,
+                buoyancy=0.02,
+                baseThirst=0.02,
+                laserlikeness=0.02,
+                groundFriction=0.02,
+                continuation=0.02,
+                indulgence=0.02,
+                martyrdom=0.02,
+                shakespearianism=0.02,
+                suppression=0.02,
+                unthwackability=0.02,
+                coldness=0.02,
+                overpowerment=0.02,
+                ruthlessness=0.02,
+                omniscience=0.02,
+                tenaciousness=0.02,
+                watchfulness=0.02,
+                anticapitalism=0.02,
+                chasiness=0.02,
+                totalFingers=1
+            ))
+            rd.player_attr_change(evt["timestamp"], evt["source_player_id"], dict(ruthlessness=-0.05))
+
+    rd.update_team("2020-09-11T19:00:14.988Z", WILD_WINGS, {"location": "Wexico City", "nickname": "Mild Wings", "fullName": "Wexico City Mild Wings"})
+    rd.update_team("2020-09-11T20:46:23.888Z", WILD_WINGS, {"location": "Mexico City", "nickname": "Mild Wings", "fullName": "Mexico City Mild Wings"})
+
 def main():
     rd = Redata()
 
@@ -2239,6 +2327,9 @@ def main():
 
     season_5_election(rd)
     rd.assert_consistency("2020-09-07T07:00:00Z")
+
+    season_6(rd)
+    rd.assert_consistency("2020-09-12T07:00:00Z")
 
     pass
 

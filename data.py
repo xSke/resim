@@ -836,7 +836,7 @@ class PlayerData(TeamOrPlayerMods):
         data_state = data.get("state", {})
         items = [ItemData.from_dict(item) for item in data.get("items") or []]
         player_data = PlayerData(
-            id=data["id"],
+            id=data.get("id"),
             last_update_time=last_update_time,
             raw_name=data["name"],
             unscattered_name=data_state.get("unscatteredName"),
@@ -946,7 +946,7 @@ class PlayerData(TeamOrPlayerMods):
 
     @staticmethod
     def _get_stats_with_items(data: Dict[str, Any], items: List[ItemData]) -> Dict[str, float]:
-        stats = {stat: data[stat] for stat in stat_indices}
+        stats = {stat: data.get(stat, 0) for stat in stat_indices}
         for item in items:
             # if item.health != 0:
             for stat, value in item.stats.items():
