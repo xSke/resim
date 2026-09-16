@@ -215,15 +215,17 @@ def handle_outcome(outcome: Outcome):
         immune = player_by_name(immune_name)
         source = player_by_name(source_name)
         return dict(type="feedback_failed", immune_player_id=immune.id, source_player_id=source.id)
-    elif "flickers!" in outcome.text:
-        pass
     elif "is Red Hot!" in outcome.text:
         pass
     elif "is no longer Red Hot." in outcome.text:
         pass
     elif "switched teams in the feedback" in outcome.text:
-        player_a_name = outcome.text.split(" and ")[0]
-        player_b_name = outcome.text.split(" and ")[1].split(" switched")[0]
+        trimmed = outcome.text
+        if "flickers! " in trimmed:
+            trimmed = trimmed.split(" flickers! ")[1]
+
+        player_a_name = trimmed.split(" and ")[0]
+        player_b_name = trimmed.split(" and ")[1].split(" switched")[0]
         # print(outcome.text)
 
         gd.fetch_players(outcome.timestamp, -15)
@@ -231,13 +233,27 @@ def handle_outcome(outcome: Outcome):
         player_b = player_by_name(player_b_name)
 
 
-        gd.fetch_teams(game_start, -60*5)
+        gd.fetch_teams(game_start, -60*3)
         ht_before, at_before = gd.teams[ht], gd.teams[at]
-        gd.fetch_teams(game_end, 60*5)
+        gd.fetch_teams(game_end, 60*3)
         ht_after, at_after = gd.teams[ht], gd.teams[at]
 
         player_a_team = ht if player_a.id in (ht_before.lineup + ht_before.rotation) else at
         player_b_team = ht if player_b.id in (ht_before.lineup + ht_before.rotation) else at
+
+        if "Eugenia Garbage and Simon Haley" in outcome.text:
+            # dunno. special case.
+            player_a_team = SHOE_THIEVES
+            player_b_team = MOIST_TALKERS
+
+        if "Eduardo Woodman and Alyssa Harrell" in outcome.text:
+            # hardcoded
+            if outcome.timestamp.startswith("2020-09-25T09:04"):
+                player_a_team = PIES
+                player_b_team = FRIDAYS
+            elif outcome.timestamp.startswith("2020-09-25T09:12"):
+                player_a_team = FRIDAYS
+                player_b_team = PIES
         assert player_a_team != player_b_team
 
         gd.fetch_player_after(player_a.id, outcome.timestamp)
@@ -277,7 +293,7 @@ def handle_outcome(outcome: Outcome):
         else:
             lohi = 0.04, 0.08
             if team.id == DALE:
-                lohi = lohi[0]*1.2, lohi[1]*1.2
+                lohi = lohi[0]*1.1, lohi[1]*1.1
 
         # diffs = []
         for s in stat_order:
@@ -400,6 +416,8 @@ def handle_outcome(outcome: Outcome):
         # literally once
         pass
     elif "swallowed a stray Peanut" in outcome.text:
+        gd.fetch_teams(outcome.timestamp)
+        
         assert htn in outcome.text or atn in outcome.text
         if " hitter " in outcome.text:
             player_name = outcome.text.split(" hitter ")[1].split(" swallowed")[0]
@@ -413,13 +431,18 @@ def handle_outcome(outcome: Outcome):
         team = player_team(player.id, [ht, at])
 
         return dict(type=type, player_id=player.id, team_id=team.id)
+    elif "but they're Fireproof!" in outcome.text:
+        player_name = outcome.text.split(" hitter ")[1].split(", ")[0]
+        player = player_by_name(player_name)
+
+        return dict(type="fireproof", player_id=player.id)
     else:
-        # pass
+        pass
         print("!!!!!", outcome.text)
     pass
 
 outcome_jsons = []
-for season in [6]:
+for season in [7]:
     season_games = [g for g in all_games if g["data"]["season"] == season]
     # season_games = [g for g in season_games if g["gameId"] == "b9a32210-3598-4650-8a4d-7c443733f2c3"]
 

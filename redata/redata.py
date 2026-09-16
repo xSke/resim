@@ -40,6 +40,23 @@ JAZZ_HANDS = "a37f9158-7f82-46bc-908c-c9e2dda7c33b"
 
 CHRONICLER_URI = "https://api.sibr.dev/chronicler"
 
+def rng_parse_cached(rng_str: str):
+    rng_cache_path = os.path.join(os.path.dirname(__file__), "_rng_cache.json")
+    if os.path.exists(rng_cache_path):
+        with open(rng_cache_path, "r") as f:
+            rng_cache = json.load(f)
+    else:
+        rng_cache = {}
+
+    if rng_str in rng_cache:
+        return Rng.parse(rng_cache[rng_str])
+    rng = Rng.parse(rng_str)
+    rng_cache[rng_str] = rng.get_state_str()
+
+    with open(rng_cache_path, "w") as f:
+        json.dump(rng_cache, f)
+    return rng
+
 
 def generate_player(rng: Rng, id: str, name: str, roll_cinnamon=False, roll_s3=False):
     # we expect an rng value that's pointed to the roll just *before* the first-name roll
@@ -59,6 +76,10 @@ def generate_player(rng: Rng, id: str, name: str, roll_cinnamon=False, roll_s3=F
 
     soul_roll = rng.next()
     player["soul"] = int(soul_roll * 8 + 2)
+
+    if roll_s3:
+        player["aaa"] = rng.next()
+        player["fate"] = int(rng.next() * 100)
     return player
 
 def batting_rating(p):
@@ -98,8 +119,8 @@ class Redata:
     def update_player(self, timestamp, id: str, delta: dict):
         self._append({"type": "update_player", "timestamp": timestamp, "player_id": id, "delta": delta})
 
-    def move_player(self, timestamp, player_id: str, src_team_id: str, dest_team_id: str, dest_position: str):
-        self._append({"type": "move_player", "timestamp": timestamp, "player_id": player_id, "src_team_id": src_team_id, "dest_team_id": dest_team_id, "dest_position": dest_position})
+    def move_player(self, timestamp, player_id: str, src_team_id: str, dest_team_id: str, dest_position: str, dest_index: int):
+        self._append({"type": "move_player", "timestamp": timestamp, "player_id": player_id, "src_team_id": src_team_id, "dest_team_id": dest_team_id, "dest_position": dest_position, "dest_index": dest_index})
 
     def remove_player(self, timestamp, team_id: str, player_id: str):
         self._append({"type": "remove_player", "timestamp": timestamp, "team_id": team_id, "player_id": player_id})
@@ -177,7 +198,7 @@ class Redata:
         new_player_id: str,
         new_player_name: str,
     ):
-        rng = Rng.parse(new_player_rng)
+        rng = rng_parse_cached(new_player_rng)
 
         roll_cinnamon = timestamp > "2020-08-03T00:00:00Z"  # s3+
         new_player = generate_player(rng, new_player_id, new_player_name, roll_cinnamon=roll_cinnamon)
@@ -356,13 +377,13 @@ class Redata:
         elif ty == "move_player":
             player_id = event["player_id"]
             dest_team = self.teams[event["dest_team_id"]]
-            dest_position = event["dest_team_position"]
+            dest_position = event["dest_position"]
 
             src_team = self.teams[event["src_team_id"]]
             old_pos = self.find_player_in_team(event["src_team_id"], player_id)
             src_team[old_pos[0]].remove(player_id)
 
-            dest_team[dest_position].append(player_id)
+            dest_team[dest_position].insert(event["dest_index"], player_id)
         elif ty == "remove_player":
             player_id = event["player_id"]
             team = self.teams[event["team_id"]]
@@ -608,7 +629,7 @@ def season_1_election(rd: Redata):
         ("80de2b05-e0d4-4d33-9297-9951b2b5c950", "8171ff73601510ff+54"),  # Alyssa Harrell
         ("70ccff1e-6b53-40e2-8844-0a28621cb33e", "8171ff73601510ff+70"),  # Moody Cookbook
     ]:
-        r = Rng.parse(seed)
+        r = rng_parse_cached(seed)
         rd.update_player(
             S1_ELECTION_TIMESTAMP,
             player_id,
@@ -624,7 +645,7 @@ def season_1_election(rd: Redata):
         )
 
     # Derrick timeline - Winnie Hess mystery boost
-    r = Rng.parse("6e9cecada970c54f+51")
+    r = rng_parse_cached("6e9cecada970c54f+51")
     rd.update_player(
         S1_ELECTION_TIMESTAMP,
         "f2a27a7e-bf04-4d31-86f5-16bfa3addbe7",
@@ -814,7 +835,7 @@ def season_2_election(rd: Redata):
     rd.update_player(S2_ELECTION_TIMESTAMP, "5ff66eae-7111-4e3b-a9b8-a9579165b0a5", dict(name="Peanutiel Duffy"))
 
     # this is where cinnamon, fate, and allergies were rolled
-    r = Rng.parse("01b73d5d48bdcfc9+1")
+    r = rng_parse_cached("01b73d5d48bdcfc9+1")
     for team_id in ORIGINAL_TEAM_ORDER:
         team = rd.teams[team_id]
         for player_id in team["lineup"] + team["rotation"] + team["bench"] + team["bullpen"]:
@@ -917,7 +938,7 @@ def season_2_election(rd: Redata):
         )
 
     # Soul Swap blessed the New York Millennials.
-    r = Rng.parse("01b73d5d48bdcfc9+1515")
+    r = rng_parse_cached("01b73d5d48bdcfc9+1515")
     for player_id in [
         "ae4acebd-edb5-4d20-bf69-f2d5151312ff",  # Theodore Cervantes
         "378c07b0-5645-44b5-869f-497d144c7b35",  # Fynn Doyle
@@ -1554,7 +1575,7 @@ def season_3_election(rd: Redata):
     rd.swap_player(S3_ELECTION_TIMESTAMP, FRIDAYS, "c0732e36-3731-4f1a-abdc-daa9563b6506", JAZZ_HANDS, "e6114fd4-a11d-4f6c-b823-65691bb2d288")
 
     # Summoning Circle blessed the Kansas City Breath Mints
-    election_rng = Rng.parse("ff7c8068a29e94e9+27")
+    election_rng = rng_parse_cached("ff7c8068a29e94e9+27")
     # Rodriguez Internet's hitting was randomized from ½ to ★★½.
     rd.reroll_attributes(S3_ELECTION_TIMESTAMP, "4b6f0a4e-de18-44ad-b497-03b1f470c43c", election_rng, ["buoyancy", "thwackability", "moxie", "divinity", "musclitude", "patheticism", "martyrdom"])
     election_rng.step(1)
@@ -1623,7 +1644,7 @@ def season_3_election(rd: Redata):
     # Exploratory Surgeries blessed the Unlimited Tacos.
     # ... you know what, let's do this.
     comfort_glover = "e16c3f28-eecd-4571-be1a-606bbac36b2b" # (Comfort Glover)
-    # r = Rng.parse("ff7c8068a29e94e9+51")
+    # r = rng_parse_cached("ff7c8068a29e94e9+51")
     assert round_rating(pitching_rating(rd.players[comfort_glover])) == 0.5
 
     # Wyatt Mason's pitching was randomized from ½ to ½.
@@ -1642,7 +1663,7 @@ def season_3_election(rd: Redata):
     rd.swap_player(S3_ELECTION_TIMESTAMP, FIREFIGHTERS, "d46abb00-c546-4952-9218-4f16084e3238", BREATH_MINTS, "3af96a6b-866c-4b03-bc14-090acf6ecee5")
 
     # Team-Building Exercise blessed the Chicago Firefighters
-    # election_rng = Rng.parse("ff7c8068a29e94e9+70")
+    # election_rng = rng_parse_cached("ff7c8068a29e94e9+70")
     election_rng.step(1)
     # Joshua Butt's hitting was randomized from 0 to ★★½.
     rd.reroll_attributes(S3_ELECTION_TIMESTAMP, "69196296-f652-42ff-b2ca-0d9b50bd9b7b", election_rng, ["buoyancy", "thwackability", "moxie", "divinity", "musclitude", "patheticism", "martyrdom"])
@@ -1801,7 +1822,7 @@ def season_4_election(rd: Redata):
     # note: NOT the same order in the baserunning block?
     ALT_ATTRIBUTES = PITCHING_ATTR_BLOCK + DEFENSE_ATTR_BLOCK + ["baseThirst", "laserlikeness", "continuation", "indulgence", "groundFriction"] + BATTING_ATTR_BLOCK
 
-    rng = Rng.parse("706953916a8d68d6+131")
+    rng = rng_parse_cached("706953916a8d68d6+131")
     # exit()
 
     for team_id in ORIGINAL_TEAM_ORDER:
@@ -1879,7 +1900,7 @@ def season_4_election(rd: Redata):
         ))
 
     # Non-Dominant Arms blessed the Kansas City Breath Mints. Improved the Kansas City Breath Mints' pitching by 13%
-    rng = Rng.parse("706953916a8d68d6+1191")
+    rng = rng_parse_cached("706953916a8d68d6+1191")
     amount = (rng.next() * 0.2) - 0.05
     for player_id in rd.teams[BREATH_MINTS]["rotation"]:
         rd.player_attr_change(S4_ELECTION_TIMESTAMP, player_id, dict(
@@ -1975,7 +1996,7 @@ def season_4_election(rd: Redata):
     # Randomized the stats for the Houston Spies's worst hitter, Marco Escobar, from 1.5 stars to 1 star
     # Randomized the stats for the Houston Spies's worst hitter, Marco Escobar, from 1 star to 3 stars 
     # todo: assert the star values here
-    rng = Rng.parse("706953916a8d68d6+1214")
+    rng = rng_parse_cached("706953916a8d68d6+1214")
     for player_id in [
         rd.player_id(SPIES, "Marco Escobar"),
         rd.player_id(SPIES, "Marco Escobar"),
@@ -2057,7 +2078,7 @@ def season_5(rd: Redata):
 
 def season_5_election(rd: Redata):
     S5_ELECTION_TIMESTAMP = "2020-09-06T19:00:00Z"
-    rng = Rng.parse("9af3b0c0a561e21a+147")
+    rng = rng_parse_cached("9af3b0c0a561e21a+147")
 
     # Zombies, Run! Presents Horde Hallucinations: Improved the Baltimore Crabs's baserunning by 17%
     rand_amount = (rng.next() * (0.24+0.08)) - 0.08 # 0.7929858270216812
@@ -2244,6 +2265,8 @@ def handle_data_events(rd: Redata, events: list[dict]):
                 rd.blooddrain_baserunning(evt["timestamp"], evt["sippee_id"], evt["sipper_id"])
             elif evt["category"] == "defensive":
                 rd.blooddrain_defense(evt["timestamp"], evt["sippee_id"], evt["sipper_id"])
+            else:
+                raise evt["category"]
         elif evt["type"] == "function":
             evt["function"]()
         elif evt["type"] == "feedback":
@@ -2266,11 +2289,15 @@ def handle_data_events(rd: Redata, events: list[dict]):
             # shelled -> superallergic
             rd.update_player(evt["timestamp"], evt["player_id"], {"peanutAllergy": True})
         elif evt["type"] == "party":
-            rng = Rng.parse(evt["seed"])
+            rng = rng_parse_cached(evt["seed"])
             rng.step(-1)
             order = DEFENSE_ATTR_BLOCK + PITCHING_ATTR_BLOCK + BASERUNNING_ATTR_BLOCK + BATTING_ATTR_BLOCK + ["cinnamon"]
 
-            lo, hi = 0.06, 0.1
+            if evt["season"] == 6:
+                lo, hi = 0.06, 0.1
+            else:
+                lo, hi = 0.04, 0.08
+
             if evt["team_id"] == DALE:
                 # LOTP
                 lo, hi = lo*1.1, hi*1.1
@@ -2313,6 +2340,34 @@ def handle_data_events(rd: Redata, events: list[dict]):
                 totalFingers=1
             ))
             rd.player_attr_change(evt["timestamp"], evt["source_player_id"], dict(ruthlessness=-0.05))
+        elif evt["type"] == "fireproof":
+            rd.player_attr_change(evt["timestamp"], evt["player_id"], dict(
+                thwackability=0.05,
+                moxie=0.05,
+                divinity=0.05,
+                musclitude=0.05,
+                patheticism=-0.05,
+                buoyancy=0.05,
+                baseThirst=0.05,
+                laserlikeness=0.05,
+                groundFriction=0.05,
+                continuation=0.05,
+                indulgence=0.05,
+                martyrdom=0.05,
+                shakespearianism=0.05,
+                suppression=0.05,
+                unthwackability=0.05,
+                coldness=0.05,
+                overpowerment=0.05,
+                ruthlessness=0.05,
+                omniscience=0.05,
+                tenaciousness=0.05,
+                watchfulness=0.05,
+                anticapitalism=0.05,
+                chasiness=0.05,
+                totalFingers=1
+            ))
+
 
 
 def season_6(rd: Redata):
@@ -2459,7 +2514,7 @@ def season_6_election(rd: Redata):
     ))
 
     # Collect Call: Randomized the Steaks's least Idolized player, Leach Herman. 1 -> 2
-    rng = Rng.parse("6ebdd663e6ef1c88+159")
+    rng = rng_parse_cached("6ebdd663e6ef1c88+159")
     # yes this is also the "wrong" order for baserunning block
     attr_order = PITCHING_ATTR_BLOCK + DEFENSE_ATTR_BLOCK + ["baseThirst", "laserlikeness", "continuation", "indulgence", "groundFriction"] + BATTING_ATTR_BLOCK
     rd.reroll_attributes(S6_ELECTION_TIMESTAMP, rd.player_id(STEAKS, "Leach Herman"), rng, attr_order)
@@ -2603,13 +2658,209 @@ def season_7(rd: Redata):
         {"type": "function", "function": fix_wild_wings, "timestamp": "2020-09-19T19:43:08.648Z"}
     ])
 
+def season_7_election(rd: Redata):
+    S7_ELECTION_TIMESTAMP = "2020-09-20T19:00:00Z"
+
+    # Arranged San Francisco Lovers' lineup in order of their idolatry. 
+    lineup_order = [
+        rd.player_id(LOVERS, "Knight Urlacher"), # pre-name-change
+        rd.player_id(LOVERS, "Don Mitchell"),
+        rd.player_id(LOVERS, "Kichiro Guerra"),
+        rd.player_id(LOVERS, "Helga Burton"),
+        rd.player_id(LOVERS, "Alexander Horne"),
+        rd.player_id(LOVERS, "Ortiz Lopez"),
+        rd.player_id(LOVERS, "Helga Moreno"),
+        rd.player_id(LOVERS, "Theo King"),
+        rd.player_id(LOVERS, "Kennedy Meh"),
+    ]
+    rd.update_team(S7_ELECTION_TIMESTAMP, LOVERS, {"lineup": lineup_order})
+
+    # The Seattle Garages stole hitter Oliver Notarobot from the Baltimore Crabs. They sent back Luis Acevedo.
+    rd.swap_player(S7_ELECTION_TIMESTAMP, CRABS, rd.player_id(CRABS, "Oliver Notarobot"), GARAGES, rd.player_id(GARAGES, "Luis Acevedo"))
+
+    # Sandie Turner is now Spicy!
+
+    # Hellmouth Sunbeams's worst hitter, Joe Voorhees, retreats to the Shadows.
+    rd.move_player(S7_ELECTION_TIMESTAMP, rd.player_id(SUNBEAMS, "Joe Voorhees"), SUNBEAMS, SUNBEAMS, "bench", 0)
+
+    # Randomized Defense stats for the Hellmouth Sunbeams's worst defender, Eugenia Bickle. 3 stars to 4 stars
+    # Randomized Defense stats for the Hellmouth Sunbeams's worst defender, Sandoval Crossing. 3 stars to 3.5 stars
+    # Randomized Defense stats for the Hellmouth Sunbeams's worst defender, Miguel James. 3 stars to 1.5 stars
+    rng = rng_parse_cached("5805f8baf5aa000b+152")
+    for player_id, stars_after in [
+        (rd.player_id(SUNBEAMS, "Eugenia Bickle"), 4),
+        (rd.player_id(SUNBEAMS, "Sandoval Crossing"), 3.5),
+        (rd.player_id(SUNBEAMS, "Miguel James"), 1.5)
+    ]:
+        rd.reroll_attributes(S7_ELECTION_TIMESTAMP, player_id, rng, ["omniscience", "tenaciousness", "watchfulness", "anticapitalism", "chasiness"])
+        assert round_rating(defense_rating(rd.players[player_id])) == stars_after
+
+    # Randomized Hitting stats for the Hades Tigers's worst hitter, Richmond Harrison. 0.5 stars to 1 star
+    # Randomized Hitting stats for the Hades Tigers's worst hitter, Richmond Harrison. 1 star to 3 stars
+    # Randomized Hitting stats for the Hades Tigers's worst hitter, Spears Taylor. 1.5 stars to 1 star
+    for player_id, stars_after in [
+        (rd.player_id(TIGERS, "Richmond Harrison"), 1),
+        (rd.player_id(TIGERS, "Richmond Harrison"), 3),
+        (rd.player_id(TIGERS, "Spears Taylor"), 1)
+    ]:
+        rd.reroll_attributes(S7_ELECTION_TIMESTAMP, player_id, rng, BATTING_ATTR_BLOCK)
+        assert round_rating(batting_rating(rd.players[player_id])) == stars_after
+
+    # Improved the Hades Tigers's hitting by 4%
+    amount = rng.next() * 0.2 - 0.05
+    for player_id in rd.teams[TIGERS]["lineup"]:
+        rd.player_attr_change(S7_ELECTION_TIMESTAMP, player_id, dict(
+            thwackability=amount,
+            moxie=amount,
+            divinity=amount,
+            musclitude=amount,
+            patheticism=-amount,
+            buoyancy=amount,
+            martyrdom=amount,
+        ))
+
+    # The Chicago Firefighters stole hitter Axel Cardenas, from the Mexico City Wild Wings. They sent back Joshua Watson.
+    # The Chicago Firefighters stole hitter José Haley, from the Mexico City Wild Wings. They sent back Axel Cardenas.
+    # The Chicago Firefighters stole pitcher Kennedy Rodgers, from the Mexico City Wild Wings. They sent back Mullen Peterson.
+    rd.swap_player(S7_ELECTION_TIMESTAMP, WILD_WINGS, rd.player_id(WILD_WINGS, "Axel Cardenas"), FIREFIGHTERS, rd.player_id(FIREFIGHTERS, "Joshua Watson"))
+    rd.swap_player(S7_ELECTION_TIMESTAMP, WILD_WINGS, rd.player_id(WILD_WINGS, "José Haley"), FIREFIGHTERS, rd.player_id(FIREFIGHTERS, "Axel Cardenas"))
+    rd.swap_player(S7_ELECTION_TIMESTAMP, WILD_WINGS, rd.player_id(WILD_WINGS, "Kennedy Rodgers"), FIREFIGHTERS, rd.player_id(FIREFIGHTERS, "Mullen Peterson"))
+
+    # Declan Suzanne stole Oliver Mueller's armor, Fireproof Jacket.
+
+    # Raúl Leal gained the sawed off bat, the Iffey Jr. and has been Minimized.
+    raul = rd.player_id(DALE, "Raúl Leal")
+    for i in range(51): # where does 51 come from?
+        rd.player_attr_change(S7_ELECTION_TIMESTAMP, raul, dict(
+            thwackability=-0.01,
+            moxie=-0.01,
+            divinity=-0.01,
+            musclitude=-0.01,
+            patheticism=0.01,
+            buoyancy=-0.01,
+            baseThirst=-0.01,
+            laserlikeness=-0.01,
+            groundFriction=-0.01,
+            continuation=-0.01,
+            indulgence=-0.01,
+            martyrdom=-0.01,
+            shakespearianism=-0.01,
+            suppression=-0.01,
+            unthwackability=-0.01,
+            coldness=-0.01,
+            overpowerment=-0.01,
+            ruthlessness=-0.01,
+            omniscience=-0.01,
+            tenaciousness=-0.01,
+            watchfulness=-0.01,
+            anticapitalism=-0.01,
+            chasiness=-0.01,
+            totalFingers=1,
+        ))
+
+    # All of the Miami Dale's players now have Electric blood type!
+
+    # Jesús Koch gained Mclaughlin Scorpler's Memorial Fireproof Jacket.
+
+    # The Hawai'i Fridays stole hitter Aldon Cashmoney from the Breckenridge Jazz Hands. They sent back Elijah Valenzuela.
+    rd.swap_player(S7_ELECTION_TIMESTAMP, JAZZ_HANDS, rd.player_id(JAZZ_HANDS, "Aldon Cashmoney"), FRIDAYS, rd.player_id(FRIDAYS, "Elijah Valenzuela"))
+
+    # The Hawai'i Fridays stole hitter Evelton McBlase II from the Houston Spies. They sent back Karato Bean.
+    rd.swap_player(S7_ELECTION_TIMESTAMP, SPIES, rd.player_id(SPIES, "Evelton McBlase II"), FRIDAYS, rd.player_id(FRIDAYS, "Karato Bean"))
+
+    # The Shame Bubble protects the Mild Low.
+
+    # Hawai'i Fridays' player Jacob Winner cannot be Idolized anymore!
+
+    # York Silk is now a Super Idol!
+
+    # Randomized Pitching stats for the Hawai'i Fridays's worst pitcher, James Mora. 1.5 stars to 1.5 stars
+    # Randomized Pitching stats for the Hawai'i Fridays's worst pitcher, James Mora. 1.5 stars to 1 star
+    # Randomized Pitching stats for the Hawai'i Fridays's worst pitcher, James Mora. 1 star to 2 stars
+    rng.step(10)
+    for player_id, stars_after in [
+        (rd.player_id(FRIDAYS, "James Mora"), 1.5),
+        (rd.player_id(FRIDAYS, "James Mora"), 1),
+        (rd.player_id(FRIDAYS, "James Mora"), 2)
+    ]:
+        rd.reroll_attributes(S7_ELECTION_TIMESTAMP, player_id, rng, PITCHING_ATTR_BLOCK)
+        assert round_rating(pitching_rating(rd.players[player_id])) == stars_after
+
+    # Glabe Moon has been recruited to join the Boston Flowers' lineup!
+    glabe_moon = generate_player(rng, "04931546-1b4a-469f-b391-7ed67afe824c", "Glabe Moon", True, True)
+    rd.create_player(S7_ELECTION_TIMESTAMP, glabe_moon)
+    rd.insert_player(S7_ELECTION_TIMESTAMP, FLOWERS, glabe_moon["id"], "lineup", len(rd.teams[FLOWERS]["lineup"]))
+
+    # Randomized Baserunning stats for the Boston Flowers's worst baserunner, Zeboriah Wilson. 1 star to 3.5 stars
+    # Randomized Baserunning stats for the Boston Flowers's worst baserunner, Chambers Simmons. 1.5 stars to 3.5 stars
+    # Randomized Baserunning stats for the Boston Flowers's worst baserunner, Owen Picklestein. 1.5 stars to 1.5 stars
+    for player_id, stars_after in [
+        (rd.player_id(FLOWERS, "Zeboriah Wilson"), 3.5),
+        (rd.player_id(FLOWERS, "Chambers Simmons"), 3.5),
+        (rd.player_id(FLOWERS, "Owen Picklestein"), 1.5)
+    ]:
+        rd.reroll_attributes(S7_ELECTION_TIMESTAMP, player_id, rng, ["baseThirst", "laserlikeness", "continuation", "indulgence", "groundFriction"])
+        assert round_rating(baserunning_rating(rd.players[player_id])) == stars_after
+
+
+def season_8_pre_fix(rd: Redata):
+    # so the reroll baserunning/defense blessings in the s7 election targeted pitchers, not batters
+    # so to compensate for that bug, they gave these flat boosts after the election
+    S8_PRE = "2020-09-21T07:45:00Z"
+    for player_id in [
+        rd.player_id(FLOWERS, "Nic Winkler"),
+        rd.player_id(FLOWERS, "Gloria Bugsnax"),
+        rd.player_id(FLOWERS, "Jacob Haynes"),
+    ]:
+        rd.player_attr_change(S8_PRE, player_id, dict(
+            # yes they didn't give jacob haynes, specifically, laserlikeness
+            # ?????
+            laserlikeness=0.1 if player_id != rd.player_id(FLOWERS, "Jacob Haynes") else 0,
+            baseThirst=0.1,
+            groundFriction=0.1,
+            continuation=0.1,
+            indulgence=0.1,
+        ))
+    for player_id in [
+        rd.player_id(SUNBEAMS, "Igneus Delacruz"),
+        rd.player_id(SUNBEAMS, "Hahn Fox"),
+        rd.player_id(SUNBEAMS, "Hendricks Richardson"),
+    ]:
+        rd.player_attr_change(S8_PRE, player_id, dict(
+            omniscience=0.1,
+            tenaciousness=0.1,
+            watchfulness=0.1,
+            anticapitalism=0.1,
+            chasiness=0.1,
+        ))
+
+
+def season_8(rd: Redata):
+    with open(os.path.dirname(__file__) + "/s8_events.json") as f:
+        events = json.load(f)
+    # def fix_wild_wings():
+    #     rd.update_team("2020-09-19T19:43:08.648Z", WILD_WINGS, {"nickname": "Wild Wings", "fullName": "Mexico City Wild Wings"})
+
+    S8_D1 = "2020-09-21T16:00:00Z"
+    rng = rng_parse_cached("914071fe31ce6e83+130")
+    rng.step(-2) # skip name rolls
+    pitching_machine = generate_player(rng, "de21c97e-f575-43b7-8be7-ecc5d8c4eaff", "Pitching Machine", True, True)
+    rd.create_player(S8_D1, pitching_machine)
+    rd.insert_player(S8_D1, TACOS, pitching_machine["id"], "rotation", 5)
+
+    handle_data_events(rd, events + [
+        # stupid hack to get this into the event list at the right place
+        # {"type": "function", "function": fix_wild_wings, "timestamp": "2020-09-19T19:43:08.648Z"}
+    ])
+
+
 def main():
     rd = Redata()
 
     # Season 1 start setup
     S1_START_TIMESTAMP = "2020-07-20T00:00:00Z"
     player_name_queue = list(S1_PLAYER_NAMES)
-    rng = Rng.parse("0eeb2966d0cf3cfd+1")
+    rng = rng_parse_cached("0eeb2966d0cf3cfd+1")
     for team_id in ORIGINAL_TEAM_ORDER:
         team_player_ids = []
         for _ in range(25):
@@ -2676,7 +2927,14 @@ def main():
     season_7(rd)
     rd.assert_consistency("2020-09-20T07:00:00Z")
 
-    pass
+    season_7_election(rd)
+    rd.assert_consistency("2020-09-21T07:00:00Z")
+
+    season_8_pre_fix(rd)
+    rd.assert_consistency("2020-09-21T15:00:00Z")
+
+    season_8(rd)
+    rd.assert_consistency("2020-09-27T07:00:00Z")
 
 
 if __name__ == "__main__":
