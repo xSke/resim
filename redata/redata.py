@@ -14,6 +14,7 @@ from redata.constants import (
     PITCHING_ATTR_BLOCK,
     BASERUNNING_ATTR_BLOCK,
     DEFENSE_ATTR_BLOCK,
+    S3_INTERVIEWS_FINAL_VALUES,
 )
 import json, os.path
 
@@ -67,6 +68,8 @@ def generate_player(rng: Rng, id: str, name: str, roll_cinnamon=False, roll_s3=F
         "id": id,
         "name": name,
         "totalFingers": 10,
+        "bat": "",
+        "armor": "",
     }
     for stat in ATTR_ORDER_GEN:
         player[stat] = rng.next()
@@ -78,7 +81,7 @@ def generate_player(rng: Rng, id: str, name: str, roll_cinnamon=False, roll_s3=F
     player["soul"] = int(soul_roll * 8 + 2)
 
     if roll_s3:
-        player["aaa"] = rng.next()
+        player["peanutAllergy"] = rng.next() < 0.5
         player["fate"] = int(rng.next() * 100)
     return player
 
@@ -201,7 +204,8 @@ class Redata:
         rng = rng_parse_cached(new_player_rng)
 
         roll_cinnamon = timestamp > "2020-08-03T00:00:00Z"  # s3+
-        new_player = generate_player(rng, new_player_id, new_player_name, roll_cinnamon=roll_cinnamon)
+        roll_s3 = timestamp > "2020-08-03T00:00:00Z"  # s3+
+        new_player = generate_player(rng, new_player_id, new_player_name, roll_cinnamon=roll_cinnamon, roll_s3=roll_s3)
 
         # maybe only s4+?
         if new_player["patheticism"] > 0.99:
@@ -420,13 +424,23 @@ class Redata:
                 continue
             chron_player = chron_players[player_id]
 
-            for attr in ATTR_ORDER_GEN + ["soul", "name", "totalFingers", "fate", "peanutAllergy", "cinnamon"]:
+            for attr in ATTR_ORDER_GEN + ["soul", "name", "totalFingers", "fate", "peanutAllergy", "cinnamon", "bat", "armor"]:
+            # for attr in ATTR_ORDER_GEN + ["soul", "name", "totalFingers", "fate", "peanutAllergy", "cinnamon", "blood", "coffee"]:
                 if attr == "tragicness":
                     # todo: check this?
                     continue
-                if attr not in player or attr not in chron_player:
+                if attr not in chron_player:
                     continue
+                if attr in chron_player and attr not in player:
+                    if chron_player[attr] is not None:
+                        errors.append(
+                            f"player missing attr @ {chron_timestamp} @ {player_id}/{attr} ({player['name']}): {chron_player[attr]} (chron)"
+                        )
+                    continue
+
                 if chron_player[attr] != player[attr]:
+                    if chron_player[attr] is None and player[attr] == "":
+                        continue # don't wanna deal with this
                     errors.append(
                         f"player inconsistent @ {chron_timestamp} @ {player_id}/{attr} ({player['name']}): {chron_player[attr]} (chron) != {player[attr]} (redata)"
                     )
@@ -825,14 +839,8 @@ def season_2(rd: Redata):
         "Dan Holloway",
     )
 
-
-def season_2_election(rd: Redata):
-    S2_ELECTION_TIMESTAMP = "2020-08-02T19:00:00Z"
-
-    # Peanuts passed with 4441 votes, 36% of all Decree Votes.
-    rd.update_player(S2_ELECTION_TIMESTAMP, "667cb445-c288-4e62-b603-27291c1e475d", dict(name="Peanut Holloway"))
-    rd.update_player(S2_ELECTION_TIMESTAMP, "9820f2c5-f9da-4a07-b610-c2dd7bee2ef6", dict(name="Peanut Bong"))
-    rd.update_player(S2_ELECTION_TIMESTAMP, "5ff66eae-7111-4e3b-a9b8-a9579165b0a5", dict(name="Peanutiel Duffy"))
+def season_2_pre_election(rd: Redata):
+    S2_PRE_ELECTION_TIMESTAMP = "2020-08-02T10:23:00Z"
 
     # this is where cinnamon, fate, and allergies were rolled
     r = rng_parse_cached("01b73d5d48bdcfc9+1")
@@ -843,7 +851,7 @@ def season_2_election(rd: Redata):
             allergy = r.next() < 0.5
             fate = int(r.next() * 100)
             rd.update_player(
-                S2_ELECTION_TIMESTAMP,
+                S2_PRE_ELECTION_TIMESTAMP,
                 player_id,
                 dict(
                     cinnamon=cinnamon,
@@ -851,6 +859,25 @@ def season_2_election(rd: Redata):
                     fate=fate,
                 ),
             )
+
+    # also i believe this is where this happened? can't find a good source...
+    rd.update_player(S2_PRE_ELECTION_TIMESTAMP, rd.player_id(PIES, "Jessica Telephone"), {
+        "bat": "the Dial Tone"
+    })
+
+    # this is where this was instated too? might just be a global scan
+    rd.update_player(S2_PRE_ELECTION_TIMESTAMP, rd.player_id(WILD_WINGS, "Sosa Hayes"), {
+        "patheticism": 0.99
+    })
+
+
+def season_2_election(rd: Redata):
+    S2_ELECTION_TIMESTAMP = "2020-08-02T19:00:00Z"
+
+    # Peanuts passed with 4441 votes, 36% of all Decree Votes.
+    rd.update_player(S2_ELECTION_TIMESTAMP, "667cb445-c288-4e62-b603-27291c1e475d", dict(name="Peanut Holloway"))
+    rd.update_player(S2_ELECTION_TIMESTAMP, "9820f2c5-f9da-4a07-b610-c2dd7bee2ef6", dict(name="Peanut Bong"))
+    rd.update_player(S2_ELECTION_TIMESTAMP, "5ff66eae-7111-4e3b-a9b8-a9579165b0a5", dict(name="Peanutiel Duffy"))
 
     # TODO: The Fourth Strike was granted to the New York Millennials, the Kansas City Breath Mints, the Hellmouth Sunbeams, and the San Francisco Lovers.
 
@@ -936,6 +963,9 @@ def season_2_election(rd: Redata):
                 martyrdom=0.01,
             ),
         )
+    rd.update_player(S2_ELECTION_TIMESTAMP, rd.player_id(FRIDAYS, "York Silk"), {
+        "bat": "Gunblade Bat"
+    })
 
     # Soul Swap blessed the New York Millennials.
     r = rng_parse_cached("01b73d5d48bdcfc9+1515")
@@ -1065,10 +1095,6 @@ def season_2_election(rd: Redata):
                 martyrdom=0.01,
             ),
         )
-
-    # ...at some point in here, Sosa Hayes' path was capped at 0.99
-    # todo: is this a "cronjob" to cap them across the board? when specifically was this?
-    rd.update_player(S2_ELECTION_TIMESTAMP, "b7267aba-6114-4d53-a519-bf6c99f4e3a9", dict(patheticism=0.99))
 
 
 def season_2_election_postfix(rd: Redata):
@@ -1532,6 +1558,32 @@ def season_3_early_fixup(rd: Redata):
     # this is also around when this happened :)
     rd.update_player(ALLERGY_FIX_TIMESTAMP, "a1628d97-16ca-4a75-b8df-569bae02bef9", {"soul": 1777})
 
+def season_3_interviews(rd: Redata):
+    S3_INTERVIEWS_TIMESTAMP = "2020-08-09T07:23:00Z"
+
+    rng = rng_parse_cached("8e26413a67f1c388+1")
+    for team_id in ORIGINAL_TEAM_ORDER:
+        team = rd.teams[team_id]
+        for player_id in team["lineup"] + team["rotation"] + team["bench"] + team["bullpen"]:
+            coffee = int(rng.next()*14)
+            blood = int(rng.next()*13)
+            ritual_roll = rng.next()
+            rd.update_player(S3_INTERVIEWS_TIMESTAMP, player_id, {"coffee": coffee, "blood": blood})
+
+    # not handling the null bug here the right way but
+    for player_id, attrs in S3_INTERVIEWS_FINAL_VALUES.items():
+        player = rd.players[player_id]
+        # assert on the original value, should've been zero
+        if "blood" in attrs:
+            assert player["blood"] == 0
+        if "coffee" in attrs:
+            assert player["coffee"] == 0
+        rd.update_player(S3_INTERVIEWS_TIMESTAMP, player_id, attrs)
+
+    # and these ones were fixed up juuust before the election
+    rd.update_player("2020-08-09T16:40:00Z", "ea44bd36-65b4-4f3b-ac71-78d87a540b48", {"blood": 11})
+    rd.update_player("2020-08-09T16:40:00Z", "24ad200d-a45f-4286-bfa5-48909f98a1f7", {"blood": 5})
+
 def season_3_election(rd: Redata):
     S3_ELECTION_TIMESTAMP = "2020-08-09T19:00:00Z"
 
@@ -1716,6 +1768,10 @@ def season_3_election(rd: Redata):
     pass
 
 def season_3_4_siesta(rd: Redata):
+    rd.update_player("2020-08-10T18:47:01.611Z", "3af96a6b-866c-4b03-bc14-090acf6ecee5", {
+        "bat": "Literal Arm Cannon"
+    })
+
     # not accurate, we can be more granular ig
     UNMASONING_TIMESTAMP = "2020-08-13T00:00:00Z"
     for player_id, new_name in [
@@ -1810,11 +1866,28 @@ def season_4(rd: Redata):
     rd.update_player("2020-08-28T19:54:23.418Z", "3a96d76a-c508-45a0-94a0-8f64cd6beeb4", {
         "name": "Sixpack Dogwalker",
         "thwackability": 0.666,
-        "ritual": "Talking to the Microphone"
+        "ritual": "Talking to the Microphone",
+        "bat": "The Union Jack"
+    })
+
+    rd.update_player("2020-08-28T21:02:34.226Z", "3a96d76a-c508-45a0-94a0-8f64cd6beeb4", {
+        "bat": "Bangers & Smash"
     })
 
     # 2020-08-29T06:10:32.868Z 3 97 531fc360-30c8-4fa3-935f-c865c69fcb87 {'Rogue Umpire incinerated Flowers hitter Morrow Doyle! Replaced by Inez Owens'}
     rd.incineration("2020-08-29T06:10:32.868Z", FLOWERS, rd.player_id(FLOWERS, "Morrow Doyle"), "d12ccb77b62cde4f+137992", "28964497-0efe-420c-9c1d-8574f224a4e9", "Inez Owens")
+
+def season_4_pre_election(rd: Redata):
+    # mostly just fixups of item names
+    rd.update_player("2020-08-30T07:25:00Z", "3a96d76a-c508-45a0-94a0-8f64cd6beeb4", {
+        "bat": "ENGLAND_MEMORABILIA"
+    })
+    rd.update_player("2020-08-30T07:25:00Z", "083d09d4-7ed3-4100-b021-8fbe30dd43e8", {
+        "bat": "GUNBLADE_A"
+    })
+    rd.update_player("2020-08-30T07:25:00Z", "86d4e22b-f107-4bcf-9625-32d387fcb521", {
+        "bat": "GUNBLADE_B"
+    })
 
 def season_4_election(rd: Redata):
     S4_ELECTION_TIMESTAMP = "2020-08-30T19:00:00Z"
@@ -1879,6 +1952,7 @@ def season_4_election(rd: Redata):
         anticapitalism=0.6,
         chasiness=0.6,
     ))
+    rd.update_player(S4_ELECTION_TIMESTAMP, rd.player_id(SHOE_THIEVES, "Richardson Games"), dict(bat="GRAPPLING_HOOK"))
 
     # Extra Elbows blessed the San Francisco Lovers.
     # Yosh Carpenter's pitching was increased by 20%.
@@ -1971,6 +2045,7 @@ def season_4_election(rd: Redata):
         indulgence=-0.4,
         cinnamon=0.4
     ))
+    rd.update_player(S4_ELECTION_TIMESTAMP, rd.player_id(WILD_WINGS, "José Haley"), dict(bat="MUSHROOM"))
 
     # Precognition blessed the Hellmouth Sunbeams.
     # Improved Nagomi Nava's hitting by 20%.
@@ -2003,6 +2078,9 @@ def season_4_election(rd: Redata):
         rd.player_id(SPIES, "Marco Escobar")
     ]:
         rd.reroll_attributes(S4_ELECTION_TIMESTAMP, player_id, rng, ["tragicness", "buoyancy", "thwackability", "moxie", "divinity", "musclitude", "patheticism", "martyrdom"])
+
+    # also when they fixed this
+    rd.update_player(S4_ELECTION_TIMESTAMP, "3af96a6b-866c-4b03-bc14-090acf6ecee5", dict(bat="ARM_CANNON"))
 
 def season_5(rd: Redata):
     # 2020-08-31T20:16:24.708Z 4 4 8ef67ba1-aab3-4129-92a3-d258ae9a4358 {'The Fridays were completely shuffled in the Reverb!'}
@@ -2182,6 +2260,7 @@ def season_5_election(rd: Redata):
 
     # Noise-Cancelling Headphones: Mclaughlin Scorpler gained Noise-Cancelling Headphones.
     # (lol)
+    rd.update_player(S5_ELECTION_TIMESTAMP, rd.player_id(TIGERS, "Mclaughlin Scorpler"), dict(armor="HEADPHONES"))
 
     # Flame-Resistant Foam: The Moist Talkers have covered themselves with Fire-Resistant Foam, and will be immune to Incinerations next season.
 
@@ -2383,6 +2462,7 @@ def season_6_election(rd: Redata):
     S6_ELECTION_TIMESTAMP = "2020-09-13T19:00:00Z"
 
     # Night Vision Goggles: Sutton Dreamy gained Night Vision Goggles.
+    rd.update_player(S6_ELECTION_TIMESTAMP, rd.player_id(CRABS, "Sutton Dreamy"), dict(bat="NIGHT_VISION_GOGGLES"))
 
     # Shrink Ray: Holden Stanton gained the Shrink Ray.
     rd.player_attr_change(S6_ELECTION_TIMESTAMP, rd.player_id(CRABS, "Holden Stanton"), dict(
@@ -2395,6 +2475,7 @@ def season_6_election(rd: Redata):
         continuation=0.2,
         indulgence=0.2,
     ))
+    rd.update_player(S6_ELECTION_TIMESTAMP, rd.player_id(CRABS, "Holden Stanton"), dict(bat="SHRINK_RAY"))
 
     # Headhunter: The Baltimore Crabs stole the best player in the The Wild League, hitter Nagomi Mcdaniel, from the Breckenridge Jazz Hands. They sent back Holden Stanton.
     rd.swap_player(S6_ELECTION_TIMESTAMP, JAZZ_HANDS, rd.player_id(JAZZ_HANDS, "Nagomi Mcdaniel"), CRABS, rd.player_id(CRABS, "Holden Stanton"))
@@ -2402,6 +2483,7 @@ def season_6_election(rd: Redata):
     # Single-Season Fourth Strike: The Jazz Hands have received the Fourth Strike.
 
     # Gravity Boots: Steph Weeks gained Gravity Boots.
+    rd.update_player(S6_ELECTION_TIMESTAMP, rd.player_id(JAZZ_HANDS, "Steph Weeks"), dict(armor="GRAVITY_BOOTS"))
 
     # Headliners: Arranged Kansas City Breath Mints's lineup in order of their Idolatry.
     # 1 - Boyfriend Monreal
@@ -2446,7 +2528,15 @@ def season_6_election(rd: Redata):
     rd.insert_player(S6_ELECTION_TIMESTAMP, GARAGES, jaylen, "bullpen", 0)
     rd.swap_player(S6_ELECTION_TIMESTAMP, GARAGES, rd.player_id(GARAGES, "Jaylen Hotdogfingers"), GARAGES, rd.player_id(GARAGES, "Mike Townsend"))
 
+    rng = rng_parse_cached("6ebdd663e6ef1c88+154")
+    rd.update_player(S6_ELECTION_TIMESTAMP, jaylen, {
+        "cinnamon": rng.next(),
+        "fate": int(rng.next()*100),
+        "peanutAllergy": rng.next() < 0.5,
+    })
+
     # Fireproof Jacket: Oliver Mueller gained the Fireproof Jacket.
+    rd.update_player(S6_ELECTION_TIMESTAMP, rd.player_id(GARAGES, "Oliver Mueller"), dict(armor="FIREPROOF"))
 
     # Sharing Signs: Improved the Wild Low's hitting rating by 10% and impaired their pitching rating by -5%
     wild_low_teams = [FLOWERS, SUNBEAMS, SPIES, DALE, TACOS]
@@ -2471,7 +2561,6 @@ def season_6_election(rd: Redata):
                 ruthlessness=-0.05,
                 totalFingers=1,
             ))
-
 
     # Ooze: Boosted the New York Millennials power by 10%
     for player_id in rd.teams[MILLENNIALS]["lineup"] + rd.teams[MILLENNIALS]["rotation"]:
@@ -2658,6 +2747,8 @@ def season_7(rd: Redata):
         {"type": "function", "function": fix_wild_wings, "timestamp": "2020-09-19T19:43:08.648Z"}
     ])
 
+    rd.update_player("2020-09-20T06:55:00.646Z", rd.player_id(MAGIC, "Inky Rutledge"), dict(bat="INKY_BLAGONBALL"))
+
 def season_7_election(rd: Redata):
     S7_ELECTION_TIMESTAMP = "2020-09-20T19:00:00Z"
 
@@ -2727,6 +2818,8 @@ def season_7_election(rd: Redata):
     rd.swap_player(S7_ELECTION_TIMESTAMP, WILD_WINGS, rd.player_id(WILD_WINGS, "Kennedy Rodgers"), FIREFIGHTERS, rd.player_id(FIREFIGHTERS, "Mullen Peterson"))
 
     # Declan Suzanne stole Oliver Mueller's armor, Fireproof Jacket.
+    rd.update_player(S7_ELECTION_TIMESTAMP, rd.player_id(GARAGES, "Oliver Mueller"), dict(armor=""))
+    rd.update_player(S7_ELECTION_TIMESTAMP, rd.player_id(FIREFIGHTERS, "Declan Suzanne"), dict(armor="FIREPROOF"))
 
     # Raúl Leal gained the sawed off bat, the Iffey Jr. and has been Minimized.
     raul = rd.player_id(DALE, "Raúl Leal")
@@ -2757,10 +2850,12 @@ def season_7_election(rd: Redata):
             chasiness=-0.01,
             totalFingers=1,
         ))
+    rd.update_player(S7_ELECTION_TIMESTAMP, raul, dict(bat="SAWED_OFF_BAT"))
 
     # All of the Miami Dale's players now have Electric blood type!
 
     # Jesús Koch gained Mclaughlin Scorpler's Memorial Fireproof Jacket.
+    rd.update_player(S7_ELECTION_TIMESTAMP, rd.player_id(MOIST_TALKERS, "Jesús Koch"), dict(armor="SCORPLERS_JACKET"))
 
     # The Hawai'i Fridays stole hitter Aldon Cashmoney from the Breckenridge Jazz Hands. They sent back Elijah Valenzuela.
     rd.swap_player(S7_ELECTION_TIMESTAMP, JAZZ_HANDS, rd.player_id(JAZZ_HANDS, "Aldon Cashmoney"), FRIDAYS, rd.player_id(FRIDAYS, "Elijah Valenzuela"))
@@ -2838,8 +2933,6 @@ def season_8_pre_fix(rd: Redata):
 def season_8(rd: Redata):
     with open(os.path.dirname(__file__) + "/s8_events.json") as f:
         events = json.load(f)
-    # def fix_wild_wings():
-    #     rd.update_team("2020-09-19T19:43:08.648Z", WILD_WINGS, {"nickname": "Wild Wings", "fullName": "Mexico City Wild Wings"})
 
     S8_D1 = "2020-09-21T16:00:00Z"
     rng = rng_parse_cached("914071fe31ce6e83+130")
@@ -2848,11 +2941,55 @@ def season_8(rd: Redata):
     rd.create_player(S8_D1, pitching_machine)
     rd.insert_player(S8_D1, TACOS, pitching_machine["id"], "rotation", 5)
 
-    handle_data_events(rd, events + [
-        # stupid hack to get this into the event list at the right place
-        # {"type": "function", "function": fix_wild_wings, "timestamp": "2020-09-19T19:43:08.648Z"}
-    ])
+    handle_data_events(rd, events)
 
+def season_8_election(rd: Redata):
+    pass
+    # TODO
+    # Ron Monstera is now Stable!
+
+    # Lori Boston has been recruited to join the Seattle Garages's rotation!
+
+    # The Garages have received Home Field Advantage for the next season.
+
+    # A Rogue Umpire incinerated the Garages's least Idolized player, Ron Monstera! Durham Spaceman joins the team as a replacement.
+
+    # The Tigers have covered themselves with Fire-Resistant Foam, and will be immune to Incinerations next season.
+
+    # Hades Tigers's worst pitcher, Nagomi Meng, retreats to the Shadows.
+
+    # The Hades Tigers stole hitter Aldon Cashmoney from the Hawai'i Fridays. They sent back Spears Taylor.
+
+    # Blood Transfusion. All of the Hellmouth Sunbeams's players now have Base blood type!
+
+    # Improved Denzel Scott's pitching by 20%. Improved Math Velazquez's pitching by 20%. Improved Math Velazquez's pitching by 20%.
+
+    # The Pies have received a newfound Affinity for Crows.
+
+    # Philly Pies stole the least popular player in the league, hitter Jaxon Buckley, from the Philly Pies, and maxed their stats. They sent back their worst hitter, Farrell Seagull.
+
+    # The Wild Wings swapped into the Mild High. The Breath Mints were swapped back to take their place in the Mild Low.
+
+    # The Wild Wings swapped into the Wild High. The Millennials were swapped back to take their place in the Mild High.
+
+    # Blood Transfusion. All of the Boston Flowers's players now have Grass blood type!
+
+    # Randomized the pitching stats for the Charleston Shoe Thieves's worst player, Snyder Briggs. 0.5 to 2
+    # Randomized the hitting stats for the Charleston Shoe Thieves's worst player, Simon Haley. 1 to 3.5
+    # Randomized the hitting stats for the Charleston Shoe Thieves's worst player, Hotbox Sato. 1.5 to 2
+
+    # The Charleston Shoe Thieves stole pitcher Fitzgerald Wanderlust from the Unlimited Tacos's Shadows! Kevin Dudley was sent to the Unlimited Tacos's Shadows in return.
+
+    # 10000 Peanuts have been granted to each of the Fans of the Canada Moist Talkers.
+
+    # Improved Holden Stanton's hitting by 20%. Improved Baby Doyle's hitting by 20%. Improved Baby Doyle's hitting by 20%.
+
+    # A Duplicate of Moist Talkers pitcher Mooney Doctor was created by the Breath Mints.
+    # Mooney Doctor II takes the place of Atlas Guerra, who retreats to the Shadows.
+
+    # The Magic reach into the Garages's Shadows.
+    # Chorby Short answers the call.
+    # Terrell Bradley is sent back.
 
 def main():
     rd = Redata()
@@ -2884,6 +3021,9 @@ def main():
 
     rd.assert_consistency("2020-08-01T00:00:00Z")
 
+    season_2_pre_election(rd)
+    rd.assert_consistency("2020-08-02T10:23:00Z")
+
     season_2_election(rd)
     rd.assert_consistency("2020-08-02T19:40:00Z")
     # on sim restart, it would find all players without an allergy and roll to give them an allergy
@@ -2898,6 +3038,13 @@ def main():
     season_3(rd)
     rd.assert_consistency("2020-08-09T03:00:00Z")
 
+
+    rd.update_player("2020-08-09T06:23:00Z", rd.player_id(FRIDAYS, "York Silk"), {
+        "bat": "Vibe Check"
+    })
+    rd.assert_consistency("2020-08-09T07:00:00Z")
+    season_3_interviews(rd)
+    rd.assert_consistency("2020-08-09T08:00:00Z")
     season_3_election(rd)
     rd.assert_consistency("2020-08-10T03:00:00Z")
 
@@ -2907,6 +3054,8 @@ def main():
     season_4(rd)
     rd.assert_consistency("2020-08-30T07:00:00Z")
 
+    season_4_pre_election(rd)
+    rd.assert_consistency("2020-08-30T08:00:00Z")
     season_4_election(rd)
     rd.assert_consistency("2020-08-31T07:00:00Z")
 
