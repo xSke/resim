@@ -436,13 +436,17 @@ def handle_outcome(outcome: Outcome):
         player = player_by_name(player_name)
 
         return dict(type="fireproof", player_id=player.id)
+    elif "A Big Peanut " in outcome.text:
+        player_name = outcome.text.split(" encasing ")[1].split("!")[0]
+        player = player_by_name(player_name)
+        return dict(type="encased", player_id=player.id)
     else:
         pass
         print("!!!!!", outcome.text)
     pass
 
 outcome_jsons = []
-for season in [7]:
+for season in [8]:
     season_games = [g for g in all_games if g["data"]["season"] == season]
     # season_games = [g for g in season_games if g["gameId"] == "b9a32210-3598-4650-8a4d-7c443733f2c3"]
 

@@ -391,7 +391,7 @@ class Redata:
         elif ty == "remove_player":
             player_id = event["player_id"]
             team = self.teams[event["team_id"]]
-            pos = self.find_player_in_team(event["team_id"], player_id)
+            pos, _ = self.find_player_in_team(event["team_id"], player_id)
             team[pos].remove(player_id)
         elif ty == "insert_player":
             team = self.teams[event["team_id"]]
@@ -2364,6 +2364,8 @@ def handle_data_events(rd: Redata, events: list[dict]):
             rd.reverb_lineup(evt["timestamp"], evt["team_id"], rd._flip_permutation(evt["permutation"]))
         elif evt["type"] == "reverb_rotation":
             rd.reverb_rotation(evt["timestamp"], evt["team_id"], rd._flip_permutation(evt["permutation"]))
+        elif evt["type"] == "reverb_full":
+            rd.reverb_full(evt["timestamp"], evt["team_id"], rd._flip_permutation(evt["permutation"]))
         elif evt["type"] == "pecked_free":
             # shelled -> superallergic
             rd.update_player(evt["timestamp"], evt["player_id"], {"peanutAllergy": True})
@@ -2944,29 +2946,74 @@ def season_8(rd: Redata):
     handle_data_events(rd, events)
 
 def season_8_election(rd: Redata):
-    pass
+    S8_ELECTION_TIMESTAMP = "2020-09-27T19:00:00Z"
+
     # TODO
     # Ron Monstera is now Stable!
 
     # Lori Boston has been recruited to join the Seattle Garages's rotation!
+    rng = rng_parse_cached("83306cc9132cd087+149")
+    lori_boston = generate_player(rng, "019ce117-2399-4382-8036-8c14db7e1d30", "Lori Boston", True, True)
+    rd.create_player(S8_ELECTION_TIMESTAMP, lori_boston)
+    rd.insert_player(S8_ELECTION_TIMESTAMP, GARAGES, lori_boston["id"], "rotation", 5)
 
     # The Garages have received Home Field Advantage for the next season.
 
     # A Rogue Umpire incinerated the Garages's least Idolized player, Ron Monstera! Durham Spaceman joins the team as a replacement.
-
+    rd.incineration(S8_ELECTION_TIMESTAMP, GARAGES, rd.player_id(GARAGES, "Ron Monstera"), "83306cc9132cd087+180", "68dd9d47-b9a8-4fd3-a89c-5c112eb1982e", "Durham Spaceman")
+    
     # The Tigers have covered themselves with Fire-Resistant Foam, and will be immune to Incinerations next season.
 
     # Hades Tigers's worst pitcher, Nagomi Meng, retreats to the Shadows.
+    rd.move_player(S8_ELECTION_TIMESTAMP, rd.player_id(TIGERS, "Nagomi Meng"), TIGERS, TIGERS, "bench", 0)
 
     # The Hades Tigers stole hitter Aldon Cashmoney from the Hawai'i Fridays. They sent back Spears Taylor.
+    rd.swap_player(S8_ELECTION_TIMESTAMP, FRIDAYS, rd.player_id(FRIDAYS, "Aldon Cashmoney"), TIGERS, rd.player_id(TIGERS, "Spears Taylor"))
 
     # Blood Transfusion. All of the Hellmouth Sunbeams's players now have Base blood type!
 
     # Improved Denzel Scott's pitching by 20%. Improved Math Velazquez's pitching by 20%. Improved Math Velazquez's pitching by 20%.
+    for player_id in [
+        rd.player_id(SPIES, "Denzel Scott"),
+        rd.player_id(SPIES, "Math Velazquez"),
+        rd.player_id(SPIES, "Math Velazquez"),
+    ]:
+        rd.player_attr_change(S8_ELECTION_TIMESTAMP, player_id, dict(
+            shakespearianism=0.2,
+            suppression=0.2,
+            unthwackability=0.2,
+            coldness=0.2,
+            overpowerment=0.2,
+            ruthlessness=0.2,
+            totalFingers=1
+        ))
 
     # The Pies have received a newfound Affinity for Crows.
 
     # Philly Pies stole the least popular player in the league, hitter Jaxon Buckley, from the Philly Pies, and maxed their stats. They sent back their worst hitter, Farrell Seagull.
+    # rd.swap_player(S8_ELECTION_TIMESTAMP, PIES, rd.player_id(PIES, "Jaxon Buckley"), PIES, rd.player_id(PIES, "Farrell Seagull"))
+    jaxon = rd.player_id(PIES, "Jaxon Buckley")
+    while True:
+        rd.player_attr_change(S8_ELECTION_TIMESTAMP, jaxon, dict(
+            thwackability=0.01,
+            moxie=0.01,
+            divinity=0.01,
+            musclitude=0.01,
+            patheticism=-0.01,
+            buoyancy=0.01,
+            martyrdom=0.01,
+        ))
+        if round_rating(batting_rating(rd.players[jaxon])) >= 5:
+            break
+    # todo: clean this up, it does one fewer iterations than you'd expect
+    rd.player_attr_change(S8_ELECTION_TIMESTAMP, jaxon, dict(
+        thwackability=-0.01,
+        moxie=-0.01,
+        divinity=-0.01,
+        musclitude=-0.01,
+        buoyancy=-0.01,
+        martyrdom=-0.01,
+    ))
 
     # The Wild Wings swapped into the Mild High. The Breath Mints were swapped back to take their place in the Mild Low.
 
@@ -2974,22 +3021,145 @@ def season_8_election(rd: Redata):
 
     # Blood Transfusion. All of the Boston Flowers's players now have Grass blood type!
 
+    
     # Randomized the pitching stats for the Charleston Shoe Thieves's worst player, Snyder Briggs. 0.5 to 2
+    rng = rng_parse_cached("83306cc9132cd087+220")
+    rd.reroll_attributes(S8_ELECTION_TIMESTAMP, rd.player_id(SHOE_THIEVES, "Snyder Briggs"), rng, PITCHING_ATTR_BLOCK)
+    assert round_rating(pitching_rating(rd.players[rd.player_id(SHOE_THIEVES, "Snyder Briggs")])) == 2
+
     # Randomized the hitting stats for the Charleston Shoe Thieves's worst player, Simon Haley. 1 to 3.5
+    rd.reroll_attributes(S8_ELECTION_TIMESTAMP, rd.player_id(SHOE_THIEVES, "Simon Haley"), rng, BATTING_ATTR_BLOCK)
+    assert round_rating(batting_rating(rd.players[rd.player_id(SHOE_THIEVES, "Simon Haley")])) == 3.5
+
     # Randomized the hitting stats for the Charleston Shoe Thieves's worst player, Hotbox Sato. 1.5 to 2
+    rd.reroll_attributes(S8_ELECTION_TIMESTAMP, rd.player_id(SHOE_THIEVES, "Hotbox Sato"), rng, BATTING_ATTR_BLOCK)
+    assert round_rating(batting_rating(rd.players[rd.player_id(SHOE_THIEVES, "Hotbox Sato")])) == 2
 
     # The Charleston Shoe Thieves stole pitcher Fitzgerald Wanderlust from the Unlimited Tacos's Shadows! Kevin Dudley was sent to the Unlimited Tacos's Shadows in return.
+    rd.swap_player(S8_ELECTION_TIMESTAMP, SHOE_THIEVES, rd.player_id(SHOE_THIEVES, "Kevin Dudley"), TACOS, rd.player_id(TACOS, "Fitzgerald Wanderlust"))
 
     # 10000 Peanuts have been granted to each of the Fans of the Canada Moist Talkers.
 
     # Improved Holden Stanton's hitting by 20%. Improved Baby Doyle's hitting by 20%. Improved Baby Doyle's hitting by 20%.
+    for player_id in [
+        rd.player_id(JAZZ_HANDS, "Holden Stanton"),
+        rd.player_id(JAZZ_HANDS, "Baby Doyle"),
+        rd.player_id(JAZZ_HANDS, "Baby Doyle"),
+    ]:
+        rd.player_attr_change(S8_ELECTION_TIMESTAMP, player_id, dict(
+            thwackability=0.2,
+            moxie=0.2,
+            divinity=0.2,
+            musclitude=0.2,
+            patheticism=-0.2,
+            buoyancy=0.2,
+            martyrdom=0.2,
+        ))
 
     # A Duplicate of Moist Talkers pitcher Mooney Doctor was created by the Breath Mints.
     # Mooney Doctor II takes the place of Atlas Guerra, who retreats to the Shadows.
+    twooney = dict(rd.players[rd.player_id(MOIST_TALKERS, "Mooney Doctor")])
+    twooney["id"] = "57290370-6723-4d33-929e-b4fc190e6a9a"
+    twooney["name"] = "Mooney Doctor II"
+    rd.create_player(S8_ELECTION_TIMESTAMP, twooney)
+    rd.insert_player(S8_ELECTION_TIMESTAMP, BREATH_MINTS, twooney["id"], "bullpen", 0)
+    rd.player_attr_change(S8_ELECTION_TIMESTAMP, twooney["id"], dict(
+        thwackability=-0.05,
+        moxie=-0.05,
+        divinity=-0.05,
+        musclitude=-0.05,
+        patheticism=0.05,
+        buoyancy=-0.05,
+        baseThirst=-0.05,
+        laserlikeness=-0.05,
+        groundFriction=-0.05,
+        continuation=-0.05,
+        indulgence=-0.05,
+        martyrdom=-0.05,
+        shakespearianism=-0.05,
+        suppression=-0.05,
+        unthwackability=-0.05,
+        coldness=-0.05,
+        overpowerment=-0.05,
+        ruthlessness=-0.05,
+        omniscience=-0.05,
+        tenaciousness=-0.05,
+        watchfulness=-0.05,
+        anticapitalism=-0.05,
+        chasiness=-0.05,
+        totalFingers=1
+    ))
+    rd.swap_player(S8_ELECTION_TIMESTAMP, BREATH_MINTS, rd.player_id(BREATH_MINTS, "Atlas Guerra"), BREATH_MINTS, rd.player_id(BREATH_MINTS, "Mooney Doctor II"))
 
     # The Magic reach into the Garages's Shadows.
     # Chorby Short answers the call.
     # Terrell Bradley is sent back.
+    rd.swap_player(S8_ELECTION_TIMESTAMP, MAGIC, rd.player_id(MAGIC, "Terrell Bradley"), GARAGES, rd.player_id(GARAGES, "Chorby Short"))
+
+def do_playoff_births(rd: Redata, timestamp: str, rng: Rng, order: list[tuple[str, str, str]]):
+    for team_id, player_id, player_name in order:
+        player = generate_player(rng, player_id, player_name, True, True)
+        rd.create_player(timestamp, player)
+        rd.insert_player(timestamp, team_id, player_id, "bench", len(rd.teams[team_id]["bench"]))
+
+def season_9(rd: Redata):
+    with open(os.path.dirname(__file__) + "/s9_events.json") as f:
+        events = json.load(f)
+
+    FIX_FRIDAYS_TIMESTAMP = "2020-10-09T16:30:57Z"
+    PLAYOFF_BIRTH_TIMESTAMP = "2020-10-09T19:00:00Z"
+    DAY_X_PULL_TIMESTAMP = "2020-10-11T02:23:00Z"
+
+    def s9_playoff_births():
+        rng = rng_parse_cached("9e44ff7ab5d87ad9+139")
+        do_playoff_births(rd, PLAYOFF_BIRTH_TIMESTAMP, rng, [
+            (CRABS, "61bbbf34-98c1-4bf6-bd0c-56c19199b35e", "Squid Galvanic"),
+            (SPIES, "c9339f5e-1040-4642-a4a7-07cd36d281f8", "Quantum Flahwah"),
+            (FLOWERS, "710541f4-bb89-4134-8973-958c82b29a41", "Kiki Junior Jr"),
+            (SUNBEAMS, "5a6b0c6d-1cc8-4acb-991c-0ffe62f3d990", "Lotus Clutch"),
+            (FIREFIGHTERS, "28162da7-eafa-4eb1-8bc1-5a625f03ae57", "Mags Banananana"),
+        ])
+        rng.step(1) # selection for wild card team maybe?
+        do_playoff_births(rd, PLAYOFF_BIRTH_TIMESTAMP, rng, [
+            (SHOE_THIEVES, "94844fad-9519-4c14-8ab3-d38606a7bb44", "Conditional Yuniesky"),
+            (PIES, "e495cadc-a645-439d-a556-e41de7493f18", "Twofurious Puddles"),
+            (GARAGES, "25581c43-f8da-4657-9e96-e704df0a8878", "Freemium Fairwood"),
+            (TIGERS, "6f71667b-59f2-46df-adac-a8885a4f6ac5", "Eris Street"),
+            (FRIDAYS, "4cd0ac8f-6c2e-4bf1-a232-a5ac6fd4a677", "Pug Meatbrick"),
+        ])
+
+    def day_x_pulls():
+        # TODO: don't hardcode this
+        # TODO: create the pods?
+        for team_id, player_id in [
+            (DALE, "9820f2c5-f9da-4a07-b610-c2dd7bee2ef6"),
+            (TACOS, "5ca7e854-dc00-4955-9235-d7fcd732ddcf"),
+            (TACOS, "8903a74f-f322-41d2-bd75-dbf7563c4abb"),
+            (TACOS, "a1ed3396-114a-40bc-9ff0-54d7e1ad1718"),
+            (TACOS, "f741dc01-2bae-4459-bfc0-f97536193eea"),
+            (TACOS, "ea44bd36-65b4-4f3b-ac71-78d87a540b48"),
+            (TACOS, "de21c97e-f575-43b7-8be7-ecc5d8c4eaff"),
+            (TIGERS, "5ff66eae-7111-4e3b-a9b8-a9579165b0a5"),
+            (FRIDAYS, "86d4e22b-f107-4bcf-9625-32d387fcb521"),
+            (PIES, "083d09d4-7ed3-4100-b021-8fbe30dd43e8"),
+            (PIES, "667cb445-c288-4e62-b603-27291c1e475d"),
+            (CRABS, "3af96a6b-866c-4b03-bc14-090acf6ecee5"),
+        ]:
+            assert rd.player_id(team_id, rd.players[player_id]["name"])
+            rd.remove_player(DAY_X_PULL_TIMESTAMP, team_id, player_id)
+
+    def fix_fridays():
+        rd.update_team(FIX_FRIDAYS_TIMESTAMP, FRIDAYS, {
+            "location": "Hawai'i",
+            "fullName": "Hawai'i Fridays"
+        })
+
+    handle_data_events(rd, events + [
+        {"timestamp": PLAYOFF_BIRTH_TIMESTAMP, "type": "function", "function": s9_playoff_births},
+        {"timestamp": DAY_X_PULL_TIMESTAMP, "type": "function", "function": day_x_pulls},
+        {"timestamp": FIX_FRIDAYS_TIMESTAMP, "type": "function", "function": fix_fridays},
+    ])
+
 
 def main():
     rd = Redata()
@@ -3084,6 +3254,15 @@ def main():
 
     season_8(rd)
     rd.assert_consistency("2020-09-27T07:00:00Z")
+
+    season_8_election(rd)
+    rd.assert_consistency("2020-09-27T20:00:00Z")
+
+    # TODO: figure out when this happens
+    rd.update_player("2020-10-05T16:00:00Z", rd.player_id(GARAGES, "Lori Boston"), dict(patheticism=0.99))
+    rd.assert_consistency("2020-10-05T16:00:00Z")
+    season_9(rd)
+    rd.assert_consistency("2020-10-11T03:00:00Z")
 
 
 if __name__ == "__main__":
