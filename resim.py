@@ -161,14 +161,14 @@ class Resim:
             jands = self.data.get_team("a37f9158-7f82-46bc-908c-c9e2dda7c33b")
             if not jands.has_mod(Mod.OVERPERFORMING):
                 jands.add_mod(Mod.OVERPERFORMING, ModType.PERMANENT)
-                jands.last_update_time = self.event["created"]
+                jands.last_update_time = self.event_time
 
         # another workaround for bad data
         if self.game_id == "c608b5db-29ad-4216-a703-8f0627057523":
             caleb_novak = self.data.get_player("0eddd056-9d72-4804-bd60-53144b785d5c")
             if caleb_novak.has_mod(Mod.ELSEWHERE):
                 caleb_novak.remove_mod(Mod.ELSEWHERE, ModType.PERMANENT)
-                caleb_novak.last_update_time = self.event["created"]
+                caleb_novak.last_update_time = self.event_time
 
         # missed a "happy to be home" event 45 secs before the fragment starts
         if self.game_id == "ee0066a5-8408-4270-a5d8-8e66abf55d03":
@@ -199,7 +199,7 @@ class Resim:
             shoe_thieves = self.data.get_team("bfd38797-8404-4b38-8b82-341da28b1f83")
             if not shoe_thieves.has_mod(blood_type):
                 shoe_thieves.add_mod(blood_type, ModType.GAME)
-                shoe_thieves.last_update_time = self.event["created"]
+                shoe_thieves.last_update_time = self.event_time
 
         self.print()
         if not self.update and self.play and self.play > 1:
@@ -250,10 +250,10 @@ class Resim:
             "2021-07-21T21:08:45.629Z": 1, # elsewhere scattering?
             "2021-07-23T22:07:38.888Z": 2, # fix for item gen problem
         }
-        to_step = event_adjustments.get(self.event["created"])
+        to_step = event_adjustments.get(self.event_time)
         if to_step is not None:
             self.rng.step(to_step)
-            time = self.event["created"]
+            time = self.event_time
             self.print(f"!!! CORRECTION: stepping {to_step} @ {time}")
             self.emit_correction_to_stream(to_step)
 
@@ -399,7 +399,7 @@ class Resim:
             next_phase = 10 # making up a high number, the game sets this back to -1 before starting tick otherwise
 
         # fix for missing update data
-        if self.event["created"] == "2021-04-07T08:02:52.530Z":
+        if self.event_time == "2021-04-07T08:02:52.530Z":
             last_phase = 0
 
         for cur_phase in range(last_phase+1, next_phase+1):
@@ -448,7 +448,7 @@ class Resim:
                 if self.season >= 15:
                     self.roll("reset items? idk?")
 
-                if self.event["created"] in [
+                if self.event_time in [
                     # these two are probably not the same reason
                     "2021-04-13T01:06:52.165Z",
                     "2021-04-13T01:28:04.005Z",
@@ -530,8 +530,8 @@ class Resim:
         # todo: merge this into data.py, it belongs there
         # yes we are intentionally fetching standings for the "previous" day
         # when doing upcoming-game odds, because that's what it'd have available
-        season = self.data.fetch_season_at(self.data.sim["seasonId"], self.event["created"])["data"]
-        standings = self.data.fetch_standings_at(season["standings"], self.event["created"])["data"]
+        season = self.data.fetch_season_at(self.data.sim["seasonId"], self.event_time)["data"]
+        standings = self.data.fetch_standings_at(season["standings"], self.event_time)["data"]
 
         raw_updates = self.data.get_raw_game_updates(game_id)
 
@@ -864,7 +864,7 @@ class Resim:
                 team = self.data.get_team(self.event["teamTags"][0])
                 if (
                     not team.has_mod(Mod.PARTY_TIME) and not team.has_mod(Mod.AFTER_PARTY) and self.day < 27
-                ) or self.event["created"] in [
+                ) or self.event_time in [
                     "2021-05-17T21:21:21.303Z",
                     "2021-05-17T21:22:11.076Z",
                 ]:
@@ -950,7 +950,7 @@ class Resim:
             EventType.REVERB_LINEUP_SHUFFLE,
         ]:
             # skip reverb
-            self.data.fetch_teams(self.event["created"], 30)
+            self.data.fetch_teams(self.event_time, 30)
             return True
         if self.ty == EventType.PLAYER_TRADED:
             # skip feedback
@@ -1012,7 +1012,7 @@ class Resim:
             self.roll("thieves guild?")
             self.roll("thieves guild?")
 
-            if self.event["created"] in ["2021-07-19T18:38:17.282Z", "2021-07-22T12:24:29.719Z", "2021-07-22T21:24:03.118Z", "2021-07-23T03:26:25.413Z", "2021-07-20T14:31:06.765Z", "2021-07-21T10:27:28.256Z", "2021-07-21T11:34:52.841Z"]:
+            if self.event_time in ["2021-07-19T18:38:17.282Z", "2021-07-22T12:24:29.719Z", "2021-07-22T21:24:03.118Z", "2021-07-23T03:26:25.413Z", "2021-07-20T14:31:06.765Z", "2021-07-21T10:27:28.256Z", "2021-07-21T11:34:52.841Z"]:
                 self.roll("thieves guild?")
             else:
                 self.print(f"no extra thieves guild roll?")
@@ -1087,7 +1087,7 @@ class Resim:
             if self.event["day"] not in self.fetched_days:
                 self.fetched_days.add(self.event["day"])
 
-                timestamp = self.event["created"]
+                timestamp = self.event_time
                 self.data.fetch_league_data(timestamp, 20)
 
             self.print(self.stadium.mods)
@@ -1226,7 +1226,7 @@ class Resim:
                 "2021-04-23T14:06:46.795Z": 12,
             }
 
-            time = self.event["created"]
+            time = self.event_time
             to_step = chests.get(time)
             if to_step:
                 self.print(f"!!! stepping {to_step} @ {time} for Community Chest")
@@ -1235,15 +1235,15 @@ class Resim:
                 self.roll("?????")
 
             # todo: properly handle the item changes
-            if self.event["created"] == "2021-05-11T16:05:03.662Z":
+            if self.event_time == "2021-05-11T16:05:03.662Z":
                 steph_weeks = self.data.get_player("18f45a1b-76eb-4b59-a275-c64cf62afce0")
                 steph_weeks.add_mod(Mod.CAREFUL, ModType.ITEM)
-                steph_weeks.last_update_time = self.event["created"]
+                steph_weeks.last_update_time = self.event_time
 
-            if self.event["created"] == "2021-05-18T13:07:33.068Z":
+            if self.event_time == "2021-05-18T13:07:33.068Z":
                 aldon_cashmoney_ii = self.data.get_player("194a78fd-3aa7-4356-8ba0-b9fdcbc0ea85")
                 aldon_cashmoney_ii.add_mod(Mod.CAREFUL, ModType.ITEM)
-                aldon_cashmoney_ii.last_update_time = self.event["created"]
+                aldon_cashmoney_ii.last_update_time = self.event_time
             return True
         if self.ty == EventType.BALLPARK_MOD_RATIFIED:
             return True
@@ -1999,7 +1999,7 @@ class Resim:
 
     def handle_out_advances(self, fielder):
         # special case for a chron data gap - ground out with no runners (so no rolls), but the game update is missing
-        if self.event["created"] == "2021-04-07T08:02:52.078Z":
+        if self.event_time == "2021-04-07T08:02:52.078Z":
             return
 
         def did_advance(base, runner_id):
@@ -2159,7 +2159,7 @@ class Resim:
                 runner = self.data.get_player(runner_id)
 
                 was_forced = base < forced_bases
-                if self.event["created"] in ["2021-05-12T13:20:27.312Z", "2021-05-17T19:19:27.034Z"]:
+                if self.event_time in ["2021-05-12T13:20:27.312Z", "2021-05-17T19:19:27.034Z"]:
                     # did_advance gets confused because the same runner is on two bases.
                     roll_outcome = True
                 else:
@@ -2213,7 +2213,7 @@ class Resim:
             bases_before, bases_after, bases_hit, base_before_home + 1
         ):
             # work around missing data in next_update
-            if self.event["created"] == "2021-04-14T15:11:04.159Z":
+            if self.event_time == "2021-04-14T15:11:04.159Z":
                 roll_outcome = False
             roll = self.roll(f"adv ({base}, {roll_outcome}")
             runner = self.data.get_player(runner_id)
@@ -2319,7 +2319,7 @@ class Resim:
             # assuming this can never be >0.04
             predicted_upgrade_roll = self.get_predicted_upgrade_roll()
 
-            if self.season >= 20 and out_roll > out_threshold and self.event["created"] not in fakeout_overrides and predicted_upgrade_roll < 0.04:
+            if self.season >= 20 and out_roll > out_threshold and self.event_time not in fakeout_overrides and predicted_upgrade_roll < 0.04:
                 fly_threshold = get_fly_or_ground_threshold(
                     self.batter, self.batting_team, self.pitcher, self.pitching_team, self.stadium, self.get_stat_meta()
                 )
@@ -2528,7 +2528,7 @@ class Resim:
         predicted_upgrade_roll = self.get_predicted_upgrade_roll()
 
         is_fake_single = False
-        if self.season >= 20 and "a Single" in self.desc and predicted_upgrade_roll < 0.04 and (out_roll > out_threshold and self.event["created"] not in fakeout_override) or (self.event["created"] in fakeout_opposite_overrides):
+        if self.season >= 20 and "a Single" in self.desc and predicted_upgrade_roll < 0.04 and (out_roll > out_threshold and self.event_time not in fakeout_override) or (self.event_time in fakeout_opposite_overrides):
             is_fake_single = True
             
             fly_threshold = get_fly_or_ground_threshold(
@@ -2656,7 +2656,7 @@ class Resim:
 
             last_base = 4 if self.stadium.has_mod(Mod.EXTRA_BASE) else 3
             is_force_score = base >= (last_base - hit_bases)  # fifth base lol
-            if is_force_score and self.event["created"] != "2021-04-23T13:30:43.331Z":
+            if is_force_score and self.event_time != "2021-04-23T13:30:43.331Z":
                 self.damage(runner, "batter")
 
     def get_stat_meta(self):
@@ -2736,9 +2736,9 @@ class Resim:
         if self.batter.undefined():
             self.roll("undefined (foul?)")
             self.roll("undefined (filth tenac)")
-            # self.data.fetch_stadiums(self.event["created"])
+            # self.data.fetch_stadiums(self.event_time)
             # filth_before = self.data.get_stadium(self.stadium.id).filthiness
-            # self.data.fetch_stadiums(self.event["created"], 10)
+            # self.data.fetch_stadiums(self.event_time, 10)
             # filth_after = self.data.get_stadium(self.stadium.id).filthiness
 
             # tenac_mul = get_multiplier(self.batter, self.batting_team, "batter", "tenaciousness", self.get_stat_meta(), self.stadium)
@@ -2772,9 +2772,9 @@ class Resim:
     def check_filth_delta(self, expected_change=None):
         # todo: this is very unreliable because of fetch resolution
         pass
-        # self.data.fetch_stadiums(self.event["created"])
+        # self.data.fetch_stadiums(self.event_time)
         # filth_before = self.data.get_stadium(self.stadium.id).filthiness
-        # self.data.fetch_stadium_after(self.stadium.id, self.event["created"])
+        # self.data.fetch_stadium_after(self.stadium.id, self.event_time)
         # filth_after = self.data.get_stadium(self.stadium.id).filthiness
         # if filth_before != filth_after:
         #     self.print(f"!!!FILTH CHANGED: {filth_before} -> {filth_after}")
@@ -2876,7 +2876,7 @@ class Resim:
                 target = self.data.get_player(self.event["playerTags"][0])
 
             # this really needs a refactor, helga and jon's instability incins need to proc in the sub function (and they do)
-            if self.ty == EventType.INCINERATION and "Kansas City Breath Mints" not in self.desc and self.event["created"] not in ["2021-07-22T06:03:17.918Z", "2021-07-22T06:06:08.970Z", "2021-07-23T10:04:54.389Z", "2021-05-14T11:21:35.835Z"]:
+            if self.ty == EventType.INCINERATION and "Kansas City Breath Mints" not in self.desc and self.event_time not in ["2021-07-22T06:03:17.918Z", "2021-07-22T06:06:08.970Z", "2021-07-23T10:04:54.389Z", "2021-05-14T11:21:35.835Z"]:
                 if "A Debt was collected" not in self.desc:
                     self.log_roll(Csv.WEATHERPROC, "Burn", eclipse_roll, True)
 
@@ -2922,9 +2922,9 @@ class Resim:
                         for _ in range(8):
                             self.roll("where are the paws, joel?")
 
-                        self.data.fetch_league_data(self.event["created"], 10)
+                        self.data.fetch_league_data(self.event_time, 10)
                         # correction for fetch league data
-                        self.data.fetch_player_after("df4da81a-917b-434f-b309-f00423ee4967", self.event["created"])
+                        self.data.fetch_player_after("df4da81a-917b-434f-b309-f00423ee4967", self.event_time)
                     return True
 
 
@@ -2961,7 +2961,7 @@ class Resim:
                 batters = self.batting_team.lineup
 
                 # Siphon on Siphon Violence - They all conveniently fall into the same roll length
-                if self.event["created"] in [
+                if self.event_time in [
                     "2021-03-11T16:07:06.900Z",
                     "2021-04-16T02:23:37.186Z",
                     "2021-05-19T14:06:37.515Z",
@@ -3005,14 +3005,14 @@ class Resim:
                                         self.roll("which stat drained")
                                         self.roll("effect")
 
-                if self.event["created"] == "2021-04-12T22:01:16.338Z":
+                if self.event_time == "2021-04-12T22:01:16.338Z":
                     # this... might be item damage on siphon strikeout...?
                     self.roll("sorry kidror idk why")
                 return True
 
             if self.ty == EventType.BLOODDRAIN or self.ty == EventType.BLOODDRAIN_BLOCKED:
                 # This one thinks that an on base runner is the batter
-                if self.event["created"] in ["2021-04-20T06:31:02.337Z"]:
+                if self.event_time in ["2021-04-20T06:31:02.337Z"]:
                     self.roll("blooddrain proc1")
                     self.roll("blooddrain proc2")
                     self.roll("blooddrain proc3")
@@ -3099,7 +3099,7 @@ class Resim:
                         roast_roll,
                         True,
                     )
-                elif roast_roll < batter_threshold or self.event["created"] in extras:
+                elif roast_roll < batter_threshold or self.event_time in extras:
                     self.roll("honey roasted extra")
                 else:
                     self.log_roll(
@@ -3117,7 +3117,7 @@ class Resim:
                         poast_roll,
                         True,
                     )
-                elif poast_roll < pitcher_threshold or self.event["created"] in extras:
+                elif poast_roll < pitcher_threshold or self.event_time in extras:
                     self.roll("honey roasted extra")
                 else:
                     self.log_roll(
@@ -3304,7 +3304,7 @@ class Resim:
 
                 if "were shuffled in the Reverb!" in self.desc:
                     # Steph Weeks has gravity mod from armor, but we don't handle mods from old-style items.
-                    if self.event["created"] == "2021-03-11T08:24:46.288Z":
+                    if self.event_time == "2021-03-11T08:24:46.288Z":
                         amount = 14
                     else:
                         amount = sum(
@@ -3656,7 +3656,7 @@ class Resim:
             if elsewhere_time > 18:
                 should_scatter = True
         if "season" in self.desc:
-            if self.event["created"] not in ["2021-04-05T16:24:45.346Z", "2021-04-05T20:08:23.286Z", "2021-07-26T17:13:07.143Z", "2021-07-19T21:10:44.664Z"]:
+            if self.event_time not in ["2021-04-05T16:24:45.346Z", "2021-04-05T20:08:23.286Z", "2021-07-26T17:13:07.143Z", "2021-07-19T21:10:44.664Z"]:
                 should_scatter = True
 
         if should_scatter:
@@ -3749,7 +3749,7 @@ class Resim:
                                     team.lineup.remove(attacked_player_id)
                                 if attacked_player_id in team.rotation:
                                     team.rotation.remove(attacked_player_id)
-                                team.last_update_time = self.event["created"] 
+                                team.last_update_time = self.event_time 
 
                         return True
                     else:
@@ -3780,7 +3780,7 @@ class Resim:
                 self.roll("extra party?")
 
             return True
-        elif party_roll < party_threshold and self.event["created"] not in []:
+        elif party_roll < party_threshold and self.event_time not in []:
             team_roll = self.roll("target team (not partying)")
             if team_roll < 0.5 and self.home_team.has_mod(Mod.PARTY_TIME):
                 self.print("!!! home team is in party time")
@@ -3790,7 +3790,7 @@ class Resim:
     def handle_ballpark(self):
         league_mods = self.data.sim["attr"]
         if "SECRET_TUNNELS" in league_mods:
-            if self.update["awayScore"] >= 1 and self.event["created"]:
+            if self.update["awayScore"] >= 1 and self.event_time:
                 self.roll("tunnels?")
                 self.roll("tunnels?")
                 self.roll("tunnels?") # actual success roll
@@ -3889,10 +3889,10 @@ class Resim:
         # but for some reason we don't see the secret base id until the next tick
         # however, per roll counts, there is still someone in the base, so we should NOT roll for secret base
         # i think this might be the same situation as the above block, but there's an inning switch in between, so our lookahead breaks
-        if self.event["created"] == "2021-04-14T19:07:51.129Z":
+        if self.event_time == "2021-04-14T19:07:51.129Z":
             # forrest best
             secret_runner_id = "d35ccee1-9559-49a1-aaa4-7809f7b5c46e"
-        if self.event["created"] == "2021-04-14T17:06:27.921Z":
+        if self.event_time == "2021-04-14T17:06:27.921Z":
             # peanut holloway
             secret_runner_id = "667cb445-c288-4e62-b603-27291c1e475d"
 
@@ -4023,8 +4023,8 @@ class Resim:
                 # should probably move this logic into a function somehow
                 self.batting_team.lineup.remove(runner_id)
                 runner.add_mod(Mod.REDACTED, ModType.PERMANENT)
-                self.batting_team.last_update_time = self.event["created"]
-                runner.last_update_time = self.event["created"]
+                self.batting_team.last_update_time = self.event_time
+                runner.last_update_time = self.event_time
 
                 # and just as a cherry on top let's hack this so we don't roll for steal as well
                 self.update["basesOccupied"].remove(1)
@@ -4067,7 +4067,7 @@ class Resim:
                 runner = self.data.get_player(self.update["baseRunners"][-1])
                 # finding new and funny ways to detect if this is a ghost
                 if runner.pressurization == 0.5 and runner.cinnamon == 0.5:
-                    self.data.fetch_player_after(self.update["baseRunners"][-1], self.event["created"])
+                    self.data.fetch_player_after(self.update["baseRunners"][-1], self.event_time)
                     runner = self.data.get_player(self.update["baseRunners"][-1])
                     
                 self.roll("trick 1 name")
@@ -4338,8 +4338,8 @@ class Resim:
             "2021-06-24T09:20:42.736Z": True,
             "2021-06-24T11:10:24.784Z": True,
         }
-        if self.event["created"] in known_result_overrides:
-            self.is_strike = known_result_overrides[self.event["created"]]
+        if self.event_time in known_result_overrides:
+            self.is_strike = known_result_overrides[self.event_time]
 
         if self.pitching_team.has_mod("FIERY") and self.strikes < self.max_strikes - 1:
             # event where our formula registers a ball but we know it's a strike by roll count
@@ -4351,8 +4351,8 @@ class Resim:
                 # "2021-06-22T17:19:20.764Z": True,
             }
 
-            if self.event["created"] in double_strike_overrides:
-                override_is_strike = double_strike_overrides[self.event["created"]]
+            if self.event_time in double_strike_overrides:
+                override_is_strike = double_strike_overrides[self.event_time]
                 if override_is_strike != self.is_strike:
                     self.is_strike = override_is_strike
                     self.print("!!! overriding double strike to {}".format(override_is_strike))
@@ -4392,7 +4392,7 @@ class Resim:
 
         # so, there are a few(?) cases in early s16 where an item was damaged and broke,
         # and no event was logged or displayed.
-        if (self.event["created"], player.id) in [
+        if (self.event_time, player.id) in [
             ("2021-04-12T16:22:51.087Z", "c09e64b6-8248-407e-b3af-1931b880dbee")  # Lenny Spruce
         ]:
             was_item_broken_this_event = True
@@ -4405,7 +4405,7 @@ class Resim:
             # gloria bugsnax must NOT trigger break here (pitcher threshold lower??)
             ("2021-05-11T09:09:39.742Z", "8cd06abf-be10-4a35-a3ab-1a408a329147"): False,
         }
-        damage_roll_successful = manual_damage_overrides.get((self.event["created"], player.id), damage_roll_successful)
+        damage_roll_successful = manual_damage_overrides.get((self.event_time, player.id), damage_roll_successful)
 
         if damage_roll_successful:
             self.roll(f"which item? ({player.name})")
@@ -4475,7 +4475,7 @@ class Resim:
             self.next_update["basesOccupied"] if self.next_update else None,
             self.get_stat_meta(),
             save_objects,
-            self.event["created"],
+            self.event_time,
         )
 
     def setup_data(self, event):
@@ -4488,6 +4488,7 @@ class Resim:
             pass
 
         self.event = event
+        self.event_time = event["created"]
         self.ty = event["type"]
         self.desc = event["description"].replace("\n", " ").strip()
         self.season = event["season"]
@@ -4502,7 +4503,7 @@ class Resim:
         next_update = self.data.get_update(self.game_id, self.play + 1)
         if not update:
             # This list is events where using the prev_event is more accurate.
-            if next_update and self.event["created"] not in [
+            if next_update and self.event_time not in [
                 "2021-03-01T16:31:50.029Z",
                 "2021-03-01T17:23:04.303Z",
                 "2021-03-01T20:21:59.527Z",
@@ -4579,8 +4580,8 @@ class Resim:
             },
         }
 
-        if self.event["created"] in missing_update_adjustments:
-            for k, v in missing_update_adjustments[self.event["created"]].items():
+        if self.event_time in missing_update_adjustments:
+            for k, v in missing_update_adjustments[self.event_time].items():
                 update[k] = v
 
         self.update = update
@@ -4640,7 +4641,7 @@ class Resim:
             and self.ty != EventType.BATTER_UP
         ):
             self.batter.add_mod(Mod.OVERPERFORMING, ModType.GAME)
-            self.batter.last_update_time = self.event["created"]
+            self.batter.last_update_time = self.event_time
 
     def apply_event_changes(self, event):
         # maybe move this function to data.py?
@@ -4655,16 +4656,16 @@ class Resim:
             if event["playerTags"]:
                 player = self.data.get_player(event["playerTags"][0])
                 player.add_mod(meta["mod"], meta["type"])
-                player.last_update_time = self.event["created"]
+                player.last_update_time = self.event_time
             else:
 
                 if meta["mod"] == "EXTRA_BASE":
                     self.stadium.mods.add(meta["mod"])
-                    self.stadium.last_update_time = self.event["created"]
+                    self.stadium.last_update_time = self.event_time
                 else:
                     team = self.data.get_team(event["teamTags"][0])
                     team.add_mod(meta["mod"], meta["type"])
-                    team.last_update_time = self.event["created"]
+                    team.last_update_time = self.event_time
 
         # player or team mod removed
         if event["type"] in [
@@ -4689,7 +4690,7 @@ class Resim:
                     self.print(f"!!! warn: trying to remove mod {meta['mod']} but can't find it")
                 else:
                     player.remove_mod(meta["mod"], meta["type"])
-                player.last_update_time = self.event["created"]
+                player.last_update_time = self.event_time
 
             else:
                 team = self.data.get_team(event["teamTags"][0])
@@ -4698,7 +4699,7 @@ class Resim:
                     self.print(f"!!! warn: trying to remove mod {meta['mod']} but can't find it")
                 else:
                     team.remove_mod(meta["mod"], meta["type"])
-                team.last_update_time = self.event["created"]
+                team.last_update_time = self.event_time
 
         # mod replaced
         if event["type"] in [EventType.CHANGED_MODIFIER]:
@@ -4706,12 +4707,12 @@ class Resim:
                 player = self.data.get_player(event["playerTags"][0])
                 player.remove_mod(meta["from"], meta["type"])
                 player.add_mod(meta["to"], meta["type"])
-                player.last_update_time = self.event["created"]
+                player.last_update_time = self.event_time
             else:
                 team = self.data.get_team(event["teamTags"][0])
                 team.remove_mod(meta["from"], meta["type"])
                 team.add_mod(meta["to"], meta["type"])
-                team.last_update_time = self.event["created"]
+                team.last_update_time = self.event_time
 
         # timed mods wore off
         if event["type"] in [EventType.MOD_EXPIRES]:
@@ -4722,12 +4723,12 @@ class Resim:
                         self.print(f"!!! warn: trying to remove mod {mod} but can't find it")
                     else:
                         player.remove_mod(mod, meta["type"])
-                player.last_update_time = self.event["created"]
+                player.last_update_time = self.event_time
             else:
                 team = self.data.get_team(event["teamTags"][0])
                 for mod in meta["mods"]:
                     team.remove_mod(mod, meta["type"])
-                team.last_update_time = self.event["created"]
+                team.last_update_time = self.event_time
 
         # echo mods added/removed
         if event["type"] in [
@@ -4746,7 +4747,7 @@ class Resim:
                         if source == [mod["mod"]]:  # todo: what if multiple?
                             player.remove_mod(secondary_mod, ModType.PERMANENT)
 
-                player.last_update_time = self.event["created"]
+                player.last_update_time = self.event_time
 
         # cases where the tagged player needs to be refetched (party, consumer, incin replacement)
         if event["type"] in [
@@ -4776,7 +4777,7 @@ class Resim:
                 team.lineup.remove(player_id)
             if player_id in team.rotation:
                 team.rotation.remove(player_id)
-            team.last_update_time = self.event["created"]
+            team.last_update_time = self.event_time
 
         # mod changed from one to other
         if event["type"] == EventType.MODIFICATION_CHANGE:
@@ -4789,7 +4790,7 @@ class Resim:
                 for mod, source in player.season_mod_sources.items():
                     if source == ["RECEIVER"]:
                         player.remove_mod(mod, ModType.SEASON)
-            player.last_update_time = self.event["created"]
+            player.last_update_time = self.event_time
 
         # roster swap
         if event["type"] == EventType.PLAYER_TRADED:
@@ -4804,8 +4805,8 @@ class Resim:
 
             b_location[b_idx] = a_player
             a_location[a_idx] = b_player
-            a_team.last_update_time = self.event["created"]
-            b_team.last_update_time = self.event["created"]
+            a_team.last_update_time = self.event_time
+            b_team.last_update_time = self.event_time
 
         # carcinization etc
         if event["type"] == EventType.PLAYER_MOVE:
@@ -4819,8 +4820,8 @@ class Resim:
             if player_id in send_team.rotation:
                 send_team.rotation.remove(player_id)
                 receive_team.rotation.append(player_id)
-            send_team.last_update_time = self.event["created"]
-            receive_team.last_update_time = self.event["created"]
+            send_team.last_update_time = self.event_time
+            receive_team.last_update_time = self.event_time
 
         if event["type"] == EventType.PLAYER_SWAP:
             # For some reason, this swap doesn't actually happen. Possibly a bug with a player getting swapped multiple times?
@@ -4845,7 +4846,7 @@ class Resim:
                 b_idx = b_location.index(b_player)
                 b_location[b_idx] = a_player
                 a_location[a_idx] = b_player
-                team.last_update_time = self.event["created"]
+                team.last_update_time = self.event_time
 
         if event["type"] == EventType.PLAYER_BORN_FROM_INCINERATION:
             # Roscoe Sundae replaced the incinerated Case Sports. etc
@@ -4860,7 +4861,7 @@ class Resim:
 
             replace_idx = location.index(out_player)
             location[replace_idx] = in_player
-            team.last_update_time = self.event["created"]
+            team.last_update_time = self.event_time
 
         if event["type"] in [
             EventType.ITEM_BREAKS,
@@ -4881,11 +4882,11 @@ class Resim:
                         for mod in meta["mods"]:
                             player.add_mod(mod, ModType.ITEM)
             player.update_stats()
-            player.last_update_time = self.event["created"]
+            player.last_update_time = self.event_time
 
         if event["type"] == EventType.HYPE_BUILT:
             self.stadium.hype = meta["after"]
-            self.stadium.last_update_time = self.event["created"]
+            self.stadium.last_update_time = self.event_time
 
         if event["type"] in [EventType.PLAYER_HIDDEN_STAT_INCREASE, EventType.PLAYER_HIDDEN_STAT_DECREASE]:
             player_id = event["playerTags"][0]
@@ -4896,7 +4897,7 @@ class Resim:
             # we just set to "after" so doesn't matter if it's increase or decrease
             player.data[attr_name] = meta["after"]
             player.update_stats()
-            player.last_update_time = self.event["created"]
+            player.last_update_time = self.event_time
 
     def find_start_of_inning_score(self, game_id, inning):
         # Home Field Advantage and such happen before the first inning, but can still be reset.
@@ -4966,7 +4967,7 @@ class Resim:
             if self.roll_log[-1].event_id == self.event["id"]:
                 idx = self.roll_log[-1].index + 1
 
-        log_obj = LoggedRoll(self.event["id"], idx, self.event["created"], label, lower, upper)
+        log_obj = LoggedRoll(self.event["id"], idx, self.event_time, label, lower, upper)
         self.roll_log.append(log_obj)
         return value
 
