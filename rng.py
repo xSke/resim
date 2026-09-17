@@ -71,6 +71,8 @@ def dbg_str(s0, s1, offset, note=None):
 class Rng(object):
     state: Tuple[int, int]
     offset: int
+    seed: str
+    roll_index: int = 0
 
     @staticmethod
     def from_seed(seed: str | int, offset: int) -> 'Rng':
@@ -111,7 +113,9 @@ class Rng(object):
                 steps_back = distance - (distance % 64) + ((-distance) % 64)
                 # expected_offset = (distance-1) % 64
                 # ^ use this to "correct" an rng instance
-                return seed0, steps_back
+                self.seed = f"{seed0:0{16}x}"
+                self.roll_index = steps_back
+                return self.seed, self.roll_index
 
             state = xs128p_backward(state)
         return None
@@ -126,6 +130,11 @@ class Rng(object):
 
     def get_state_str(self) -> str:
         return state_str(self.state[0], self.state[1], self.offset)
+
+    def get_seed_str(self) -> str:
+        if not self.seed:
+            return self.get_state_str()
+        return f"{self.seed}+{self.roll_index}"
 
     def value(self) -> float:
         return to_double(self.state[0])
@@ -145,6 +154,7 @@ class Rng(object):
                 self.state = xs128p_backward(self.state)
 
     def step(self, steps=1):
+        self.roll_index += steps
         self.offset -= steps
 
         while self.offset < 0:

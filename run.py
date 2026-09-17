@@ -436,6 +436,7 @@ def run_fragment(pool_args, progress_callback=None):
     (silent, out_file_name, csvs_to_log, stream_file_dir), (season, rng_state, rng_offset, step, start_time, end_time) = pool_args
     out_file = get_out_file(silent, out_file_name, start_time)
     rng = Rng(rng_state, rng_offset)
+    rng.find_seed()
     rng.step(step)
     resim = Resim(rng, out_file, run_name=f"s{season}-{start_time}", raise_on_errors=False, csvs_to_log=csvs_to_log, stream_file_dir=stream_file_dir)
 
