@@ -71,7 +71,7 @@ def dbg_str(s0, s1, offset, note=None):
 class Rng(object):
     state: Tuple[int, int]
     offset: int
-    seed: str
+    seed: Optional[str] = None
     roll_index: int = 0
 
     @staticmethod
@@ -103,8 +103,15 @@ class Rng(object):
             return Rng.from_seed(seed, offset)
             
     def find_seed(self, max_distance: int = 50_000_000):
+        if self.seed is not None:
+            return self.seed, self.roll_index
+
+
+        FORWARD_SEARCH = 64 * 2
         state = self.state
-        for distance in range(max_distance):
+        for _ in range(FORWARD_SEARCH):
+            state = xs128p(state)
+        for distance in range(-1 * FORWARD_SEARCH, max_distance):
             seed0 = mh3_inv(state[0])
             seed1 = mh3_inv(state[1]) ^ MASK
             if seed0 == seed1:
@@ -132,7 +139,7 @@ class Rng(object):
         return state_str(self.state[0], self.state[1], self.offset)
 
     def get_seed_str(self) -> str:
-        if not self.seed:
+        if self.seed is None:
             return self.get_state_str()
         return f"{self.seed}+{self.roll_index}"
 
