@@ -1,5 +1,5 @@
 import struct
-from typing import Tuple
+from typing import Optional, Tuple
 
 MASK = 0xFFFFFFFFFFFFFFFF
 
