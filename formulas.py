@@ -637,3 +637,109 @@ def get_triple_threshold(
             return float("nan")
         opw_pow = pitcher_opw**1.5
         return 0.042 + 0.2 * batter_gf - 0.056 * opw_pow - 0.05 * fielder_chase + 0.1 * ballpark_sum
+
+def get_double_play_threshold(
+    batter: PlayerData,
+    pitcher: PlayerData,
+    fielder: PlayerData,
+    batting_team: TeamData,
+    pitching_team: TeamData,
+    stadium: StadiumData,
+    meta: StatRelevantData,
+):
+    pitcher_vibes = pitcher.vibes(meta.day)
+    fielder_vibes = fielder.vibes(meta.day)
+
+    hype = stadium.hype * (1 if meta.top_of_inning else -1)
+
+    # no vibes, yes multipliers
+    batter_trag = batter.multiplied(
+        "tragicness", 1 / get_multiplier(batter, batting_team, "batter", "tragicness", meta, stadium)
+    )
+    inv_batter_trag = 1 - batter_trag
+
+    pitcher_shakes = pitcher.multiplied(
+        "shakespearianism", get_multiplier(pitcher, pitching_team, "pitcher", "shakespearianism", meta, stadium)
+    )
+    pitcher_shakes = (pitcher_shakes + 0.2 * hype) * (1 + 0.2 * pitcher_vibes)
+
+    fielder_tenac = fielder.multiplied(
+        "tenaciousness", get_multiplier(fielder, pitching_team, "fielder", "tenaciousness", meta, stadium)
+    )
+    fielder_tenac = (fielder_tenac + 0.2 * hype) * (1 + 0.2 * fielder_vibes)
+
+    elong = stadium.elongation - 0.5
+
+    return -0.05 + 0.4 * pitcher_shakes - 0.18 * inv_batter_trag + 0.1 * fielder_tenac - 0.16 * elong
+
+
+def get_advance_on_hit_threshold(
+    runner: PlayerData,
+    fielder: PlayerData,
+    pitching_team: TeamData,
+    stadium: StadiumData,
+    meta: StatRelevantData,
+):
+    # no vibes
+    fielder_tenac = fielder.multiplied(
+        "tenaciousness", get_multiplier(fielder, pitching_team, "fielder", "tenaciousness", meta, stadium)
+    )
+
+    # No mods or vibes here -- not sure if I need to use .multiplied at all
+    runner_cont = runner.multiplied("continuation", 1.0)
+
+    threshold = 0.7 - fielder_tenac + 0.6 * runner_cont
+    return max(min(threshold, 0.95), 0.01)
+
+def get_advance_on_ground_out_threshold(
+    runner: PlayerData,
+    fielder: PlayerData,
+    pitching_team: TeamData,
+    stadium: StadiumData,
+    meta: StatRelevantData,
+):
+    runner_vibes = runner.vibes(meta.day)
+    fielder_vibes = fielder.vibes(meta.day)
+
+    # no mods
+    runner_ind = runner.multiplied("indulgence", 1.0) * (1 + 0.2 * runner_vibes)
+    
+    fielder_tenac = fielder.multiplied(
+        "tenaciousness", get_multiplier(fielder, pitching_team, "fielder", "tenaciousness", meta, stadium)
+    ) * (1 + 0.2 * fielder_vibes)
+
+    elong = stadium.elongation - 0.5
+    incon = stadium.inconvenience - 0.5
+
+    return 0.5 + 0.35 * runner_ind - 0.1 * fielder_tenac - 0.1 * elong - 0.1 * incon
+
+
+def get_advance_on_flyout_threshold(
+    advancing_from: int,
+    runner: PlayerData,
+    batting_team: TeamData,
+    stadium: StadiumData,
+    meta: StatRelevantData,
+):
+    runner_vibes = runner.vibes(meta.day)
+
+    runner_ind = runner.multiplied(
+        "indulgence", get_multiplier(runner, batting_team, "batter", "indulgence", meta, stadium)
+    )
+    runner_ind = runner_ind * (1 + 0.2 * runner_vibes)
+    runner_ind_sq = runner_ind ** 2
+    runner_ind_p4 = runner_ind ** 4
+
+    elong = stadium.elongation - 0.5
+    inconv = stadium.inconvenience - 0.5
+    park_factor = 0.10 * elong + 0.10 * inconv
+
+    if advancing_from == 0:
+        return -0.085 + 0.36 * runner_ind - 0.38 * runner_ind_sq + 0.24 * runner_ind_p4 - park_factor
+    elif advancing_from == 1:
+        return 0.045 + 0.065 * runner_ind + 0.30 * runner_ind_sq - park_factor
+    elif advancing_from == 2:
+        return 0.45 + 0.35 * runner_ind - park_factor
+    else:
+        raise RuntimeError(f"Unexpected advancing-from base {advancing_from} (expected 0, 1, or 2).")
+
